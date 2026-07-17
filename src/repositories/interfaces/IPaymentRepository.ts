@@ -1,0 +1,63 @@
+import type {
+  Payment,
+  PaymentStatus,
+  PaymentProvider,
+  CreatePaymentInput,
+  ConfirmPaymentInput,
+} from '@/types'
+
+/**
+ * Repository contract for the Payment aggregate.
+ *
+ * Rules:
+ * - Payments are never soft-deleted. Status transitions are the audit trail.
+ * - One active payment per order at a time (enforced by DB unique constraint).
+ * - The repository does NOT call external payment providers — that is the
+ *   responsibility of the PaymentService + SumUp/Stripe integrations.
+ */
+export interface IPaymentRepository {
+  /**
+   * Find a payment by its unique identifier.
+   * Returns null if not found.
+   */
+  findById(id: string): Promise<Payment | null>
+
+  /**
+   * Find the payment associated with a given order.
+   * Returns null if no payment has been initiated yet.
+   */
+  findByOrderId(orderId: string): Promise<Payment | null>
+
+  /**
+   * Find a payment by its external provider transaction ID.
+   * Used for webhook verification and idempotency checks.
+   */
+  findByExternalId(provider: PaymentProvider, externalId: string): Promise<Payment | null>
+
+  /**
+   * Create a new payment record in PENDING status.
+   * Throws ConflictError if an active payment already exists for the order.
+   */
+  create(data: CreatePaymentInput): Promise<Payment>
+
+  /**
+   * Mark a payment as PAID after receiving confirmation from the provider.
+   */
+  confirm(id: string, data: ConfirmPaymentInput): Promise<Payment>
+
+  /**
+   * Mark a payment as FAILED with an optional reason.
+   */
+  markFailed(id: string, reason: string): Promise<Payment>
+
+  /**
+   * Mark a payment as REFUNDED.
+   */
+  markRefunded(id: string): Promise<Payment>
+
+  /**
+   * Update the payment status to any valid value.
+   * Prefer the specific methods above over this generic one.
+   */
+  updateStatus(id: string, status: PaymentStatus): Promise<Payment>
+}
