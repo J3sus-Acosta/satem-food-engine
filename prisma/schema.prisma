@@ -79,10 +79,12 @@ enum PaymentStatus {
 /// Proveedor de pago
 enum PaymentProvider {
   SUMUP
+  WEBPAY
   STRIPE
   MERCADOPAGO
   CASH
   TRANSFER
+  CUSTOM
   OTHER
 }
 
@@ -184,6 +186,13 @@ model Organization {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   deletedAt     DateTime?
+  /// Proveedor de pago preferido para toda la organización.
+  /// null = hereda de PAYMENT_PROVIDER (.env) → SUMUP
+  paymentProvider      PaymentProvider? @map("payment_provider")
+  /// Configuración específica del proveedor (clave-valor simple).
+  /// Ej: { "merchantCode": "ABC123", "currency": "CLP" }
+  /// null = sin configuración personalizada.
+  paymentConfiguration Json?           @map("payment_configuration")
 
   // Relations
   locations      Location[]
@@ -221,6 +230,12 @@ model Location {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
+  /// Proveedor de pago para esta sucursal. Sobreescribe Organization.paymentProvider.
+  /// null = hereda de Organization → .env → SUMUP
+  paymentProvider      PaymentProvider? @map("payment_provider")
+  /// Configuración específica del proveedor para esta sucursal (clave-valor simple).
+  /// Sobreescribe Organization.paymentConfiguration — nunca se fusionan.
+  paymentConfiguration Json?           @map("payment_configuration")
 
   // Relations
   organization   Organization    @relation(fields: [organizationId], references: [id])

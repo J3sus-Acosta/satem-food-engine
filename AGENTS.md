@@ -35,6 +35,10 @@
 
 10. El sistema debe mantenerse preparado para soportar múltiples restaurantes, múltiples sucursales y múltiples canales sin modificar la lógica existente.
 
+11. Ningún servicio del dominio podrá depender directamente de un proveedor externo. Toda integración deberá implementarse mediante interfaces y resolverse utilizando factories o mecanismos de inyección de dependencias. La incorporación de nuevos proveedores nunca deberá requerir modificar la lógica del dominio.
+
+12. Nunca asumir un proveedor de pago fijo. Toda decisión relacionada con proveedores deberá resolverse dinámicamente utilizando `PaymentProviderFactory`. El dominio nunca deberá conocer el proveedor seleccionado. La resolución del proveedor activo corresponde exclusivamente a `ITenantConfigurationRepository` y se aplica con la jerarquía: Location → Organization → .env → SUMUP.
+
 ---
 
 ## 1. Arquitectura Obligatoria

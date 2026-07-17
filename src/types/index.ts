@@ -40,7 +40,8 @@ export type OrderType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'
 
 export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED' | 'REFUNDED'
 
-export type PaymentProvider = 'SUMUP' | 'STRIPE' | 'MERCADOPAGO' | 'CASH' | 'TRANSFER' | 'OTHER'
+export type PaymentProvider =
+  'SUMUP' | 'WEBPAY' | 'STRIPE' | 'MERCADOPAGO' | 'CASH' | 'TRANSFER' | 'CUSTOM' | 'OTHER'
 
 export type KitchenTicketStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED'
 
@@ -433,6 +434,30 @@ export interface InitiatePaymentResult {
   checkoutUrl: string
   expiresAt?: Date
   estimatedPreparationTime?: number // in minutes
+}
+
+/**
+ * Resultado de la resolución de configuración de proveedor de pago por tenant.
+ * Retornado por ITenantConfigurationRepository.resolvePaymentConfig().
+ *
+ * Jerarquía de resolución:
+ *   Location.paymentProvider/paymentConfiguration
+ *   → Organization.paymentProvider/paymentConfiguration
+ *   → process.env.PAYMENT_PROVIDER
+ *   → 'SUMUP' (fallback)
+ *
+ * paymentConfiguration nunca se fusiona entre niveles.
+ * Se usa la primera configuración encontrada en la jerarquía.
+ */
+export interface PaymentConfiguration {
+  /** Proveedor resuelto tras aplicar la jerarquía completa. */
+  provider: PaymentProvider
+  /**
+   * Configuración específica del proveedor (clave-valor de strings).
+   * Vacío ({}) cuando ningún nivel de la jerarquía tiene configuración.
+   * NUNCA es null — siempre se retorna al menos {}.
+   */
+  configuration: Record<string, string>
 }
 
 // ─── KITCHEN DOMAIN ───────────────────────────────────────────────────────────

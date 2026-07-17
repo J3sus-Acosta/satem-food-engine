@@ -1,31 +1,46 @@
 import 'server-only'
 
 import { NotFoundError, ValidationError, ConflictError } from '@/lib/errors'
-import type { IPaymentRepository, IOrderRepository } from '@/repositories'
+import type {
+  IPaymentRepository,
+  IOrderRepository,
+  ITenantConfigurationRepository,
+} from '@/repositories'
 import type { IPaymentProvider } from '@/integrations'
 import type { OrderService } from '../orders'
 import type { Payment, PaymentProvider, Money, InitiatePaymentResult } from '@/types'
+import { PaymentProviderFactory } from '@/integrations/payments/PaymentProviderFactory'
 
 /**
  * Service handling payments and coordinating with third-party providers.
  *
  * Responsibilities:
  * - Payment registration and tracking.
- * - Calling external integrations (SumUp, Stripe, etc.) to initiate transactions.
+ * - Calling external integrations via IPaymentProvider (SumUp, Webpay, etc.).
  * - Processing webhooks from payment providers.
  * - Ensuring webhook idempotency and isolation of domain events.
+ *
+ * The active payment provider is resolved per-tenant on each initiatePayment() call
+ * via ITenantConfigurationRepository → PaymentProviderFactory.build().
+ * PaymentService never knows which provider is active.
  */
 export class PaymentService {
   constructor(
     private readonly paymentRepo: IPaymentRepository,
+    /** Fallback provider singleton — used for webhook/sync operations. */
     private readonly paymentProvider: IPaymentProvider,
     private readonly orderRepo: IOrderRepository,
-    private readonly orderService: OrderService
+    private readonly orderService: OrderService,
+    /** Resolves the effective payment provider config per Location → Organization → .env → SUMUP. */
+    private readonly tenantConfigRepo: ITenantConfigurationRepository
   ) {}
 
   /**
    * Initiates a payment process for an order.
    * Generates a pending transaction and coordinates with the provider integration.
+   *
+   * The payment provider is resolved dynamically per tenant:
+   *   Location.paymentProvider → Organization.paymentProvider → .env → SUMUP
    */
   async initiatePayment(
     orderId: string,
@@ -71,17 +86,21 @@ export class PaymentService {
       })
     }
 
-    // 5. Call external payment provider to create checkout session
-    const intent = await this.paymentProvider.createIntent(payment.id, amount, currency || 'CLP')
+    // 5. Resolve the active provider for this tenant (Location → Organization → .env → SUMUP)
+    const tenantConfig = await this.tenantConfigRepo.resolvePaymentConfig(order.locationId)
+    const tenantProvider = PaymentProviderFactory.build(tenantConfig)
 
-    // 6. Update payment with provider's transaction ID
+    // 6. Call tenant-specific provider to create checkout session
+    const intent = await tenantProvider.createIntent(payment.id, amount, currency || 'CLP')
+
+    // 7. Update payment with provider's transaction ID
     payment = await this.paymentRepo.updateExternalId(
       payment.id,
       intent.providerTransactionId,
       intent.rawPayload
     )
 
-    // 7. Return enriched response
+    // 8. Return enriched response
     return {
       payment,
       orderNumber: order.orderNumber,
@@ -215,19 +234,24 @@ export class PaymentService {
   }
 }
 
-// Instantiate and export service singletons
+// ─── Singleton instantiation ───────────────────────────────────────────────────
+// The active payment provider is resolved per-tenant at request time via
+// ITenantConfigurationRepository + PaymentProviderFactory.build().
+// The singleton paymentProvider below is the fallback used for webhooks/sync.
 import { PrismaPaymentRepository } from '@/repositories/prisma/PrismaPaymentRepository'
-import { SumUpPaymentProvider } from '@/integrations/sumup/SumUpPaymentProvider'
 import { PrismaOrderRepository } from '@/repositories/prisma/PrismaOrderRepository'
+import { PrismaTenantConfigurationRepository } from '@/repositories/prisma/PrismaTenantConfigurationRepository'
 import { orderService } from '../orders'
 
 const paymentRepo = new PrismaPaymentRepository()
-const paymentProvider = new SumUpPaymentProvider()
+const paymentProvider = PaymentProviderFactory.resolve() // env-based fallback for webhooks
 const orderRepo = new PrismaOrderRepository()
+const tenantConfigRepo = new PrismaTenantConfigurationRepository()
 
 export const paymentService = new PaymentService(
   paymentRepo,
   paymentProvider,
   orderRepo,
-  orderService
+  orderService,
+  tenantConfigRepo
 )

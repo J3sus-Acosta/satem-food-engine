@@ -41,3 +41,22 @@ export const ROUTES = {
     },
   },
 } as const
+
+/**
+ * Payment configuration.
+ *
+ * NOTE: This config is read server-side only.
+ * Do NOT import this block from Client Components.
+ *
+ * Supported PAYMENT_PROVIDER values:
+ *   sumup       — SumUp hosted checkout (fully implemented)
+ *   webpay      — Transbank Webpay Plus (skeleton, not yet implemented)
+ *
+ * Planned (not yet scaffolded):
+ *   stripe      — Stripe Payment Intents
+ *   mercadopago — Mercado Pago Checkout Pro
+ */
+export const PAYMENT_CONFIG = {
+  /** Active payment provider key — resolved at runtime by PaymentProviderFactory. */
+  provider: process.env.PAYMENT_PROVIDER ?? 'sumup',
+} as const
