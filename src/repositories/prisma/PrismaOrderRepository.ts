@@ -666,4 +666,26 @@ export class PrismaOrderRepository implements IOrderRepository {
       throw error
     }
   }
+
+  async findKitchenQueue(locationId: string): Promise<OrderWithItems[]> {
+    return this.findActiveOrdersWithItems(locationId)
+  }
+
+  async findDefaultChannelId(locationId: string): Promise<string | null> {
+    try {
+      const channel = await db.channel.findFirst({
+        where: { locationId, isActive: true },
+        orderBy: { createdAt: 'asc' },
+      })
+      return channel?.id || null
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaOrderRepository.findDefaultChannelId] DB connection failed, using in-memory mock channel.'
+        )
+        return 'web-channel'
+      }
+      throw error
+    }
+  }
 }

@@ -2,7 +2,8 @@ import React from 'react'
 import { headers } from 'next/headers'
 import { productService } from '@/services'
 import { TENANT_CONFIG } from '@/config'
-import { MenuGrid } from '@/components/menu/MenuGrid'
+import { CustomerCartProvider, MenuCustomerView } from '@/components/customer/menu'
+import { CustomerOrderProvider } from '@/components/customer/order/CustomerOrderProvider'
 import { Store, MapPin, Clock } from 'lucide-react'
 
 interface PageProps {
@@ -78,7 +79,11 @@ export default async function MenuPage({ searchParams }: PageProps) {
 
       {/* Menu Grid and interactive items */}
       <section className="flex-1 py-8">
-        <MenuGrid menu={menu} />
+        <CustomerOrderProvider>
+          <CustomerCartProvider>
+            <MenuCustomerView menu={menu} />
+          </CustomerCartProvider>
+        </CustomerOrderProvider>
       </section>
 
       {/* Premium subtle brand watermark footer */}

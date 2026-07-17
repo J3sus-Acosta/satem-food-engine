@@ -18,10 +18,15 @@ import type {
  * @see PaymentProviderFactory — activates this provider via PAYMENT_PROVIDER=sumup.
  */
 export class SumUpPaymentProvider implements IPaymentProvider {
+  private readonly config: Record<string, unknown>
   private readonly webhookSecret: string
 
-  constructor() {
-    this.webhookSecret = process.env.SUMUP_WEBHOOK_SECRET || 'mock_secret_12345'
+  constructor(config?: Record<string, unknown>) {
+    this.config = config || {}
+    this.webhookSecret =
+      (this.config.webhookSecret as string) ||
+      process.env.SUMUP_WEBHOOK_SECRET ||
+      'mock_secret_12345'
   }
 
   async createIntent(

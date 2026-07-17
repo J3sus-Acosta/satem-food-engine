@@ -1,0 +1,360 @@
+{
+  "name": "SATEM · 03 Order Status",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 03 Order Status\n\nRecibe cambios de estado de pedidos desde SATEM y enruta notificaciones.\n\nEstados manejados: READY, CANCELLED, PREPARING y otros.\n\nExtender with WhatsApp/Telegram para notificar al cliente.",
+        "color": 2,
+        "width": 1200,
+        "height": 360
+      },
+      "id": "92b726e1-5b99-493d-8d82-aaf2e53f63cd",
+      "name": "Sticky Note 979a89ec",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [190, 110]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-status",
+        "responseMode": "responseNode"
+      },
+      "id": "cba350ca-1843-4b79-8032-c6f9a14f8420",
+      "name": "Order Status Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "webhookId": "6186893c-be86-4b65-87a7-ab3ff60d0e27"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ord-id",
+              "name": "orderId",
+              "value": "={{ $json.body?.orderId ?? $json.orderId ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "ord-num",
+              "name": "orderNumber",
+              "value": "={{ $json.body?.orderNumber ?? $json.orderNumber ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "ord-status",
+              "name": "newStatus",
+              "value": "={{ $json.body?.newStatus ?? $json.newStatus ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "cust-phone",
+              "name": "customerPhone",
+              "value": "={{ $json.body?.customerPhone ?? $json.customerPhone ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "cust-name",
+              "name": "customerName",
+              "value": "={{ $json.body?.customerName ?? $json.customerName ?? \"\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "9843a06f-bcfe-4ff2-a4e1-973adf2c44e6",
+      "name": "Normalize Order Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "outputKey": "ready",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.newStatus }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "READY"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "cancelled",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.newStatus }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "CANCELLED"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "preparing",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.newStatus }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "PREPARING"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Other"
+        }
+      },
+      "id": "8b336df9-0013-4d01-aea5-ed5c114e271a",
+      "name": "Route by Order Status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "notif-msg",
+              "name": "message",
+              "value": "={{ \"Tu pedido #\" + $json.orderNumber + \" esta listo para retirar!\" }}",
+              "type": "string"
+            },
+            {
+              "id": "notif-phone",
+              "name": "phone",
+              "value": "={{ $json.customerPhone }}",
+              "type": "string"
+            },
+            {
+              "id": "notif-type",
+              "name": "notificationType",
+              "value": "ORDER_READY",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "a42af89a-963e-4f76-ac0e-b8bf8ec902c7",
+      "name": "Prepare Ready Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1140, 160]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { received: true, orderId: $json.orderId ?? $json.loggedOrderId, processedAt: $now.toISO() } }}"
+      },
+      "id": "7cf92f4b-1cf5-4300-b348-2cd6988141da",
+      "name": "Respond Processed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cancel-msg",
+              "name": "message",
+              "value": "={{ \"Lo sentimos, tu pedido #\" + $json.orderNumber + \" fue cancelado.\" }}",
+              "type": "string"
+            },
+            {
+              "id": "cancel-phone",
+              "name": "phone",
+              "value": "={{ $json.customerPhone }}",
+              "type": "string"
+            },
+            {
+              "id": "cancel-type",
+              "name": "notificationType",
+              "value": "ORDER_CANCELLED",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "269ede5f-ee44-49fe-9853-7b1c0933f638",
+      "name": "Prepare Cancelled Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1140, 320]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "log-status",
+              "name": "loggedStatus",
+              "value": "={{ $json.newStatus }}",
+              "type": "string"
+            },
+            {
+              "id": "log-ord",
+              "name": "loggedOrderId",
+              "value": "={{ $json.orderId }}",
+              "type": "string"
+            },
+            {
+              "id": "log-ts",
+              "name": "loggedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "83e3f371-b68f-4ab1-92d3-e69b42dd4243",
+      "name": "Log Status Change",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1140, 480]
+    }
+  ],
+  "connections": {
+    "Order Status Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Order Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Order Payload": {
+      "main": [
+        [
+          {
+            "node": "Route by Order Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Order Status": {
+      "main": [
+        [
+          {
+            "node": "Prepare Ready Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Cancelled Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Status Change",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Status Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Ready Notification": {
+      "main": [
+        [
+          {
+            "node": "Respond Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Cancelled Notification": {
+      "main": [
+        [
+          {
+            "node": "Respond Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Status Change": {
+      "main": [
+        [
+          {
+            "node": "Respond Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  }
+}

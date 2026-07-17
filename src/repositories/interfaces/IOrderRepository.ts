@@ -107,4 +107,14 @@ export interface IOrderRepository {
    * Retrieves active orders with all items and modifiers for kitchen display (FIFO).
    */
   findActiveOrdersWithItems(locationId: string): Promise<OrderWithItems[]>
+
+  /**
+   * Retrieves the current active kitchen queue orders (CONFIRMED, PREPARING, READY) for a location.
+   */
+  findKitchenQueue(locationId: string): Promise<OrderWithItems[]>
+
+  /**
+   * Resolves the default active channel ID for a location.
+   */
+  findDefaultChannelId(locationId: string): Promise<string | null>
 }

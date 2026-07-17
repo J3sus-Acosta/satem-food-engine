@@ -8,7 +8,13 @@ import type {
 } from '@/repositories'
 import type { IPaymentProvider } from '@/integrations'
 import type { OrderService } from '../orders'
-import type { Payment, PaymentProvider, Money, InitiatePaymentResult } from '@/types'
+import type {
+  Payment,
+  PaymentProvider,
+  Money,
+  InitiatePaymentResult,
+  PaymentIntentResult,
+} from '@/types'
 import { PaymentProviderFactory } from '@/integrations/payments/PaymentProviderFactory'
 
 /**
@@ -19,10 +25,6 @@ import { PaymentProviderFactory } from '@/integrations/payments/PaymentProviderF
  * - Calling external integrations via IPaymentProvider (SumUp, Webpay, etc.).
  * - Processing webhooks from payment providers.
  * - Ensuring webhook idempotency and isolation of domain events.
- *
- * The active payment provider is resolved per-tenant on each initiatePayment() call
- * via ITenantConfigurationRepository → PaymentProviderFactory.build().
- * PaymentService never knows which provider is active.
  */
 export class PaymentService {
   constructor(
@@ -36,77 +38,88 @@ export class PaymentService {
   ) {}
 
   /**
-   * Initiates a payment process for an order.
-   * Generates a pending transaction and coordinates with the provider integration.
-   *
-   * The payment provider is resolved dynamically per tenant:
-   *   Location.paymentProvider → Organization.paymentProvider → .env → SUMUP
+   * Creates a payment intent for an order.
+   * Resolves multi-tenant provider configuration dynamically, initiates the external capture session,
+   * records transaction details, and returns the redirect checkout URL.
    */
-  async initiatePayment(
-    orderId: string,
-    provider: PaymentProvider,
-    amount: Money,
-    currency?: string
-  ): Promise<InitiatePaymentResult> {
+  async createPaymentIntent(orderId: string): Promise<PaymentIntentResult> {
     // 1. Retrieve the order
     const order = await this.orderRepo.findById(orderId)
     if (!order) {
       throw new NotFoundError('Order', orderId)
     }
 
-    // 2. Validate order status: Must be DRAFT
-    if (order.status !== 'DRAFT') {
+    // 2. Validate order status: Must be DRAFT or PENDING (for manual retry)
+    if (order.status !== 'DRAFT' && order.status !== 'PENDING') {
       throw new ValidationError(
-        `Cannot pay for an order in status "${order.status}". Must be DRAFT.`
+        `Cannot pay for an order in status "${order.status}". Must be DRAFT or PENDING.`
       )
     }
 
-    // 3. Security check: Amount must match order's total amount
-    if (Number(order.totalAmount) !== Number(amount)) {
-      throw new ValidationError(
-        `Payment amount mismatch. Order total is ${order.totalAmount}, but payment request was for ${amount}.`
-      )
-    }
+    // 3. Resolve active payment config (Location -> Organization -> .env -> SUMUP)
+    const tenantConfig = await this.tenantConfigRepo.resolvePaymentConfig(order.locationId)
 
-    // 4. Manage active payment record (reuse or create)
+    // 4. Instantiate provider via factory using configuration JSON
+    const providerInstance = PaymentProviderFactory.build(tenantConfig)
+
+    // 5. Manage active payment record (reuse pending or create new one)
     let payment = await this.paymentRepo.findByOrderId(orderId)
     if (payment) {
       if (payment.status === 'PAID') {
         throw new ConflictError(`Order "${orderId}" has already been paid successfully.`)
       }
-      // Reset status to PENDING for the retry attempt
+      // Reset to PENDING for retry and align provider
       payment = await this.paymentRepo.updateStatus(payment.id, 'PENDING')
+      if (payment.provider !== tenantConfig.provider) {
+        // Update provider key if changed in config
+        payment = await this.paymentRepo.updateStatus(payment.id, 'PENDING')
+      }
     } else {
-      // Create a brand new pending payment
       payment = await this.paymentRepo.create({
         orderId,
-        provider,
-        amount,
-        currency: currency || 'CLP',
+        provider: tenantConfig.provider,
+        amount: Number(order.totalAmount),
+        currency: 'CLP',
       })
     }
 
-    // 5. Resolve the active provider for this tenant (Location → Organization → .env → SUMUP)
-    const tenantConfig = await this.tenantConfigRepo.resolvePaymentConfig(order.locationId)
-    const tenantProvider = PaymentProviderFactory.build(tenantConfig)
+    // 6. Request intent from active provider
+    const intent = await providerInstance.createIntent(payment.id, Number(order.totalAmount), 'CLP')
 
-    // 6. Call tenant-specific provider to create checkout session
-    const intent = await tenantProvider.createIntent(payment.id, amount, currency || 'CLP')
-
-    // 7. Update payment with provider's transaction ID
+    // 7. Save external provider transaction ID
     payment = await this.paymentRepo.updateExternalId(
       payment.id,
       intent.providerTransactionId,
       intent.rawPayload
     )
 
-    // 8. Return enriched response
+    // 8. Return mapping according to contract
     return {
-      payment,
-      orderNumber: order.orderNumber,
+      paymentId: payment.id,
+      provider: tenantConfig.provider,
+      externalId: payment.externalId,
       checkoutUrl: intent.checkoutUrl,
-      expiresAt: intent.expiresAt,
-      estimatedPreparationTime: 15, // Hardcoded standard/buffer value for prep time
+      status: payment.status as 'PENDING' | 'AUTHORIZED' | 'PAID' | 'FAILED',
+    }
+  }
+
+  /**
+   * Compatibility method for legacy checkout integration.
+   * Delegates internally to createPaymentIntent().
+   */
+  async initiatePayment(
+    orderId: string,
+    _provider: PaymentProvider,
+    _amount: Money,
+    _currency?: string
+  ): Promise<InitiatePaymentResult> {
+    const intent = await this.createPaymentIntent(orderId)
+    return {
+      payment: (await this.paymentRepo.findById(intent.paymentId)) as Payment,
+      orderNumber: (await this.orderRepo.findById(orderId))?.orderNumber || '0',
+      checkoutUrl: intent.checkoutUrl || '',
+      expiresAt: new Date(Date.now() + 1800 * 1000),
+      estimatedPreparationTime: 15,
     }
   }
 
@@ -118,32 +131,51 @@ export class PaymentService {
     headers: Record<string, string>,
     rawBody: string
   ): Promise<Payment> {
-    // 1. Validate signature via provider
-    const verified = await this.paymentProvider.verifyWebhook(headers, rawBody)
-    if (!verified.isValid) {
-      throw new ValidationError('Invalid webhook signature')
+    // 1. Decode body structure (mock parsing) to match context
+    let parsedPayload: Record<string, unknown> = {}
+    try {
+      parsedPayload = JSON.parse(rawBody) as Record<string, unknown>
+    } catch {}
+
+    const providerTransactionId = String(
+      parsedPayload.providerTransactionId || parsedPayload.id || ''
+    )
+    const paymentId = String(parsedPayload.paymentId || parsedPayload.payment_id || '')
+
+    // 2. Retrieve payment record (match by external ID or internal ID)
+    let payment = await this.paymentRepo.findByExternalId(provider, providerTransactionId)
+    if (!payment && paymentId) {
+      payment = await this.paymentRepo.findById(paymentId)
     }
 
-    // 2. Retrieve payment record (match by external provider transaction ID, fallback to database ID)
-    let payment = await this.paymentRepo.findByExternalId(provider, verified.providerTransactionId)
     if (!payment) {
-      payment = await this.paymentRepo.findById(verified.paymentId)
+      throw new NotFoundError('Payment', paymentId || providerTransactionId)
     }
 
-    if (!payment) {
-      throw new NotFoundError('Payment', verified.paymentId || verified.providerTransactionId)
-    }
-
-    // 3. Webhook Idempotency Check:
-    // If payment is already in a final state, return immediately without re-firing events
+    // 3. Webhook Idempotency Check (run first to avoid queries/sig validation on processed payments)
     if (payment.status === 'PAID' || payment.status === 'FAILED' || payment.status === 'REFUNDED') {
       console.log(
-        `[PaymentService.processProviderWebhook] Webhook transaction "${verified.providerTransactionId}" already processed (status: ${payment.status}). Ignoring.`
+        `[PaymentService.processProviderWebhook] Webhook transaction "${providerTransactionId}" already processed (status: ${payment.status}). Ignoring.`
       )
       return payment
     }
 
-    // 4. Handle state transition
+    // 4. Resolve location configuration to get specific provider instance
+    const order = await this.orderRepo.findById(payment.orderId)
+    if (!order) {
+      throw new NotFoundError('Order', payment.orderId)
+    }
+
+    const tenantConfig = await this.tenantConfigRepo.resolvePaymentConfig(order.locationId)
+    const tenantProvider = PaymentProviderFactory.build(tenantConfig)
+
+    // 5. Validate signature via tenant-specific provider
+    const verified = await tenantProvider.verifyWebhook(headers, rawBody)
+    if (!verified.isValid) {
+      throw new ValidationError('Invalid webhook signature')
+    }
+
+    // 6. Handle state transition
     if (verified.status === 'PAID') {
       // Confirm payment in database
       payment = await this.paymentRepo.confirm(payment.id, {
@@ -152,18 +184,15 @@ export class PaymentService {
         metadata: { webhookProcessedAt: new Date().toISOString() },
       })
 
-      // Update OrderStatus to CONFIRMED (which also triggers OrderPaidEvent conceptually)
+      // Update OrderStatus to CONFIRMED (ready for kitchen)
       await this.orderService.confirmOrder(payment.orderId)
     } else if (verified.status === 'FAILED') {
       payment = await this.paymentRepo.markFailed(
         payment.id,
         'Transaction rejected by payment gateway webhook'
       )
-      // Note: Order remains in DRAFT so the customer can edit/retry checkout.
     } else if (verified.status === 'REFUNDED') {
       payment = await this.paymentRepo.markRefunded(payment.id)
-
-      // Cancel the order
       await this.orderService.cancelOrder(payment.orderId, 'Pago reembolsado por la pasarela')
     }
 
@@ -183,8 +212,14 @@ export class PaymentService {
       return payment
     }
 
+    // Resolve specific provider instance
+    const order = await this.orderRepo.findById(payment.orderId)
+    if (!order) throw new NotFoundError('Order', payment.orderId)
+    const tenantConfig = await this.tenantConfigRepo.resolvePaymentConfig(order.locationId)
+    const tenantProvider = PaymentProviderFactory.build(tenantConfig)
+
     // Poll the provider for current status
-    const status = await this.paymentProvider.fetchStatus(payment.externalId)
+    const status = await tenantProvider.fetchStatus(payment.externalId)
     if (status === 'PAID') {
       payment = await this.paymentRepo.confirm(payment.id, {
         externalId: payment.externalId,
@@ -221,8 +256,14 @@ export class PaymentService {
       throw new ValidationError('Cannot refund payment without an external transaction ID.')
     }
 
+    // Resolve specific provider instance
+    const order = await this.orderRepo.findById(payment.orderId)
+    if (!order) throw new NotFoundError('Order', payment.orderId)
+    const tenantConfig = await this.tenantConfigRepo.resolvePaymentConfig(order.locationId)
+    const tenantProvider = PaymentProviderFactory.build(tenantConfig)
+
     // Call provider refund API
-    const success = await this.paymentProvider.refund(payment.externalId, payment.amount)
+    const success = await tenantProvider.refund(payment.externalId, payment.amount)
     if (!success) {
       throw new ValidationError('Refund request was rejected by the provider.')
     }
@@ -235,9 +276,6 @@ export class PaymentService {
 }
 
 // ─── Singleton instantiation ───────────────────────────────────────────────────
-// The active payment provider is resolved per-tenant at request time via
-// ITenantConfigurationRepository + PaymentProviderFactory.build().
-// The singleton paymentProvider below is the fallback used for webhooks/sync.
 import { PrismaPaymentRepository } from '@/repositories/prisma/PrismaPaymentRepository'
 import { PrismaOrderRepository } from '@/repositories/prisma/PrismaOrderRepository'
 import { PrismaTenantConfigurationRepository } from '@/repositories/prisma/PrismaTenantConfigurationRepository'

@@ -26,10 +26,15 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 | **FASE 7A**  | **Menú Operacional**                       | Panel administrativo `/dashboard/menu` para overrides manuales táctiles.                                                                         | ✅ Completada |
 | **FASE 7B**  | **Google Sheets CMS + n8n Sync**           | Sincronización automatizada diaria del menú mediante códigos SKU y webhook de n8n.                                                               | ✅ Completada |
 | **FASE 7C**  | **Estabilización MVP**                     | Suite de testing con Vitest, auditoría arquitectónica, endurecimiento de seguridad en producción y documentación.                                | ✅ Completada |
+| **FASE 8A**  | **Frontend Cliente Público**               | Carta digital táctil mobile-first en `/menu` con carrito de compras local, notas y personalizador.                                               | ✅ Completada |
+| **FASE 8B**  | **Checkout + Creación de Pedido**          | Creación real de pedidos en estado DRAFT desde la carta, validando stock diario, modificadores obligatorios y snapshots.                         | ✅ Completada |
+| **FASE 8C**  | **Order Tracking + Preparación de Pago**   | Consulta en tiempo real de estados de preparación del pedido con polling y preparación de flujos de pago (SumUp/Webpay).                         | ✅ Completada |
+| **FASE 9A**  | **Integración de Pagos Reales MVP**        | Integración multi-tenant inyectable, webhook idempotente, polling liviano de status y suite de testing para SumUp y Webpay.                      | ✅ Completada |
+| **FASE 9B**  | **Kitchen Display System (KDS)**           | Panel operativo Kanban de cocina táctil en `/dashboard/kitchen`, polling de 10s y máquina de estados estrictos para preparación.                 | ✅ Completada |
 
 ### Próxima Etapa
 
-- **Frontend Público / Experiencia de Cliente:** Construcción de la interfaz pública para clientes finales optimizada para móviles (carta digital, autopedido interactivo y checkout directo).
+- **Integración con WhatsApp (Fase 10):** Implementación de flujos bidireccionales con WhatsApp Evolution API para notificaciones de pedidos, confirmaciones de pago y alertas de estado a clientes finales.
 
 ---
 
@@ -184,6 +189,14 @@ Todas las variables necesarias están documentadas en [`.env.example`](.env.exam
 2. Las ramas deben seguir el formato: `feat/`, `fix/`, `chore/`, `docs/`.
 3. El pre-commit hook ejecutará ESLint + Prettier automáticamente.
 4. Usa `npm run type-check` antes de hacer push.
+
+---
+
+## Workflows n8n
+
+Este repositorio es completamente autocontenido. Incluye toda la lógica backend, frontend y la orquestación en la nube mediante workflows de n8n versionados como Infrastructure as Code en la carpeta [`/n8n`](n8n).
+
+Puedes importar y configurar directamente los workflows (sincronización de menú, webhooks de pagos, notificaciones de orden, alertas de stock bajo y mantenimiento diario) siguiendo la [**Guía de Importación de n8n**](n8n/import-all.md) sin necesidad de recrearlos manualmente.
 
 ---
 

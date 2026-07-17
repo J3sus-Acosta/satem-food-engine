@@ -21,7 +21,7 @@ export class KitchenService {
    * Retrieves active tickets (orders in CONFIRMED, PREPARING, or READY status) for a location queue.
    */
   async getActiveTickets(locationId: string): Promise<OrderWithItems[]> {
-    return this.orderRepo.findActiveOrdersWithItems(locationId)
+    return this.orderRepo.findKitchenQueue(locationId)
   }
 
   /**

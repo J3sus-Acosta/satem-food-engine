@@ -10,6 +10,7 @@ import type {
   OrderType,
   MenuItemWithProduct,
   Modifier,
+  CreateCustomerOrderInput,
 } from '@/types'
 
 /**
@@ -343,6 +344,22 @@ export class OrderService {
   }
 
   /**
+   * Operations for Kitchen: Starts preparation for a paid order.
+   * Transition: CONFIRMED -> PREPARING.
+   */
+  async startPreparation(orderId: string): Promise<OrderWithItems> {
+    return this.startPreparing(orderId)
+  }
+
+  /**
+   * Operations for Kitchen: Completes preparation ready order to delivered/completed.
+   * Transition: READY -> DELIVERED (COMPLETED).
+   */
+  async completeOrder(orderId: string): Promise<OrderWithItems> {
+    return this.markDelivered(orderId)
+  }
+
+  /**
    * Cancels an order and releases any reserved resources.
    */
   async cancelOrder(orderId: string, reason: string): Promise<OrderWithItems> {
@@ -365,6 +382,80 @@ export class OrderService {
     const updatedOrder = await this.orderRepo.findByIdWithItems(orderId)
     if (!updatedOrder) throw new NotFoundError('Order', orderId)
     return updatedOrder
+  }
+
+  /**
+   * Crea un pedido completo de cliente a partir del carrito público de autopedido.
+   * Resuelve el canal por defecto del local y mapea los ítems a sus variantes de producto correspondientes.
+   */
+  async createCustomerOrder(
+    locationId: string,
+    input: Omit<CreateCustomerOrderInput, 'locationId'>
+  ): Promise<OrderWithItems> {
+    if (!input.items || input.items.length === 0) {
+      throw new ValidationError('El pedido debe tener al menos un ítem.')
+    }
+
+    // 1. Resolve default channel ID
+    const channelId = await this.orderRepo.findDefaultChannelId(locationId)
+    if (!channelId) {
+      throw new ValidationError(`No se encontró ningún canal activo para el local "${locationId}".`)
+    }
+
+    // 2. Create empty DRAFT order with customer details inside metadata
+    const order = await this.createDraftOrder(
+      locationId,
+      channelId,
+      undefined,
+      'TAKEAWAY',
+      undefined,
+      undefined,
+      {
+        customerName: (input.customerName || '').trim() || null,
+        customerPhone: (input.customerPhone || '').trim() || null,
+      }
+    )
+
+    // 3. Load active location menu tree
+    const menu = await this.catalogRepo.findMenuByLocationId(locationId)
+    if (!menu) {
+      throw new ValidationError(`No active menu found for location "${locationId}"`)
+    }
+
+    // 4. Add items sequentially
+    for (const inputItem of input.items) {
+      // Find MenuItem to resolve productVariantId
+      let foundMenuItem: MenuItemWithProduct | null = null
+      for (const cat of menu.categories) {
+        const match = cat.items.find((i) => i.id === inputItem.menuItemId)
+        if (match) {
+          foundMenuItem = match
+          break
+        }
+      }
+
+      if (!foundMenuItem) {
+        throw new ValidationError(
+          `MenuItem "${inputItem.menuItemId}" is not available in the current menu for this location.`
+        )
+      }
+
+      // Add item to draft order (OrderService.addItem resolves prices, overrides, and modifier rules)
+      await this.addItem(order.id, {
+        menuItemId: inputItem.menuItemId,
+        productVariantId: foundMenuItem.productVariantId,
+        quantity: inputItem.quantity,
+        notes: inputItem.notes || undefined,
+        modifiers: (inputItem.modifiers || []).map((m) => ({
+          modifierId: m.modifierId,
+          name: '',
+          priceExtra: 0,
+        })),
+      })
+    }
+
+    // 5. Retrieve final fully loaded order with its items
+    return this.getOrder(order.id)
   }
 }
 

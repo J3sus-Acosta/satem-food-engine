@@ -11,43 +11,24 @@ import { WebpayPaymentProvider } from './providers/WebpayPaymentProvider'
  *
  * Responsibilities:
  * - ONLY construct the correct IPaymentProvider for a given provider key.
- * - Does NOT resolve tenant configuration.
- * - Does NOT query the database, environment variables, or any external source.
+ * - Inject location-specific configurations JSON to the provider instances.
+ * - Does NOT resolve tenant configuration hierarchy.
+ * - Does NOT query the database or any external source.
  * - Does NOT contain business logic or priority resolution.
  *
  * Priority resolution lives exclusively in ITenantConfigurationRepository.
- * The Factory only receives an already-resolved PaymentConfiguration.
- *
- * @see ITenantConfigurationRepository — resolves priority hierarchy.
- * @see PrismaTenantConfigurationRepository — concrete implementation.
  */
 export class PaymentProviderFactory {
   /**
    * Builds an IPaymentProvider from an already-resolved PaymentConfiguration.
-   *
-   * This method does NOT query anything — it simply maps the provider key
-   * to the corresponding implementation.
-   *
-   * @param config - The resolved PaymentConfiguration (from ITenantConfigurationRepository).
-   * @throws {ValidationError} if the provider key has no registered implementation.
-   *
-   * @example
-   * ```ts
-   * const config = await tenantConfigRepo.resolvePaymentConfig(locationId)
-   * const provider = PaymentProviderFactory.build(config)
-   * const intent = await provider.createIntent(...)
-   * ```
    */
   static build(config: PaymentConfiguration): IPaymentProvider {
-    return PaymentProviderFactory.buildFromKey(config.provider)
+    return PaymentProviderFactory.buildFromKey(config.provider, config.configuration)
   }
 
   /**
    * Compatibility method for singleton instantiation at startup.
    * Reads process.env.PAYMENT_PROVIDER → falls back to 'SUMUP'.
-   *
-   * Used only in the PaymentService singleton block (src/services/payments/index.ts).
-   * For per-request provider resolution, use build() with a resolved PaymentConfiguration.
    */
   static resolve(): IPaymentProvider {
     const raw = (process.env.PAYMENT_PROVIDER ?? 'SUMUP').toUpperCase().trim()
@@ -58,12 +39,15 @@ export class PaymentProviderFactory {
    * Internal: maps a provider key to its implementation.
    * @throws {ValidationError} for unknown provider keys.
    */
-  private static buildFromKey(provider: PaymentProvider): IPaymentProvider {
+  private static buildFromKey(
+    provider: PaymentProvider,
+    configuration?: Record<string, unknown>
+  ): IPaymentProvider {
     switch (provider) {
       case 'SUMUP':
-        return new SumUpPaymentProvider()
+        return new SumUpPaymentProvider(configuration)
       case 'WEBPAY':
-        return new WebpayPaymentProvider()
+        return new WebpayPaymentProvider(configuration)
       default:
         throw new ValidationError(
           `Payment provider "${provider}" has no registered implementation. ` +

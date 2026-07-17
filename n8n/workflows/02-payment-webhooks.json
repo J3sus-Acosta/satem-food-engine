@@ -1,0 +1,240 @@
+{
+  "name": "SATEM · 02 Payment Webhooks",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 02 Payment Webhooks\n\nRecibe webhooks de SumUp, normaliza el payload y lo reenvía a SATEM /api/webhooks/sumup.\n\nSolo procesa eventos PAYMENT. El resto se ignora silenciosamente.\n\nConfigurar en SumUp el endpoint: /webhook/payment-webhook",
+        "color": 5,
+        "width": 1200,
+        "height": 300
+      },
+      "id": "659967ad-1f17-4bfa-b51a-9e1b650c66e6",
+      "name": "Sticky Note 8e66c7f1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [190, 150]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-webhook",
+        "responseMode": "responseNode"
+      },
+      "id": "5fe75335-c08a-489e-8d31-dab1386a73b9",
+      "name": "SumUp Payment Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "webhookId": "f38fc5c6-5cc9-4476-acfb-c53521534297"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "event-type",
+              "name": "eventType",
+              "value": "={{ $json.body?.type ?? $json.type ?? \"UNKNOWN\" }}",
+              "type": "string"
+            },
+            {
+              "id": "tx-id",
+              "name": "transactionId",
+              "value": "={{ $json.body?.id ?? $json.id ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "tx-status",
+              "name": "status",
+              "value": "={{ $json.body?.status ?? $json.status ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "order-ref",
+              "name": "checkoutReference",
+              "value": "={{ $json.body?.checkout_reference ?? $json.checkout_reference ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "tx-amount",
+              "name": "amount",
+              "value": "={{ $json.body?.amount ?? $json.amount ?? 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "tx-currency",
+              "name": "currency",
+              "value": "={{ $json.body?.currency ?? $json.currency ?? \"CLP\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "810167e1-cfc6-4f63-b1d3-779e579ccf4e",
+      "name": "Normalize Webhook Payload",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.eventType }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "PAYMENT"
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "08e8855e-73cb-4682-8d13-6f311fea3c0e",
+      "name": "Is Payment Event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [840, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.NEXT_PUBLIC_APP_URL ?? \"http://localhost:3000\") + \"/api/webhooks/sumup\" }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { transactionId: $json.transactionId, status: $json.status, checkoutReference: $json.checkoutReference, amount: $json.amount, currency: $json.currency } }}"
+      },
+      "id": "a912f3c8-66e7-4c44-be2d-274b270657ed",
+      "name": "Forward to SATEM Payment API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1140, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { received: true, processedAt: $now.toISO() } }}"
+      },
+      "id": "0277c1f7-9b11-4a1f-8b8a-90247ea02285",
+      "name": "Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1440, 300]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "log-msg",
+              "name": "message",
+              "value": "={{ \"Ignored event: \" + $json.eventType }}",
+              "type": "string"
+            },
+            {
+              "id": "log-ts",
+              "name": "ignoredAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "1e26ac63-963c-4d35-aeb6-963f84b75fca",
+      "name": "Log Non-Payment Event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1140, 420]
+    }
+  ],
+  "connections": {
+    "SumUp Payment Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Webhook Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Webhook Payload": {
+      "main": [
+        [
+          {
+            "node": "Is Payment Event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Payment Event?": {
+      "main": [
+        [
+          {
+            "node": "Forward to SATEM Payment API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Non-Payment Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward to SATEM Payment API": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Non-Payment Event": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp"
+  }
+}

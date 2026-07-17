@@ -385,6 +385,8 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 2. Nunca acceder directamente a Prisma desde servicios.
 3. Nunca desactivar validaciones de seguridad en producción.
 4. Toda integración externa debe usar adapters.
+5. PaymentService nunca instancia proveedores directamente. Siempre debe utilizar PaymentProviderFactory.
+6. Los cambios de estado operacional deben pasar siempre por OrderService. Nunca modificar Order.status directamente desde APIs o componentes.
 
 ---
 

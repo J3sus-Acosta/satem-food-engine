@@ -42,8 +42,14 @@ src/integrations/payments/
 ├── interfaces/
 │   └── IPaymentProvider.ts          ← contrato compartido (abstracción)
 └── providers/
-    ├── SumUpPaymentProvider.ts      ← implementación SumUp (completa)
-    └── WebpayPaymentProvider.ts     ← esqueleto Webpay (pendiente)
+src/integrations/payments/
+├── PaymentProviderFactory.ts        ← build(config) + resolve() fallback
+├── index.ts                         ← barrel export del sub-módulo
+├── interfaces/
+│   └── IPaymentProvider.ts          ← contrato compartido (abstracción)
+└── providers/
+    ├── SumUpPaymentProvider.ts      ← implementación SumUp (inyección de credenciales y mock)
+    └── WebpayPaymentProvider.ts     ← implementación Webpay (inyección de credenciales y mock)
 ```
 
 ---
@@ -51,27 +57,17 @@ src/integrations/payments/
 ## Cómo funciona `PaymentProviderFactory`
 
 La fábrica es la única responsable de instanciar proveedores.
-Lee la variable de entorno `PAYMENT_PROVIDER` y retorna
-la implementación correspondiente de `IPaymentProvider`.
+Acepta una configuración `PaymentConfiguration` efectiva del local y retorna
+la implementación correspondiente de `IPaymentProvider` pasándole la configuración específica en el constructor.
 
 ```ts
 // src/integrations/payments/PaymentProviderFactory.ts
-static resolve(): IPaymentProvider {
-  const providerKey = process.env.PAYMENT_PROVIDER ?? 'sumup'
-  switch (providerKey) {
-    case 'sumup':  return new SumUpPaymentProvider()
-    case 'webpay': return new WebpayPaymentProvider()
-    default:       throw new ValidationError(...)
-  }
+static build(config: PaymentConfiguration): IPaymentProvider {
+  return PaymentProviderFactory.buildFromKey(config.provider, config.configuration)
 }
 ```
 
-`PaymentService` obtiene su proveedor exclusivamente a través de la fábrica:
-
-```ts
-// src/services/payments/index.ts — sección de singleton
-const paymentProvider = PaymentProviderFactory.resolve()
-```
+Esto evita cualquier lectura directa de variables de entorno o Prisma por parte de los adaptadores, asegurando una inyección de dependencias totalmente limpia.
 
 ---
 
