@@ -3,7 +3,7 @@
  * Exports all pure domain services.
  */
 
-export { ProductService } from './products'
+export { ProductService, productService } from './products'
 export { OrderService } from './orders'
 export { PaymentService } from './payments'
 export { KitchenService } from './kitchen'

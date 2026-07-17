@@ -191,6 +191,33 @@ export interface CreateProductVariantInput {
 
 // ─── MENU / CATALOG DOMAIN ────────────────────────────────────────────────────
 
+export interface Menu {
+  id: string
+  locationId: string
+  name: string
+  description: string | null
+  isDefault: boolean
+  isActive: boolean
+  validFrom: Date | null
+  validUntil: Date | null
+  schedule: Record<string, unknown> | null
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date | null
+}
+
+export interface Category {
+  id: string
+  menuId: string
+  name: string
+  imageUrl: string | null
+  sortOrder: number
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date | null
+}
+
 export interface MenuItem {
   id: string
   categoryId: string
@@ -212,6 +239,14 @@ export interface MenuItem {
 export interface MenuItemWithProduct extends MenuItem {
   productVariant: ProductVariant & { product: Product }
   modifierGroups: (ModifierGroup & { modifiers: Modifier[] })[]
+}
+
+export interface CategoryWithItems extends Category {
+  items: MenuItemWithProduct[]
+}
+
+export interface MenuWithCategories extends Menu {
+  categories: CategoryWithItems[]
 }
 
 // ─── ORDER DOMAIN ─────────────────────────────────────────────────────────────

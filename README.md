@@ -12,77 +12,99 @@ SATEM Food Engine es una plataforma multi-tenant construida para modernizar la o
 
 La mayoría de los pequeños negocios de comida opera con procesos manuales fragmentados: WhatsApp para pedidos, Excel para inventario, papel para comandas. SATEM Food Engine unifica todo en una sola plataforma, reduciendo errores, tiempos de espera y costos operacionales.
 
-### Funcionalidades core (roadmap)
+### Roadmap de Implementación
 
-| Módulo           | Descripción                                             | Estado       |
-| ---------------- | ------------------------------------------------------- | ------------ |
-| 📋 Carta Digital | Menú interactivo con categorías, imágenes y precios     | 🔜 Pendiente |
-| 🤖 Chatbot       | Bot web en lenguaje natural para recibir pedidos        | 🔜 Pendiente |
-| 💳 Pagos         | Integración con pasarela de pago (Stripe / MercadoPago) | 🔜 Pendiente |
-| 🍳 Comandas      | Envío automático de pedidos a cocina vía n8n            | 🔜 Pendiente |
-| 📦 Inventario    | Control de stock con alertas automáticas de reposición  | 🔜 Pendiente |
-| 🏪 Multi-local   | Soporte para múltiples locales bajo una misma cuenta    | 🔜 Pendiente |
-| 📊 Reportes      | Panel de analíticas de ventas y rendimiento             | 🔜 Pendiente |
+| Fase       | Título                 | Objetivos Core                                                                                                                              | Estado         |
+| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| **FASE 1** | **Infraestructura**    | Configuración base, TypeScript, ESLint, lint-staged, Husky.                                                                                 | ✅ Completada  |
+| **FASE 2** | **Modelo de Dominio**  | Diseño de base de datos multi-tenant, `schema.prisma` y validaciones.                                                                       | ✅ Completada  |
+| **FASE 3** | **Catálogo Digital**   | Categorías, Productos, Variantes, Modificadores, Disponibilidad, Precios, API y página pública `/menu`. (No chatbot, no pedidos, no pagos). | 🏗️ En Progreso |
+| **FASE 4** | **Pedidos**            | Flujo completo de pedidos utilizando servicios de dominio.                                                                                  | 🔜 Pendiente   |
+| **FASE 5** | **Pagos**              | Integración de pasarela con SumUp.                                                                                                          | 🔜 Pendiente   |
+| **FASE 6** | **Pantalla de Cocina** | Dashboard de cocina para tickets y comandas.                                                                                                | 🔜 Pendiente   |
+| **FASE 7** | **Inventario**         | Control e incremento/decremento automático de stock.                                                                                        | 🔜 Pendiente   |
+| **FASE 8** | **Chatbot IA**         | Interacción conversacional (consumidor de servicios de dominio).                                                                            | 🔜 Pendiente   |
 
 ---
 
 ## Stack Tecnológico
 
-| Capa           | Tecnología                               |
-| -------------- | ---------------------------------------- |
-| Framework      | Next.js 16 (App Router)                  |
-| UI Library     | React 19                                 |
-| Lenguaje       | TypeScript 5 (strict mode)               |
-| Estilos        | Tailwind CSS 4                           |
-| Componentes UI | shadcn/ui                                |
-| ORM            | Prisma (preparado para PostgreSQL)       |
-| Automatización | n8n (self-hosted)                        |
-| Linting        | ESLint 9 + eslint-config-next            |
-| Formateo       | Prettier 3 + prettier-plugin-tailwindcss |
-| Git Hooks      | Husky + lint-staged                      |
-| Runtime        | Node.js LTS                              |
+| Capa           | Tecnología                         |
+| -------------- | ---------------------------------- |
+| Framework      | Next.js 15 (App Router)            |
+| UI Library     | React 19                           |
+| Lenguaje       | TypeScript 5 (strict mode)         |
+| Estilos        | Tailwind CSS 4                     |
+| Componentes    | shadcn/ui (`@base-ui/react` + CSS) |
+| ORM            | Prisma (PostgreSQL)                |
+| Automatización | n8n (self-hosted)                  |
 
 ---
 
-## Arquitectura
+## Arquitectura de Datos
 
-La aplicación es un **monolito full-stack** construido íntegramente con Next.js App Router. No existe un backend separado.
+**PostgreSQL** es la fuente oficial de datos de persistencia del sistema.
+**Google Sheets** actúa estrictamente como **CMS inicial** utilizado por el administrador del restaurante, **NUNCA** como base de datos directa de la aplicación.
+
+El flujo de sincronización y lectura de datos se define así:
+
+```
+[ Administrador ]
+       ↓ (Edita catálogo/precios/config)
+[ Google Sheets ]
+       ↓ (Webhook / Poll)
+[      n8n      ]
+       ↓ (Sincroniza / Escribe)
+[  PostgreSQL   ]
+       ↓ (Carga base / Lectura)
+[ Aplicación Next.js ]
+```
+
+> [!IMPORTANT]
+> La aplicación Next.js **nunca** debe consultar Google Sheets directamente. Toda la lectura de catálogo y estado se realiza desde PostgreSQL a través de la capa de servicios y repositorios.
+
+---
+
+## Estructura de Carpetas
+
+La aplicación sigue los principios de **Clean Architecture** estructurada por dominios:
 
 ```
 src/
 ├── app/                    ← Rutas Next.js (App Router)
-│   ├── (marketing)/        ← Carta pública, landing, menú
-│   ├── (dashboard)/        ← Panel admin del restaurante
-│   └── api/                ← API Routes (Route Handlers)
-├── components/
-│   ├── ui/                 ← shadcn/ui (primitivos reutilizables)
-│   ├── layout/             ← Header, Footer, Sidebar, Nav
-│   ├── chat/               ← Componentes del chatbot
-│   ├── menu/               ← Componentes de carta digital
-│   └── orders/             ← Componentes de pedidos
-├── services/               ← Lógica de negocio pura
-│   ├── chat/
-│   ├── orders/
-│   ├── products/
-│   ├── payments/
-│   ├── inventory/
-│   ├── google/
-│   └── n8n/
-├── server/                 ← Código exclusivo del servidor
-│   └── db.ts               ← Cliente Prisma (singleton server-only)
-├── config/                 ← Constantes y configuración de la app
-├── lib/                    ← Utilidades compartidas (isomórficas)
-├── hooks/                  ← Custom React hooks
-└── types/                  ← Definiciones TypeScript globales
+│   ├── (marketing)/        ← Páginas públicas (ej. /menu)
+│   ├── (dashboard)/        ← Panel administrativo privado
+│   └── api/                ← API Routes (Route Handlers externos)
+├── components/             ← Componentes React de UI (presentación pura)
+│   ├── ui/                 ← Componentes base reutilizables (Base UI)
+│   ├── layout/             ← Header, Footer, Sidebar
+│   └── menu/               ← UI del catálogo digital
+├── services/               ← Lógica de negocio (Casos de uso puros)
+│   ├── products/           ← Gestión de catálogo y productos
+│   ├── orders/             ← Gestión del flujo de pedidos
+│   ├── payments/           ← Lógica de cobros y transacciones
+│   ├── kitchen/            ← Preparación de comandas
+│   ├── inventory/          ← Control de stock
+│   ├── customers/          ← Gestión de clientes y fidelización
+│   └── chat/               ← Orquestación de chatbot
+├── repositories/           ← Capa de acceso a datos (Patrón Repository)
+│   ├── interfaces/         ← Contratos / Puertos de persistencia (puros)
+│   └── prisma/             ← Implementaciones / Adaptadores concretos de Prisma
+├── integrations/           ← Adaptadores tecnológicos externos (n8n, Google, SumUp, Telegram, WhatsApp)
+├── server/                 ← Singleton de base de datos (server-only)
+├── config/                 ← Parámetros de configuración e isomórficos
+├── lib/                    ← Utilidades compartidas y librerías transversales
+└── types/                  ← Tipos de dominio puros de TypeScript (isomórficos)
 ```
 
 ### Principios Arquitectónicos
 
 - **Sin lógica de negocio en componentes React.** Los componentes solo renderizan UI y manejan estado de presentación. Toda la lógica de negocio vive en `services/`.
 - **Server Components por defecto.** Solo se usa `'use client'` cuando se necesita interactividad real (estado, eventos, APIs del navegador).
-- **`server-only` boundary.** Todo código que no debe llegar al cliente (Prisma, API keys, etc.) vive en `src/server/` e importa `server-only`.
-- **API Routes como contrato.** La UI nunca llama directamente a servicios desde el cliente — usa Route Handlers en `app/api/`.
-- **n8n para automatización.** Los flujos complejos (comandas, alertas, notificaciones) se orquestan desde n8n, no desde la app.
+- **`server-only` boundary.** Todo código que no debe llegar al cliente (Prisma, API keys, etc.) vive en `src/server/` o `src/repositories/prisma/` e importa `server-only`.
+- **Llamadas directas en el servidor.** Los Server Components consumen directamente los servicios de dominio de `src/services/` sin realizar peticiones HTTP innecesarias.
+- **API Routes como contratos externos.** Las API Routes de Next.js existen únicamente para integraciones externas (Chatbot, n8n, WhatsApp, Telegram, etc.).
+- **n8n para automatización e integración.** Las integraciones asíncronas y flujos complejos de sincronización (como el CMS de Google Sheets) son responsabilidad de n8n.
 
 ---
 

@@ -13,6 +13,30 @@
 
 ---
 
+## Regla Arquitectónica Principal
+
+1. Ningún canal de comunicación puede contener lógica de negocio.
+
+2. Todo canal (Web, Telegram, WhatsApp, API, QR, Kiosco o cualquier otro futuro) debe consumir exactamente los mismos servicios de dominio.
+
+3. Ningún componente React puede acceder directamente a Prisma.
+
+4. Ninguna API Route puede acceder directamente a Prisma.
+
+5. Ninguna integración externa (n8n, Google, SumUp, Telegram, WhatsApp) puede contener reglas de negocio.
+
+6. Toda lógica debe vivir exclusivamente dentro de los servicios del dominio.
+
+7. Toda persistencia debe realizarse mediante los Repository Interfaces.
+
+8. Toda integración tecnológica debe implementarse únicamente dentro de src/integrations.
+
+9. El dominio nunca debe depender de una tecnología específica.
+
+10. El sistema debe mantenerse preparado para soportar múltiples restaurantes, múltiples sucursales y múltiples canales sin modificar la lógica existente.
+
+---
+
 ## 1. Arquitectura Obligatoria
 
 ### 1.1 Monolito Full-Stack con Next.js App Router

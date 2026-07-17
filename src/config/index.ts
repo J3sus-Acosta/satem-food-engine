@@ -14,6 +14,11 @@ export const APP_CONFIG = {
   url: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
 } as const
 
+export const TENANT_CONFIG = {
+  defaultOrganizationSlug: process.env.NEXT_PUBLIC_DEFAULT_ORGANIZATION_SLUG ?? 'mci-santiago',
+  defaultLocationSlug: process.env.NEXT_PUBLIC_DEFAULT_LOCATION_SLUG ?? 'foodtruck-patio',
+} as const
+
 export const ROUTES = {
   home: '/',
   menu: '/menu',
