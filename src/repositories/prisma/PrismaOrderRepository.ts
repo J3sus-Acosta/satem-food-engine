@@ -630,4 +630,40 @@ export class PrismaOrderRepository implements IOrderRepository {
       throw error
     }
   }
+
+  async findActiveOrdersWithItems(locationId: string): Promise<OrderWithItems[]> {
+    try {
+      const orders = await db.order.findMany({
+        where: {
+          locationId,
+          deletedAt: null,
+          status: { in: ['CONFIRMED', 'PREPARING', 'READY'] },
+        },
+        include: {
+          items: {
+            include: {
+              modifiers: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' }, // FIFO: oldest first
+      })
+      return orders.map(mapPrismaOrderWithItemsToDomain)
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaOrderRepository.findActiveOrdersWithItems] DB connection failed, using in-memory store.'
+        )
+        const result = IN_MEMORY_ORDERS.filter(
+          (o) =>
+            o.locationId === locationId &&
+            o.deletedAt === null &&
+            ['CONFIRMED', 'PREPARING', 'READY'].includes(o.status)
+        )
+        // Sort ascending by createdAt (oldest first)
+        return [...result].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      }
+      throw error
+    }
+  }
 }

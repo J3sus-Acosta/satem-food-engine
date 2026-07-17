@@ -264,6 +264,28 @@ export class OrderService {
   }
 
   /**
+   * Marks an order as starting preparation.
+   */
+  async startPreparing(orderId: string): Promise<OrderWithItems> {
+    const order = await this.orderRepo.findByIdWithItems(orderId)
+    if (!order) {
+      throw new NotFoundError('Order', orderId)
+    }
+
+    if (order.status !== 'CONFIRMED') {
+      throw new ConflictError(
+        `Cannot start preparation for order in status "${order.status}". Must be CONFIRMED.`
+      )
+    }
+
+    await this.orderRepo.updateStatus(orderId, 'PREPARING')
+
+    const updatedOrder = await this.orderRepo.findByIdWithItems(orderId)
+    if (!updatedOrder) throw new NotFoundError('Order', orderId)
+    return updatedOrder
+  }
+
+  /**
    * Marks an order as ready for pickup/delivery.
    */
   async markReady(orderId: string): Promise<OrderWithItems> {

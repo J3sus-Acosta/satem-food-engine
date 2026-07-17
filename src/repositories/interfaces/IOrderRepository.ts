@@ -102,4 +102,9 @@ export interface IOrderRepository {
    * Must be atomic to avoid duplicates under concurrent requests.
    */
   nextOrderNumber(locationId: string): Promise<string>
+
+  /**
+   * Retrieves active orders with all items and modifiers for kitchen display (FIFO).
+   */
+  findActiveOrdersWithItems(locationId: string): Promise<OrderWithItems[]>
 }

@@ -1,59 +1,48 @@
 import 'server-only'
 
-import { NotImplementedError } from '@/lib/errors'
-import type { IKitchenRepository } from '@/repositories'
-import type { KitchenTicket, KitchenTicketWithItems } from '@/types'
+import type { IOrderRepository } from '@/repositories'
+import type { OrderService } from '../orders'
+import type { OrderWithItems } from '@/types'
 
 /**
  * Service managing kitchen ticketing and preparation status.
  *
  * Responsibilities:
- * - Creating tickets upon order confirmation.
- * - Tracking preparation lifecycle (Pending -> In Progress -> Done).
- * - Future extension: routing to multiple kitchen stations.
+ * - Retrieving active orders for the kitchen Kanban display.
+ * - Changing order status as preparation begins and finishes.
  */
 export class KitchenService {
-  constructor(private readonly kitchenRepo: IKitchenRepository) {}
+  constructor(
+    private readonly orderRepo: IOrderRepository,
+    private readonly orderService: OrderService
+  ) {}
 
   /**
-   * Retrieves active tickets for a location queue.
+   * Retrieves active tickets (orders in CONFIRMED, PREPARING, or READY status) for a location queue.
    */
-  async getActiveQueue(locationId: string): Promise<KitchenTicketWithItems[]> {
-    throw new NotImplementedError('KitchenService.getActiveQueue')
+  async getActiveTickets(locationId: string): Promise<OrderWithItems[]> {
+    return this.orderRepo.findActiveOrdersWithItems(locationId)
   }
 
   /**
-   * Creates a kitchen ticket for a confirmed order.
+   * Marks a kitchen ticket/order as starting preparation.
    */
-  async createTicketForOrder(orderId: string): Promise<KitchenTicketWithItems> {
-    throw new NotImplementedError('KitchenService.createTicketForOrder')
+  async startPreparing(orderId: string): Promise<OrderWithItems> {
+    return this.orderService.startPreparing(orderId)
   }
 
   /**
-   * Marks a kitchen ticket as starting preparation.
+   * Marks a kitchen ticket/order as ready.
    */
-  async startPreparation(ticketId: string): Promise<KitchenTicket> {
-    throw new NotImplementedError('KitchenService.startPreparation')
-  }
-
-  /**
-   * Marks a kitchen ticket as completed.
-   */
-  async completePreparation(ticketId: string): Promise<KitchenTicket> {
-    throw new NotImplementedError('KitchenService.completePreparation')
-  }
-
-  /**
-   * Cancels a kitchen ticket.
-   */
-  async cancelTicket(ticketId: string): Promise<KitchenTicket> {
-    throw new NotImplementedError('KitchenService.cancelTicket')
-  }
-
-  /**
-   * Simulates/triggers printing for a ticket.
-   */
-  async printTicket(ticketId: string): Promise<KitchenTicket> {
-    throw new NotImplementedError('KitchenService.printTicket')
+  async markReady(orderId: string): Promise<OrderWithItems> {
+    return this.orderService.markReady(orderId)
   }
 }
+
+// Instantiate and export service singletons
+import { PrismaOrderRepository } from '@/repositories/prisma/PrismaOrderRepository'
+import { orderService } from '../orders'
+
+const orderRepo = new PrismaOrderRepository()
+
+export const kitchenService = new KitchenService(orderRepo, orderService)
