@@ -1,0 +1,38 @@
+/**
+ * Application-wide configuration constants.
+ *
+ * This file is isomorphic (safe for both server and client).
+ * Do NOT import secrets or server-only modules here.
+ * Access environment variables that must stay private via src/server/ only.
+ */
+
+export const APP_CONFIG = {
+  name: 'SATEM Food Engine',
+  description:
+    'Plataforma SaaS para restaurantes, cafeterías y food trucks con carta digital, chatbot de pedidos y gestión de inventario.',
+  version: '0.1.0',
+  url: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+} as const
+
+export const ROUTES = {
+  home: '/',
+  menu: '/menu',
+  orders: '/orders',
+  dashboard: {
+    root: '/dashboard',
+    orders: '/dashboard/orders',
+    products: '/dashboard/products',
+    inventory: '/dashboard/inventory',
+    settings: '/dashboard/settings',
+  },
+  api: {
+    orders: '/api/orders',
+    products: '/api/products',
+    chat: '/api/chat',
+    payments: '/api/payments',
+    inventory: '/api/inventory',
+    webhooks: {
+      n8n: '/api/webhooks/n8n',
+    },
+  },
+} as const
