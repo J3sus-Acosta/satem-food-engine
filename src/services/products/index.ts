@@ -356,6 +356,18 @@ export class ProductService {
 
     return results
   }
+  /**
+   * Deletes all DailyMenuOverrides for a location's active menu.
+   * Called by the nightly maintenance job (n8n workflow 04) at 02:00 AM
+   * to reset daily availability, stock, and pricing overrides before the
+   * next sync from Google Sheets at 08:00 AM.
+   *
+   * @param locationId - Internal location ID.
+   * @returns The number of override records deleted.
+   */
+  async resetDailyOverrides(locationId: string): Promise<number> {
+    return this.catalogRepo.resetDailyOverrides(locationId)
+  }
 }
 
 // Instantiate and export service singletons

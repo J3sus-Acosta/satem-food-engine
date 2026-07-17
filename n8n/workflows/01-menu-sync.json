@@ -52,19 +52,23 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ ($env.NEXT_PUBLIC_APP_URL ?? \"http://localhost:3000\") + \"/api/menu/sync-daily/apply\" }}",
+        "url": "={{ ($env.NEXT_PUBLIC_APP_URL ?? \"http://localhost:3000\") + \"/api/webhooks/menu-sync\" }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "x-menu-sync-secret",
+              "value": "={{ $env.MENU_SYNC_SECRET ?? \"\" }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { locationSlug: \"default\", csvData: $json.data } }}"
+        "jsonBody": "={{ { locationId: ($env.SATEM_DEFAULT_LOCATION_ID ?? \"default\"), rows: $json.data } }}"
       },
       "id": "94efd9b6-e5c9-458f-bbfe-522a2b7ecee7",
       "name": "Apply Menu Overrides to SATEM",

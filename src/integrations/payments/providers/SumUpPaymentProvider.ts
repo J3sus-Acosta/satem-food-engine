@@ -1,3 +1,5 @@
+import crypto from 'crypto'
+
 import { NotImplementedError } from '@/lib/errors'
 import type {
   IPaymentProvider,
@@ -74,22 +76,8 @@ export class SumUpPaymentProvider implements IPaymentProvider {
     // For testing and mock verification
     const mockSig = normalizedHeaders['x-mock-signature']
 
-    // In production, reject any mock signature and require configured webhook secret
-    if (isProd) {
-      if (!process.env.SUMUP_WEBHOOK_SECRET) {
-        console.error(
-          '[SumUpPaymentProvider] Refusing webhook validation: SUMUP_WEBHOOK_SECRET is not configured in production environment.'
-        )
-        return {
-          isValid: false,
-          paymentId: '',
-          providerTransactionId: '',
-          amount: 0,
-          status: 'FAILED',
-        }
-      }
-    } else {
-      // In development/test mode, allow mock signature or empty secret fallback
+    // In development/test mode, allow mock signature or empty secret fallback
+    if (!isProd) {
       if (mockSig === 'true' || !process.env.SUMUP_WEBHOOK_SECRET) {
         try {
           const payload = JSON.parse(rawBody) as Record<string, unknown>
@@ -112,17 +100,85 @@ export class SumUpPaymentProvider implements IPaymentProvider {
       }
     }
 
-    // TODO: Real SumUp Webhook signature verification
-    // 1. Get header: normalizedHeaders['sumup-signature']
-    // 2. Compute HMAC SHA256 of rawBody with webhookSecret
-    // 3. Compare signatures (use crypto.timingSafeEqual)
-    void this.webhookSecret // accessed via this — available for the real implementation
-    return {
-      isValid: false,
-      paymentId: '',
-      providerTransactionId: '',
-      amount: 0,
-      status: 'FAILED',
+    // ── Production: Real HMAC-SHA256 signature verification ──────────────────
+    // SumUp signs the raw request body with the webhook secret and sends the
+    // result as a hex-encoded HMAC-SHA256 digest in the `sumup-signature` header.
+    // Reference: https://developer.sumup.com/online-payments/webhooks/
+    if (!process.env.SUMUP_WEBHOOK_SECRET) {
+      console.error(
+        '[SumUpPaymentProvider] SUMUP_WEBHOOK_SECRET is not configured. Rejecting webhook.'
+      )
+      return {
+        isValid: false,
+        paymentId: '',
+        providerTransactionId: '',
+        amount: 0,
+        status: 'FAILED',
+      }
+    }
+
+    const receivedSig = normalizedHeaders['sumup-signature'] ?? ''
+    if (!receivedSig) {
+      console.error('[SumUpPaymentProvider] Missing sumup-signature header. Rejecting webhook.')
+      return {
+        isValid: false,
+        paymentId: '',
+        providerTransactionId: '',
+        amount: 0,
+        status: 'FAILED',
+      }
+    }
+
+    // Compute expected HMAC-SHA256 signature
+    const expectedSig = crypto
+      .createHmac('sha256', this.webhookSecret)
+      .update(rawBody, 'utf8')
+      .digest('hex')
+
+    // Timing-safe comparison to prevent timing attacks
+    const expectedBuf = Buffer.from(expectedSig, 'utf8')
+    const receivedBuf = Buffer.from(receivedSig, 'utf8')
+    const signaturesMatch =
+      expectedBuf.length === receivedBuf.length && crypto.timingSafeEqual(expectedBuf, receivedBuf)
+
+    if (!signaturesMatch) {
+      console.error('[SumUpPaymentProvider] Invalid webhook signature. Rejecting webhook.')
+      return {
+        isValid: false,
+        paymentId: '',
+        providerTransactionId: '',
+        amount: 0,
+        status: 'FAILED',
+      }
+    }
+
+    // Signature valid — parse the confirmed payload
+    try {
+      const payload = JSON.parse(rawBody) as Record<string, unknown>
+      // Map SumUp webhook event fields to internal contract
+      // SumUp sends: { id, checkout_reference, amount, currency, status, ... }
+      const providerTransactionId = String(
+        payload.id ?? payload.providerTransactionId ?? 'unknown_tx'
+      )
+      const paymentId = String(
+        payload.checkout_reference ?? payload.paymentId ?? payload.payment_id ?? ''
+      )
+      const amount = Number(payload.amount ?? 0)
+      // SumUp statuses: PENDING, PAID, FAILED, REFUNDED
+      const rawStatus = String(payload.status ?? '').toUpperCase()
+      const status: 'PAID' | 'FAILED' | 'REFUNDED' =
+        rawStatus === 'PAID' ? 'PAID' : rawStatus === 'REFUNDED' ? 'REFUNDED' : 'FAILED'
+
+      return { isValid: true, paymentId, providerTransactionId, amount, status }
+    } catch {
+      console.error('[SumUpPaymentProvider] Failed to parse verified webhook body.')
+      return {
+        isValid: false,
+        paymentId: '',
+        providerTransactionId: '',
+        amount: 0,
+        status: 'FAILED',
+      }
     }
   }
 

@@ -35,19 +35,23 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ ($env.NEXT_PUBLIC_APP_URL ?? \"http://localhost:3000\") + \"/api/menu/sync-daily/apply\" }}",
+        "url": "={{ ($env.NEXT_PUBLIC_APP_URL ?? \"http://localhost:3000\") + \"/api/menu/reset-daily\" }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Content-Type",
               "value": "application/json"
+            },
+            {
+              "name": "x-menu-sync-secret",
+              "value": "={{ $env.MENU_SYNC_SECRET ?? \"\" }}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { locationSlug: \"default\", csvData: \"\", reset: true } }}"
+        "jsonBody": "={{ { locationId: ($env.SATEM_DEFAULT_LOCATION_ID ?? \"default\") } }}"
       },
       "id": "f2b0aa02-ca46-450f-8760-3b3762b7dddd",
       "name": "Reset Daily Menu Overrides",

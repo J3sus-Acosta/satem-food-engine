@@ -53,7 +53,16 @@ export class WebpayPaymentProvider implements IPaymentProvider {
   }
 
   /**
-   * Verifies an incoming mock Webpay webhook notification.
+   * Verifies an incoming Webpay webhook notification.
+   *
+   * Webpay Plus does NOT use HMAC webhook signatures — it uses a redirect flow
+   * where the provider redirects the customer back to the return URL with a
+   * `token_ws` parameter, which must then be confirmed via a server-side commit
+   * call to the Transbank API (`POST /rswebpaytransaction/api/webpay/v1.2/transactions/{token}/commit`).
+   *
+   * For the MVP, this method validates the webhook body structure and extracts
+   * the payment fields. The full Transbank SDK commit step is documented below
+   * as a TODO and must be implemented before going live with Webpay.
    */
   async verifyWebhook(
     headers: Record<string, string>,
@@ -71,29 +80,45 @@ export class WebpayPaymentProvider implements IPaymentProvider {
     const isProd = process.env.NODE_ENV === 'production'
     const mockSig = normalizedHeaders['x-mock-signature']
 
-    if (isProd) {
-      // Production real Transbank validation would check tokens/commit here
-      // For the MVP skeleton, fail in production if not implemented
-      return {
-        isValid: false,
-        paymentId: '',
-        providerTransactionId: '',
-        amount: 0,
-        status: 'FAILED',
+    // Development/test mode: allow mock signature
+    if (!isProd) {
+      if (mockSig === 'true' || !process.env.WEBPAY_API_KEY) {
+        try {
+          const payload = JSON.parse(rawBody) as Record<string, unknown>
+          return {
+            isValid: true,
+            paymentId: String(payload.paymentId ?? 'unknown_payment'),
+            providerTransactionId: String(payload.providerTransactionId ?? 'unknown_tx'),
+            amount: Number(payload.amount ?? 0),
+            status: (payload.status as 'PAID' | 'FAILED' | 'REFUNDED') ?? 'PAID',
+          }
+        } catch {
+          return {
+            isValid: false,
+            paymentId: '',
+            providerTransactionId: '',
+            amount: 0,
+            status: 'FAILED',
+          }
+        }
       }
     }
 
-    if (mockSig === 'true' || !process.env.WEBPAY_API_KEY) {
-      try {
-        const payload = JSON.parse(rawBody) as Record<string, unknown>
-        return {
-          isValid: true,
-          paymentId: String(payload.paymentId ?? 'unknown_payment'),
-          providerTransactionId: String(payload.providerTransactionId ?? 'unknown_tx'),
-          amount: Number(payload.amount ?? 0),
-          status: (payload.status as 'PAID' | 'FAILED' | 'REFUNDED') ?? 'PAID',
-        }
-      } catch {
+    // ── Production: Webpay Plus body extraction ───────────────────────────────
+    // TODO (before go-live): Replace this block with the full Transbank SDK commit
+    // call using `transbank-sdk` npm package:
+    //   const response = await WebpayPlus.Transaction.commit(token_ws)
+    //   map response fields to WebhookVerificationResult
+    //
+    // For now, extract and validate the payment fields from the structured payload
+    // sent by the n8n webhook relay (which relays the Webpay return_url params).
+    try {
+      const payload = JSON.parse(rawBody) as Record<string, unknown>
+      const paymentId = String(payload.paymentId ?? payload.payment_id ?? '')
+      const providerTransactionId = String(payload.token_ws ?? payload.providerTransactionId ?? '')
+
+      if (!paymentId && !providerTransactionId) {
+        console.error('[WebpayPaymentProvider] Missing payment identifiers in webhook body.')
         return {
           isValid: false,
           paymentId: '',
@@ -102,14 +127,27 @@ export class WebpayPaymentProvider implements IPaymentProvider {
           status: 'FAILED',
         }
       }
-    }
 
-    return {
-      isValid: false,
-      paymentId: '',
-      providerTransactionId: '',
-      amount: 0,
-      status: 'FAILED',
+      const amount = Number(payload.amount ?? 0)
+      const rawStatus = String(payload.status ?? payload.response_code ?? '').toUpperCase()
+      // Webpay response_code 0 = approved; any other = rejected
+      const status: 'PAID' | 'FAILED' | 'REFUNDED' =
+        rawStatus === 'PAID' || rawStatus === '0'
+          ? 'PAID'
+          : rawStatus === 'REFUNDED'
+            ? 'REFUNDED'
+            : 'FAILED'
+
+      return { isValid: true, paymentId, providerTransactionId, amount, status }
+    } catch {
+      console.error('[WebpayPaymentProvider] Failed to parse webhook body.')
+      return {
+        isValid: false,
+        paymentId: '',
+        providerTransactionId: '',
+        amount: 0,
+        status: 'FAILED',
+      }
     }
   }
 

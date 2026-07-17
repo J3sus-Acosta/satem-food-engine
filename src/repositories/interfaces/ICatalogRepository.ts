@@ -61,4 +61,13 @@ export interface ICatalogRepository {
       notes: string | null
     }
   ): Promise<DailyMenuOverride>
+
+  /**
+   * Deletes all DailyMenuOverrides for every MenuItem belonging to the active
+   * menu of the given location. Called by the nightly maintenance workflow to
+   * reset daily menu state before the next day's sync.
+   *
+   * @returns The number of overrides deleted.
+   */
+  resetDailyOverrides(locationId: string): Promise<number>
 }

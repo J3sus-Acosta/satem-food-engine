@@ -1062,4 +1062,60 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       }
     }
   }
+
+  /**
+   * Deletes all DailyMenuOverrides for the active menu of the given location.
+   * Called by the nightly maintenance workflow at 02:00 AM before the next day's sync.
+   *
+   * @returns The number of override records deleted.
+   */
+  async resetDailyOverrides(locationId: string): Promise<number> {
+    try {
+      // 1. Resolve the active menu for this location
+      const menu = await db.menu.findFirst({
+        where: { locationId, isActive: true, deletedAt: null },
+        select: {
+          categories: {
+            where: { isActive: true, deletedAt: null },
+            select: {
+              menuItems: {
+                where: { deletedAt: null },
+                select: { id: true },
+              },
+            },
+          },
+        },
+      })
+
+      if (!menu) {
+        console.warn(
+          `[PrismaCatalogRepository.resetDailyOverrides] No active menu found for locationId "${locationId}". Nothing to reset.`
+        )
+        return 0
+      }
+
+      // 2. Collect all MenuItem IDs from all categories in the menu
+      const menuItemIds: string[] = menu.categories.flatMap((cat) =>
+        cat.menuItems.map((item) => item.id)
+      )
+
+      if (menuItemIds.length === 0) {
+        return 0
+      }
+
+      // 3. Bulk-delete all DailyMenuOverrides for those MenuItems
+      const result = await db.dailyMenuOverride.deleteMany({
+        where: { menuItemId: { in: menuItemIds } },
+      })
+
+      return result.count
+    } catch (error) {
+      console.error(
+        `[PrismaCatalogRepository.resetDailyOverrides] Database error for locationId "${locationId}":`,
+        error
+      )
+      // Return 0 instead of throwing — the nightly job should not abort on this error
+      return 0
+    }
+  }
 }

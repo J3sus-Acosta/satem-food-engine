@@ -278,58 +278,113 @@ export class PrismaOrderRepository implements IOrderRepository {
   }
 
   async create(data: CreateOrderInput): Promise<Order> {
-    const orderNumber = await this.nextOrderNumber(data.locationId)
-    try {
-      const order = await db.order.create({
-        data: {
-          orderNumber,
-          locationId: data.locationId,
-          channelId: data.channelId,
-          customerId: data.customerId || null,
-          type: data.type || 'DINE_IN',
-          tableIdentifier: data.tableIdentifier || null,
-          notes: data.notes || null,
-          metadata: (data.metadata || {}) as Prisma.InputJsonValue,
-          subtotal: 0,
-          taxAmount: 0,
-          discountAmount: 0,
-          totalAmount: 0,
-        },
-      })
-      return mapPrismaOrderToDomain(order)
-    } catch (error) {
-      if (isConnectionError(error)) {
-        console.warn('[PrismaOrderRepository.create] DB connection failed, using in-memory store.')
-        const newOrder: OrderWithItems = {
-          id: `mem_order_${++IN_MEMORY_COUNTER}`,
-          orderNumber,
-          locationId: data.locationId,
-          channelId: data.channelId,
-          customerId: data.customerId || null,
-          status: 'DRAFT',
-          type: data.type || 'DINE_IN',
-          tableIdentifier: data.tableIdentifier || null,
-          notes: data.notes || null,
-          subtotal: 0,
-          taxAmount: 0,
-          discountAmount: 0,
-          totalAmount: 0,
-          confirmedAt: null,
-          preparedAt: null,
-          deliveredAt: null,
-          cancelledAt: null,
-          cancellationReason: null,
-          metadata: data.metadata || null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          deletedAt: null,
-          items: [],
+    // ── Atomic order creation with retry on unique constraint collision ────────
+    //
+    // Problem: Reading the last order number and inserting a new one are two
+    // separate operations. Under concurrent load two requests could read the
+    // same "last" number and both attempt to insert, causing a P2002 (unique
+    // constraint violation on locationId + orderNumber).
+    //
+    // Fix: Wrap both operations in a db.$transaction so that PostgreSQL
+    // serialises the read + write. If a concurrent write still sneaks in and
+    // causes a P2002, we retry with the freshly computed next number.
+    const MAX_RETRIES = 5
+
+    const tryCreate = async (): Promise<Order> => {
+      // Calculate the next order number INSIDE the transaction so the read
+      // and the write are atomic at the database level.
+      return db.$transaction(async (tx) => {
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+
+        const latestOrder = await tx.order.findFirst({
+          where: { locationId: data.locationId, createdAt: { gte: todayStart } },
+          orderBy: { orderNumber: 'desc' },
+          select: { orderNumber: true },
+        })
+
+        let orderNumber = '#001'
+        if (latestOrder) {
+          const lastNumStr = latestOrder.orderNumber.replace('#', '')
+          const lastNum = parseInt(lastNumStr, 10)
+          if (!isNaN(lastNum)) {
+            orderNumber = `#${String(lastNum + 1).padStart(3, '0')}`
+          }
         }
-        IN_MEMORY_ORDERS.push(newOrder)
-        return newOrder
-      }
-      throw error
+
+        const order = await tx.order.create({
+          data: {
+            orderNumber,
+            locationId: data.locationId,
+            channelId: data.channelId,
+            customerId: data.customerId || null,
+            type: data.type || 'DINE_IN',
+            tableIdentifier: data.tableIdentifier || null,
+            notes: data.notes || null,
+            metadata: (data.metadata || {}) as Prisma.InputJsonValue,
+            subtotal: 0,
+            taxAmount: 0,
+            discountAmount: 0,
+            totalAmount: 0,
+          },
+        })
+        return mapPrismaOrderToDomain(order)
+      })
     }
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        return await tryCreate()
+      } catch (error) {
+        const prismaError = error as { code?: string }
+        if (prismaError?.code === 'P2002' && attempt < MAX_RETRIES) {
+          // Unique constraint collision on orderNumber — retry immediately
+          // (the next iteration reads the freshly inserted order number)
+          continue
+        }
+        if (isConnectionError(error)) {
+          // Fallback to in-memory store when PostgreSQL is unavailable
+          console.warn(
+            '[PrismaOrderRepository.create] DB connection failed, using in-memory store.'
+          )
+          IN_MEMORY_COUNTER++
+          const orderNumber = `#${String(IN_MEMORY_COUNTER).padStart(3, '0')}`
+          const newOrder: OrderWithItems = {
+            id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            orderNumber,
+            locationId: data.locationId,
+            customerId: data.customerId || null,
+            channelId: data.channelId,
+            status: 'DRAFT' as OrderStatus,
+            type: (data.type || 'DINE_IN') as OrderType,
+            tableIdentifier: data.tableIdentifier || null,
+            notes: data.notes || null,
+            subtotal: 0,
+            taxAmount: 0,
+            discountAmount: 0,
+            totalAmount: 0,
+            metadata: data.metadata || null,
+            cancellationReason: null,
+            confirmedAt: null,
+            preparedAt: null,
+            deliveredAt: null,
+            cancelledAt: null,
+            deletedAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            items: [],
+          }
+          IN_MEMORY_ORDERS.push(newOrder)
+          return newOrder
+        }
+        throw error
+      }
+    }
+
+    // Exhausted retries — this should be extremely rare in practice
+    throw new Error(
+      `[PrismaOrderRepository.create] Failed to generate a unique order number for location "${data.locationId}" after ${MAX_RETRIES} attempts.`
+    )
   }
 
   async addItem(

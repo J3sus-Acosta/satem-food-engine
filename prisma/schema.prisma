@@ -51,29 +51,29 @@ enum TaxCategory {
 
 /// Estado del ciclo de vida del pedido
 enum OrderStatus {
-  DRAFT      // Pedido en construcción (carrito del chatbot)
-  PENDING    // Enviado, esperando confirmación
-  CONFIRMED  // Aceptado por el local
-  PREPARING  // En cocina
-  READY      // Listo para entrega/retiro
-  DELIVERED  // Entregado al cliente
-  CANCELLED  // Cancelado
+  DRAFT // Pedido en construcción (carrito del chatbot)
+  PENDING // Enviado, esperando confirmación
+  CONFIRMED // Aceptado por el local
+  PREPARING // En cocina
+  READY // Listo para entrega/retiro
+  DELIVERED // Entregado al cliente
+  CANCELLED // Cancelado
 }
 
 /// Modalidad del pedido
 enum OrderType {
-  DINE_IN   // En el local (mesa)
-  TAKEAWAY  // Para llevar
-  DELIVERY  // Despacho a domicilio
+  DINE_IN // En el local (mesa)
+  TAKEAWAY // Para llevar
+  DELIVERY // Despacho a domicilio
 }
 
 /// Estado de la transacción de pago
 enum PaymentStatus {
-  PENDING    // Iniciado, sin respuesta del proveedor
+  PENDING // Iniciado, sin respuesta del proveedor
   PROCESSING // En proceso con el proveedor
-  PAID       // Confirmado
-  FAILED     // Fallido
-  REFUNDED   // Reembolsado
+  PAID // Confirmado
+  FAILED // Fallido
+  REFUNDED // Reembolsado
 }
 
 /// Proveedor de pago
@@ -90,38 +90,38 @@ enum PaymentProvider {
 
 /// Estado de la comanda de cocina
 enum KitchenTicketStatus {
-  PENDING     // Recibida, sin iniciar
+  PENDING // Recibida, sin iniciar
   IN_PROGRESS // Siendo preparada
-  DONE        // Lista
-  CANCELLED   // Cancelada
+  DONE // Lista
+  CANCELLED // Cancelada
 }
 
 /// Canal de origen del pedido
 /// Extensible sin cambios de schema: agregar un nuevo canal = nueva variante del enum
 enum ChannelType {
-  WEB       // Carta digital web
-  WHATSAPP  // WhatsApp Cloud API
-  TELEGRAM  // Telegram Bot API
-  QR        // QR en mesa (redirige a web)
-  KIOSK     // Kiosco de autoservicio
+  WEB // Carta digital web
+  WHATSAPP // WhatsApp Cloud API
+  TELEGRAM // Telegram Bot API
+  QR // QR en mesa (redirige a web)
+  KIOSK // Kiosco de autoservicio
   INSTAGRAM // Instagram DM (futuro)
-  FACEBOOK  // Facebook Messenger (futuro)
-  API       // Integración directa vía API REST
+  FACEBOOK // Facebook Messenger (futuro)
+  API // Integración directa vía API REST
 }
 
 /// Estado de la sesión de canal (conversación del chatbot)
 enum ChannelSessionStatus {
-  ACTIVE    // Conversación en curso
-  RESOLVED  // Finalizada correctamente (pedido creado o consulta resuelta)
+  ACTIVE // Conversación en curso
+  RESOLVED // Finalizada correctamente (pedido creado o consulta resuelta)
   ABANDONED // Inactiva sin finalizar
-  EXPIRED   // Caducó por timeout
+  EXPIRED // Caducó por timeout
 }
 
 /// Rol del emisor de un mensaje
 enum MessageRole {
-  USER      // Cliente
+  USER // Cliente
   ASSISTANT // Bot / IA
-  SYSTEM    // Evento de sistema
+  SYSTEM // Evento de sistema
 }
 
 /// Tipo de contenido de un mensaje
@@ -130,7 +130,7 @@ enum MessageType {
   IMAGE
   AUDIO
   INTERACTIVE // Botones, listas (WhatsApp / Telegram)
-  ORDER       // Payload estructurado de pedido
+  ORDER // Payload estructurado de pedido
 }
 
 /// Unidad de medida de ingredientes de inventario
@@ -144,20 +144,20 @@ enum IngredientUnit {
 
 /// Tipo de movimiento de stock
 enum StockMovementType {
-  PURCHASE   // Compra/reposición
-  SALE       // Descuento por venta
-  WASTE      // Merma
+  PURCHASE // Compra/reposición
+  SALE // Descuento por venta
+  WASTE // Merma
   ADJUSTMENT // Ajuste manual
-  RETURN     // Devolución al proveedor
+  RETURN // Devolución al proveedor
 }
 
 /// Rol del usuario (personal interno)
 enum UserRole {
-  OWNER    // Dueño: acceso total a toda la organización
-  ADMIN    // Administrador: acceso a todos los locales
-  MANAGER  // Gerente: acceso a locales asignados
-  CASHIER  // Cajero: pedidos y pagos
-  KITCHEN  // Cocina: solo vista de tickets
+  OWNER // Dueño: acceso total a toda la organización
+  ADMIN // Administrador: acceso a todos los locales
+  MANAGER // Gerente: acceso a locales asignados
+  CASHIER // Cajero: pedidos y pagos
+  KITCHEN // Cocina: solo vista de tickets
 }
 
 /// Nivel de fidelización del cliente
@@ -174,32 +174,32 @@ enum LoyaltyTier {
 /// Representa una empresa, marca o emprendedor.
 /// TODOS los demás modelos pertenecen directa o indirectamente a una Organization.
 model Organization {
-  id            String           @id @default(cuid())
-  slug          String           @unique
-  name          String
-  legalName     String?
-  taxId         String?
-  logoUrl       String?
-  plan          OrganizationPlan @default(FREE)
-  planExpiresAt DateTime?
-  isActive      Boolean          @default(true)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  deletedAt     DateTime?
+  id                   String           @id @default(cuid())
+  slug                 String           @unique
+  name                 String
+  legalName            String?
+  taxId                String?
+  logoUrl              String?
+  plan                 OrganizationPlan @default(FREE)
+  planExpiresAt        DateTime?
+  isActive             Boolean          @default(true)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  deletedAt            DateTime?
   /// Proveedor de pago preferido para toda la organización.
   /// null = hereda de PAYMENT_PROVIDER (.env) → SUMUP
   paymentProvider      PaymentProvider? @map("payment_provider")
   /// Configuración específica del proveedor (clave-valor simple).
   /// Ej: { "merchantCode": "ABC123", "currency": "CLP" }
   /// null = sin configuración personalizada.
-  paymentConfiguration Json?           @map("payment_configuration")
+  paymentConfiguration Json?            @map("payment_configuration")
 
   // Relations
-  locations      Location[]
-  products       Product[]
-  users          User[]
-  customers      Customer[]
-  ingredients    Ingredient[]
+  locations       Location[]
+  products        Product[]
+  users           User[]
+  customers       Customer[]
+  ingredients     Ingredient[]
   loyaltyAccounts LoyaltyAccount[]
 
   @@index([isActive])
@@ -209,33 +209,33 @@ model Organization {
 /// Unidad operativa primaria.
 /// Orders, Menus, Channels e Inventory están scoped a Location.
 model Location {
-  id             String       @id @default(cuid())
-  organizationId String
-  name           String
-  type           LocationType
-  slug           String
-  address        String?
-  city           String?
-  country        String       @default("CL")
-  timezone       String       @default("America/Santiago")
-  phone          String?
-  currency       String       @default("CLP")
+  id                   String           @id @default(cuid())
+  organizationId       String
+  name                 String
+  type                 LocationType
+  slug                 String
+  address              String?
+  city                 String?
+  country              String           @default("CL")
+  timezone             String           @default("America/Santiago")
+  phone                String?
+  currency             String           @default("CLP")
   /// Tasa de IVA como decimal: 0.1900 = 19 %
-  taxRate        Decimal      @default(0.1900) @db.Decimal(5, 4)
-  isActive       Boolean      @default(true)
+  taxRate              Decimal          @default(0.1900) @db.Decimal(5, 4)
+  isActive             Boolean          @default(true)
   /// Horarios de operación por día: { mon: { open: "08:00", close: "22:00" }, ... }
-  operatingHours Json         @default("{}")
+  operatingHours       Json             @default("{}")
   /// Configuración específica del tipo de local: propinas, delivery, mesas, etc.
-  settings       Json         @default("{}")
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
+  settings             Json             @default("{}")
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  deletedAt            DateTime?
   /// Proveedor de pago para esta sucursal. Sobreescribe Organization.paymentProvider.
   /// null = hereda de Organization → .env → SUMUP
   paymentProvider      PaymentProvider? @map("payment_provider")
   /// Configuración específica del proveedor para esta sucursal (clave-valor simple).
   /// Sobreescribe Organization.paymentConfiguration — nunca se fusionan.
-  paymentConfiguration Json?           @map("payment_configuration")
+  paymentConfiguration Json?            @map("payment_configuration")
 
   // Relations
   organization   Organization    @relation(fields: [organizationId], references: [id])
@@ -289,23 +289,23 @@ model Product {
 /// Un Product debe tener al menos una variante (puede ser la variante "estándar").
 /// MenuItem referencia ProductVariant, no Product directamente.
 model ProductVariant {
-  id          String   @id @default(cuid())
-  productId   String
+  id        String    @id @default(cuid())
+  productId String
   /// Nombre de la variante: "Estándar", "Grande", "Sin azúcar", "Con papas"
-  name        String
-  sku         String?
+  name      String
+  sku       String?
   /// Si es la variante por defecto cuando solo hay una opción
-  isDefault   Boolean  @default(false)
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime?
+  isDefault Boolean   @default(false)
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   // Relations
-  product     Product     @relation(fields: [productId], references: [id])
-  menuItems   MenuItem[]
-  orderItems  OrderItem[] // FK de auditoría en ítems de pedido
+  product    Product     @relation(fields: [productId], references: [id])
+  menuItems  MenuItem[]
+  orderItems OrderItem[] // FK de auditoría en ítems de pedido
 
   @@index([productId])
   @@index([productId, isDefault])
@@ -315,24 +315,24 @@ model ProductVariant {
 /// Grupo de modificadores de un Product (ej: "Salsas", "Puntos de cocción").
 /// Pertenece al catálogo global, no al menú local.
 model ModifierGroup {
-  id          String     @id @default(cuid())
+  id          String    @id @default(cuid())
   productId   String
   name        String
   description String?
   /// Mínimo de opciones requeridas (0 = opcional)
-  minSelect   Int        @default(0)
+  minSelect   Int       @default(0)
   /// Máximo de opciones permitidas (1 = radio, N = checkbox múltiple)
-  maxSelect   Int        @default(1)
-  isRequired  Boolean    @default(false)
-  sortOrder   Int        @default(0)
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  maxSelect   Int       @default(1)
+  isRequired  Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
   // Relations
-  product     Product    @relation(fields: [productId], references: [id])
-  modifiers   Modifier[]
+  product   Product    @relation(fields: [productId], references: [id])
+  modifiers Modifier[]
 
   @@index([productId])
   @@map("modifier_groups")
@@ -340,14 +340,14 @@ model ModifierGroup {
 
 /// Opción individual dentro de un ModifierGroup.
 model Modifier {
-  id              String        @id @default(cuid())
+  id              String    @id @default(cuid())
   modifierGroupId String
   name            String
-  priceExtra      Decimal       @default(0) @db.Decimal(10, 2)
-  sortOrder       Int           @default(0)
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  priceExtra      Decimal   @default(0) @db.Decimal(10, 2)
+  sortOrder       Int       @default(0)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
 
   // Relations
@@ -361,26 +361,26 @@ model Modifier {
 /// Carta o menú publicado en un Location.
 /// Un local puede tener múltiples menús (almuerzo, cena, temporada, etc.).
 model Menu {
-  id          String     @id @default(cuid())
+  id          String    @id @default(cuid())
   locationId  String
   name        String
   description String?
   /// Menú que se muestra por defecto a clientes sin sesión activa
-  isDefault   Boolean    @default(false)
-  isActive    Boolean    @default(true)
+  isDefault   Boolean   @default(false)
+  isActive    Boolean   @default(true)
   /// Inicio de vigencia (null = sin restricción)
   validFrom   DateTime?
   /// Fin de vigencia (null = sin restricción)
   validUntil  DateTime?
   /// Disponibilidad horaria: { mon: { open: "12:00", close: "15:00" }, ... }
   schedule    Json?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
   // Relations
-  location    Location   @relation(fields: [locationId], references: [id])
-  categories  Category[]
+  location   Location   @relation(fields: [locationId], references: [id])
+  categories Category[]
 
   @@index([locationId])
   @@index([locationId, isActive])
@@ -389,14 +389,14 @@ model Menu {
 
 /// Sección dentro de un Menu (Entradas, Platos de fondo, Postres, etc.)
 model Category {
-  id        String     @id @default(cuid())
+  id        String    @id @default(cuid())
   menuId    String
   name      String
   imageUrl  String?
-  sortOrder Int        @default(0)
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   // Relations
@@ -449,20 +449,19 @@ model DailyMenuOverride {
   id            String   @id @default(cuid())
   menuItemId    String   @unique
   price         Decimal? @db.Decimal(10, 2) // Sobrescribe MenuItem.price si no es null
-  isAvailable   Boolean?                     // Sobrescribe MenuItem.isAvailable si no es null
-  stockDaily    Int?                         // Limite de porciones para el día
-  isHighlighted Boolean  @default(false)     // Si se destaca en la carta hoy
-  isVisible     Boolean?                     // Sobrescribe MenuItem.isVisible si no es null
-  sortOrder     Int?                         // Sobrescribe MenuItem.sortOrder si no es null
-  notes         String?                      // Nota diaria (ej. "Menú especial hoy")
+  isAvailable   Boolean? // Sobrescribe MenuItem.isAvailable si no es null
+  stockDaily    Int? // Limite de porciones para el día
+  isHighlighted Boolean  @default(false) // Si se destaca en la carta hoy
+  isVisible     Boolean? // Sobrescribe MenuItem.isVisible si no es null
+  sortOrder     Int? // Sobrescribe MenuItem.sortOrder si no es null
+  notes         String? // Nota diaria (ej. "Menú especial hoy")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  menuItem      MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
 
   @@map("daily_menu_overrides")
 }
-
 
 // ─── ORDERING ─────────────────────────────────────────────────────────────────
 
@@ -518,7 +517,7 @@ model Order {
 /// SNAPSHOT PATTERN: name y unitPrice se congelan en el momento del pedido.
 /// Cambios futuros de precios o nombres NO afectan órdenes históricas.
 model OrderItem {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   orderId          String
   /// FK de auditoría — NO usar para recalcular precios
   menuItemId       String
@@ -527,14 +526,14 @@ model OrderItem {
   /// Snapshot: nombre del producto al momento del pedido
   name             String
   /// Snapshot: precio unitario al momento del pedido
-  unitPrice        Decimal  @db.Decimal(10, 2)
-  quantity         Int      @default(1)
+  unitPrice        Decimal   @db.Decimal(10, 2)
+  quantity         Int       @default(1)
   /// unitPrice × quantity + sum(modifiers.priceExtra × quantity)
-  subtotal         Decimal  @db.Decimal(10, 2)
+  subtotal         Decimal   @db.Decimal(10, 2)
   /// Nota del cliente para este ítem: "sin cebolla", "bien cocido"
   notes            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
 
   // Relations
@@ -622,7 +621,7 @@ model KitchenTicket {
   updatedAt   DateTime            @updatedAt
 
   // Relations
-  order Order              @relation(fields: [orderId], references: [id])
+  order Order               @relation(fields: [orderId], references: [id])
   items KitchenTicketItem[]
 
   @@index([orderId])
@@ -632,7 +631,7 @@ model KitchenTicket {
 
 /// Ítems asignados a un KitchenTicket.
 model KitchenTicketItem {
-  id              String        @id @default(cuid())
+  id              String @id @default(cuid())
   kitchenTicketId String
   orderItemId     String
   quantity        Int
@@ -671,15 +670,15 @@ model Ingredient {
 
 /// Nivel de stock de un Ingredient en un Location específico.
 model InventoryItem {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   locationId   String
   ingredientId String
   /// Stock actual en la unidad del Ingredient
-  quantity     Decimal   @default(0) @db.Decimal(10, 3)
+  quantity     Decimal  @default(0) @db.Decimal(10, 3)
   /// Umbral de alerta de stock bajo
-  minQuantity  Decimal   @default(0) @db.Decimal(10, 3)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  minQuantity  Decimal  @default(0) @db.Decimal(10, 3)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
   location   Location        @relation(fields: [locationId], references: [id])
@@ -755,16 +754,16 @@ model Customer {
 /// Cuenta de fidelización del Customer dentro de una Organization.
 /// Los puntos son cross-location: aplican en cualquier sucursal del mismo tenant.
 model LoyaltyAccount {
-  id             String      @id @default(cuid())
+  id             String       @id @default(cuid())
   /// Relación 1:1 con Customer (unique)
-  customerId     String      @unique
+  customerId     String       @unique
   organizationId String
-  points         Int         @default(0)
+  points         Int          @default(0)
   /// Total gastado histórico (para cálculo de tier)
-  totalSpent     Decimal     @default(0) @db.Decimal(10, 2)
+  totalSpent     Decimal      @default(0) @db.Decimal(10, 2)
   tier           LoyaltyTier?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   // Relations
   customer     Customer     @relation(fields: [customerId], references: [id])
@@ -825,9 +824,9 @@ model ChannelSession {
   deletedAt  DateTime?
 
   // Relations
-  channel   Channel   @relation(fields: [channelId], references: [id])
-  customer  Customer? @relation(fields: [customerId], references: [id])
-  messages  Message[]
+  channel  Channel   @relation(fields: [channelId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
+  messages Message[]
 
   /// Un externalId solo puede tener una sesión activa por canal
   @@unique([channelId, externalId])
