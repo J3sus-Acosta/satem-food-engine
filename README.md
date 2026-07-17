@@ -14,16 +14,17 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 
 ### Roadmap de Implementación
 
-| Fase       | Título                 | Objetivos Core                                                                                          | Estado        |
-| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------- | ------------- |
-| **FASE 1** | **Infraestructura**    | Configuración base, TypeScript, ESLint, lint-staged, Husky.                                             | ✅ Completada |
-| **FASE 2** | **Modelo de Dominio**  | Diseño de base de datos multi-tenant, `schema.prisma` y validaciones.                                   | ✅ Completada |
-| **FASE 3** | **Catálogo Digital**   | Categorías, Productos, Variantes, Modificadores, Disponibilidad, Precios, API y página pública `/menu`. | ✅ Completada |
-| **FASE 4** | **Pedidos**            | Flujo completo de pedidos utilizando servicios de dominio.                                              | ✅ Completada |
-| **FASE 5** | **Pagos**              | Integración de pasarela con SumUp y procesamiento idempotente de webhooks.                              | ✅ Completada |
-| **FASE 6** | **Pantalla de Cocina** | Dashboard de cocina táctil Kanban en `/dashboard/kitchen` para gestión de preparación (FIFO).           | ✅ Completada |
-| **FASE 7** | **Inventario**         | Control e incremento/decremento automático de stock.                                                    | 🔜 Pendiente  |
-| **FASE 8** | **Chatbot IA**         | Interacción conversacional (consumidor de servicios de dominio).                                        | 🔜 Pendiente  |
+| Fase       | Título                                   | Objetivos Core                                                                                          | Estado        |
+| ---------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------- |
+| **FASE 1** | **Infraestructura**                      | Configuración base, TypeScript, ESLint, lint-staged, Husky.                                             | ✅ Completada |
+| **FASE 2** | **Modelo de Dominio**                    | Diseño de base de datos multi-tenant, `schema.prisma` y validaciones.                                   | ✅ Completada |
+| **FASE 3** | **Catálogo Digital**                     | Categorías, Productos, Variantes, Modificadores, Disponibilidad, Precios, API y página pública `/menu`. | ✅ Completada |
+| **FASE 4** | **Pedidos**                              | Flujo completo de pedidos utilizando servicios de dominio.                                              | ✅ Completada |
+| **FASE 5** | **Pagos**                                | Integración de pasarela con SumUp y procesamiento idempotente de webhooks.                              | ✅ Completada |
+| **FASE 6** | **Pantalla de Cocina**                   | Dashboard de cocina táctil Kanban en `/dashboard/kitchen` para gestión de preparación (FIFO).           | ✅ Completada |
+| **FASE 7** | **Menú Operacional + Google Sheets CMS** | Sincronización diaria del menú y disponibilidad mediante códigos cortos y n8n para MCI Santiago.        | 🏃 En Curso   |
+| **FASE 8** | **Inventario**                           | Control e incremento/decremento automático de stock.                                                    | 🔜 Pendiente  |
+| **FASE 9** | **Chatbot IA**                           | Interacción conversacional (consumidor de servicios de dominio).                                        | 🔜 Pendiente  |
 
 ---
 
@@ -43,25 +44,26 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 
 ## Arquitectura de Datos
 
-**PostgreSQL** es la fuente oficial de datos de persistencia del sistema.
-**Google Sheets** actúa estrictamente como **CMS inicial** utilizado por el administrador del restaurante, **NUNCA** como base de datos directa de la aplicación.
+**PostgreSQL** es la única fuente de verdad y persistencia oficial del sistema.
+
+Para el cliente piloto **MCI Santiago**, **Google Sheets** actúa como un **CMS operacional temporal** para que personal no técnico actualice la disponibilidad diaria, precios y stock del menú sin acceder al panel administrativo directo. **NUNCA** actúa como base de datos directa ni fuente de verdad.
 
 El flujo de sincronización y lectura de datos se define así:
 
 ```
-[ Administrador ]
-       ↓ (Edita catálogo/precios/config)
-[ Google Sheets ]
-       ↓ (Webhook / Poll)
-[      n8n      ]
-       ↓ (Sincroniza / Escribe)
-[  PostgreSQL   ]
-       ↓ (Carga base / Lectura)
-[ Aplicación Next.js ]
+[ Administrador (MCI Santiago) ]
+               ↓ (Modifica stock/disponibilidad/precio diario)
+[       Google Sheets          ]
+               ↓ (Lectura n8n / Flujo Preview & Apply)
+[            n8n               ]
+               ↓ (Llamada API validada)
+[   Next.js API (Validación)   ]
+               ↓ (Escritura via Repository)
+[         PostgreSQL           ]
 ```
 
 > [!IMPORTANT]
-> La aplicación Next.js **nunca** debe consultar Google Sheets directamente. Toda la lectura de catálogo y estado se realiza desde PostgreSQL a través de la capa de servicios y repositorios.
+> La aplicación Next.js **nunca** debe consultar Google Sheets directamente. Toda la lectura de catálogo y estado se realiza desde PostgreSQL a través de la capa de servicios y repositorios, los cuales resuelven dinámicamente el catálogo maestro aplicando los overrides operacionales (`DailyMenuOverride`) de forma transparente.
 
 ---
 

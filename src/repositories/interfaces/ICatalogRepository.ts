@@ -1,4 +1,11 @@
-import type { MenuWithCategories, Category, Product, ProductWithFull } from '@/types'
+import type {
+  MenuWithCategories,
+  Category,
+  Product,
+  ProductWithFull,
+  MenuItem,
+  DailyMenuOverride,
+} from '@/types'
 
 /**
  * Repository contract for the Catalog (Menus, Categories, MenuItems) read operations.
@@ -33,4 +40,25 @@ export interface ICatalogRepository {
    * Finds a product by its URL-friendly slug with its variants and modifiers.
    */
   findProductBySlug(organizationId: string, slug: string): Promise<ProductWithFull | null>
+
+  /**
+   * Finds a MenuItem by the SKU of its ProductVariant for a specific location.
+   */
+  findMenuItemBySku(locationId: string, sku: string): Promise<MenuItem | null>
+
+  /**
+   * Upserts a DailyMenuOverride for a MenuItem.
+   */
+  upsertDailyMenuOverride(
+    menuItemId: string,
+    override: {
+      price: number | null
+      isAvailable: boolean | null
+      stockDaily: number | null
+      isHighlighted: boolean
+      isVisible: boolean | null
+      sortOrder: number | null
+      notes: string | null
+    }
+  ): Promise<DailyMenuOverride>
 }

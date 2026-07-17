@@ -121,6 +121,16 @@ export class OrderService {
       )
     }
 
+    // Business Rule: Daily stock limit check
+    const override = foundMenuItem.dailyMenuOverride
+    if (override && override.stockDaily !== null && override.stockDaily !== undefined) {
+      if (input.quantity > override.stockDaily) {
+        throw new ValidationError(
+          `MenuItem "${foundMenuItem.name || 'unnamed'}" superó el límite de stock diario disponible (${override.stockDaily} unidades).`
+        )
+      }
+    }
+
     // Resolve details
     const resolvedName =
       foundMenuItem.name || foundMenuItem.productVariant?.product?.name || 'Producto Sin Nombre'

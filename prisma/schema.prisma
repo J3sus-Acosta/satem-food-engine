@@ -417,9 +417,10 @@ model MenuItem {
   deletedAt        DateTime?
 
   // Relations
-  category       Category       @relation(fields: [categoryId], references: [id])
-  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
-  orderItems     OrderItem[]
+  category          Category           @relation(fields: [categoryId], references: [id])
+  productVariant    ProductVariant     @relation(fields: [productVariantId], references: [id])
+  orderItems        OrderItem[]
+  dailyMenuOverride DailyMenuOverride?
 
   /// Una variante solo puede aparecer una vez por categoría
   @@unique([categoryId, productVariantId])
@@ -427,6 +428,26 @@ model MenuItem {
   @@index([productVariantId])
   @@map("menu_items")
 }
+
+/// Sobrescribe temporalmente el comportamiento diario de un MenuItem sin alterar los datos maestros.
+model DailyMenuOverride {
+  id            String   @id @default(cuid())
+  menuItemId    String   @unique
+  price         Decimal? @db.Decimal(10, 2) // Sobrescribe MenuItem.price si no es null
+  isAvailable   Boolean?                     // Sobrescribe MenuItem.isAvailable si no es null
+  stockDaily    Int?                         // Limite de porciones para el día
+  isHighlighted Boolean  @default(false)     // Si se destaca en la carta hoy
+  isVisible     Boolean?                     // Sobrescribe MenuItem.isVisible si no es null
+  sortOrder     Int?                         // Sobrescribe MenuItem.sortOrder si no es null
+  notes         String?                      // Nota diaria (ej. "Menú especial hoy")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  menuItem      MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@map("daily_menu_overrides")
+}
+
 
 // ─── ORDERING ─────────────────────────────────────────────────────────────────
 

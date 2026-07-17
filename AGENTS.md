@@ -371,6 +371,7 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 ❌ Nunca ignorar errores con catch vacíos (`catch {}`).  
 ❌ Nunca añadir `'use client'` en archivos de `src/server/`.  
 ❌ Nunca mezclar `page.tsx` y `route.ts` en el mismo segmento de ruta.
+❌ Nunca exponer IDs técnicos (CUID, UUID o IDs internos) a usuarios finales. Toda integración humana deberá utilizar códigos cortos estables (SKU o Code). Los IDs internos son exclusivamente para persistencia.
 
 ---
 

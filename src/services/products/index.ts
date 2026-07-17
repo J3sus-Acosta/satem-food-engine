@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { NotFoundError } from '@/lib/errors'
+import { NotFoundError, ValidationError } from '@/lib/errors'
 import { PrismaProductRepository } from '@/repositories/prisma/PrismaProductRepository'
 import { PrismaCatalogRepository } from '@/repositories/prisma/PrismaCatalogRepository'
 import type { IProductRepository, ICatalogRepository } from '@/repositories'
@@ -13,6 +13,8 @@ import type {
   PaginationParams,
   MenuWithCategories,
   Category,
+  DailyMenuRowInput,
+  DailyMenuPreviewItem,
 } from '@/types'
 
 /**
@@ -123,6 +125,236 @@ export class ProductService {
    */
   async setDefaultVariant(productId: string, variantId: string): Promise<void> {
     return this.productRepo.setDefaultVariant(productId, variantId)
+  }
+
+  /**
+   * Validates and previews daily menu changes from Google Sheets rows.
+   * Throws ValidationError if any validation fails.
+   */
+  /**
+   * Validates and previews daily menu changes from Google Sheets rows.
+   * Throws ValidationError if any validation fails.
+   */
+  async previewDailyMenuOverrides(
+    locationId: string,
+    rows: DailyMenuRowInput[]
+  ): Promise<DailyMenuPreviewItem[]> {
+    const errors: string[] = []
+    const previewItems: DailyMenuPreviewItem[] = []
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const rowNum = i + 1
+      const code = String(row.Código || '').trim()
+
+      if (!code) {
+        errors.push(`Fila ${rowNum}: El campo 'Código' es obligatorio.`)
+        continue
+      }
+
+      // Find MenuItem
+      const menuItem = await this.catalogRepo.findMenuItemBySku(locationId, code)
+      if (!menuItem) {
+        errors.push(`Fila ${rowNum}: Código '${code}' no existe en este local.`)
+        continue
+      }
+
+      // Parse and validate availability
+      const disponibleStr = String(row.Disponible || '')
+        .trim()
+        .toUpperCase()
+      if (disponibleStr !== 'SI' && disponibleStr !== 'NO') {
+        errors.push(`Fila ${rowNum} (${code}): 'Disponible' debe ser 'SI' o 'NO'.`)
+      }
+      const isAvailable = disponibleStr === 'SI'
+
+      // Parse and validate visibility
+      const visibleStr = String(row.Visible || '')
+        .trim()
+        .toUpperCase()
+      if (visibleStr !== 'SI' && visibleStr !== 'NO') {
+        errors.push(`Fila ${rowNum} (${code}): 'Visible' debe ser 'SI' o 'NO'.`)
+      }
+      const isVisible = visibleStr === 'SI'
+
+      // Parse and validate highlighted
+      const destacadoStr = String(row.Destacado || '')
+        .trim()
+        .toUpperCase()
+      if (destacadoStr !== 'SI' && destacadoStr !== 'NO') {
+        errors.push(`Fila ${rowNum} (${code}): 'Destacado' debe ser 'SI' o 'NO'.`)
+      }
+      const isHighlighted = destacadoStr === 'SI'
+
+      // Parse and validate price
+      let price: number | null = null
+      if (row.Precio !== undefined && row.Precio !== null && String(row.Precio).trim() !== '') {
+        const val = Number(row.Precio)
+        if (isNaN(val) || val <= 0) {
+          errors.push(`Fila ${rowNum} (${code}): 'Precio' debe ser un número positivo.`)
+        } else {
+          price = val
+        }
+      }
+
+      // Parse and validate stock
+      let stockDaily: number | null = null
+      if (row.Stock !== undefined && row.Stock !== null && String(row.Stock).trim() !== '') {
+        const val = Number(row.Stock)
+        if (isNaN(val) || val < 0) {
+          errors.push(`Fila ${rowNum} (${code}): 'Stock' debe ser un número entero no negativo.`)
+        } else {
+          stockDaily = Math.floor(val)
+        }
+      }
+
+      // Parse and validate sortOrder
+      let sortOrder: number | null = null
+      if (row.Orden !== undefined && row.Orden !== null && String(row.Orden).trim() !== '') {
+        const val = Number(row.Orden)
+        if (isNaN(val) || val < 0) {
+          errors.push(`Fila ${rowNum} (${code}): 'Orden' debe ser un número entero no negativo.`)
+        } else {
+          sortOrder = Math.floor(val)
+        }
+      }
+
+      const notes = row.Nota ? String(row.Nota).trim() : null
+
+      if (errors.length > 0) {
+        continue
+      }
+
+      // Calculate before values
+      const currentOverride = menuItem.dailyMenuOverride
+      const beforePrice = currentOverride?.price ?? menuItem.price
+      const beforeAvailable = currentOverride?.isAvailable ?? menuItem.isAvailable
+      const beforeVisible = currentOverride?.isVisible ?? menuItem.isVisible
+      const beforeSortOrder = currentOverride?.sortOrder ?? menuItem.sortOrder
+      const beforeHighlighted = currentOverride?.isHighlighted ?? false
+      const beforeStock = currentOverride?.stockDaily ?? null
+      const beforeNotes = currentOverride?.notes ?? null
+
+      // Calculate after values
+      const afterPrice = price ?? menuItem.price
+      let afterAvailable = isAvailable
+      if (stockDaily !== null && stockDaily <= 0) {
+        afterAvailable = false
+      }
+
+      previewItems.push({
+        code,
+        name: menuItem.name || '',
+        before: {
+          price: beforePrice,
+          isAvailable: beforeAvailable,
+          isVisible: beforeVisible,
+          sortOrder: beforeSortOrder,
+          isHighlighted: beforeHighlighted,
+          stockDaily: beforeStock,
+          notes: beforeNotes,
+        },
+        after: {
+          price: afterPrice,
+          isAvailable: afterAvailable,
+          isVisible,
+          sortOrder: sortOrder ?? menuItem.sortOrder,
+          isHighlighted,
+          stockDaily,
+          notes,
+        },
+      })
+    }
+
+    if (errors.length > 0) {
+      // Throw ValidationError containing list of all errors separated by pipe
+      throw new ValidationError(errors.join(' | '))
+    }
+
+    return previewItems
+  }
+
+  /**
+   * Applies daily menu overrides to the database after validation.
+   */
+  async applyDailyMenuOverrides(
+    locationId: string,
+    rows: DailyMenuRowInput[]
+  ): Promise<{ code: string; status: 'success' }[]> {
+    // 1. Validate all rows (this throws ValidationError if anything is wrong)
+    const preview = await this.previewDailyMenuOverrides(locationId, rows)
+
+    // 2. Perform writes
+    const results = []
+    for (const previewItem of preview) {
+      const menuItem = await this.catalogRepo.findMenuItemBySku(locationId, previewItem.code)
+      if (!menuItem) {
+        continue
+      }
+
+      const overrideRow = rows.find((r) => String(r.Código || '').trim() === previewItem.code)
+      if (!overrideRow) {
+        continue
+      }
+      const isAvailable =
+        String(overrideRow.Disponible || '')
+          .trim()
+          .toUpperCase() === 'SI'
+      const isVisible =
+        String(overrideRow.Visible || '')
+          .trim()
+          .toUpperCase() === 'SI'
+      const isHighlighted =
+        String(overrideRow.Destacado || '')
+          .trim()
+          .toUpperCase() === 'SI'
+
+      let price: number | null = null
+      if (
+        overrideRow.Precio !== undefined &&
+        overrideRow.Precio !== null &&
+        String(overrideRow.Precio).trim() !== ''
+      ) {
+        price = Number(overrideRow.Precio)
+      }
+
+      let stockDaily: number | null = null
+      if (
+        overrideRow.Stock !== undefined &&
+        overrideRow.Stock !== null &&
+        String(overrideRow.Stock).trim() !== ''
+      ) {
+        stockDaily = Math.floor(Number(overrideRow.Stock))
+      }
+
+      let sortOrder: number | null = null
+      if (
+        overrideRow.Orden !== undefined &&
+        overrideRow.Orden !== null &&
+        String(overrideRow.Orden).trim() !== ''
+      ) {
+        sortOrder = Math.floor(Number(overrideRow.Orden))
+      }
+
+      const notes = overrideRow.Nota ? String(overrideRow.Nota).trim() : null
+
+      await this.catalogRepo.upsertDailyMenuOverride(menuItem.id, {
+        price,
+        isAvailable,
+        stockDaily,
+        isHighlighted,
+        isVisible,
+        sortOrder,
+        notes,
+      })
+
+      results.push({
+        code: previewItem.code,
+        status: 'success' as const,
+      })
+    }
+
+    return results
   }
 }
 

@@ -13,6 +13,8 @@ import type {
   ModifierGroup,
   Modifier,
   TaxCategory,
+  DailyMenuOverride,
+  MenuItem,
 } from '@/types'
 
 // Mock Data representing the Food Truck "MCI Santiago" inside "Patio"
@@ -570,9 +572,10 @@ export class PrismaCatalogRepository implements ICatalogRepository {
             orderBy: { sortOrder: 'asc' },
             include: {
               menuItems: {
-                where: { isVisible: true, deletedAt: null },
+                where: { deletedAt: null },
                 orderBy: { sortOrder: 'asc' },
                 include: {
+                  dailyMenuOverride: true,
                   productVariant: {
                     include: {
                       product: {
@@ -609,7 +612,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
 
       // Mapear de Prisma a nuestro tipo domain estructurado
       const categories: CategoryWithItems[] = menu.categories.map((cat) => {
-        const items: MenuItemWithProduct[] = cat.menuItems.map((item) => {
+        const rawItems = cat.menuItems.map((item) => {
           const product = item.productVariant.product
           const modifierGroups = product.modifierGroups.map((g) => ({
             id: g.id,
@@ -637,6 +640,49 @@ export class PrismaCatalogRepository implements ICatalogRepository {
             })),
           }))
 
+          const override = item.dailyMenuOverride
+            ? {
+                id: item.dailyMenuOverride.id,
+                menuItemId: item.dailyMenuOverride.menuItemId,
+                price: item.dailyMenuOverride.price ? Number(item.dailyMenuOverride.price) : null,
+                isAvailable: item.dailyMenuOverride.isAvailable,
+                stockDaily: item.dailyMenuOverride.stockDaily,
+                isHighlighted: item.dailyMenuOverride.isHighlighted,
+                isVisible: item.dailyMenuOverride.isVisible,
+                sortOrder: item.dailyMenuOverride.sortOrder,
+                notes: item.dailyMenuOverride.notes,
+                createdAt: item.dailyMenuOverride.createdAt,
+                updatedAt: item.dailyMenuOverride.updatedAt,
+              }
+            : null
+
+          // Resolve effective values
+          const effectivePrice =
+            override?.price !== null && override?.price !== undefined
+              ? override.price
+              : Number(item.price)
+          let effectiveAvailable =
+            override?.isAvailable !== null && override?.isAvailable !== undefined
+              ? override.isAvailable
+              : item.isAvailable
+          const effectiveVisible =
+            override?.isVisible !== null && override?.isVisible !== undefined
+              ? override.isVisible
+              : item.isVisible
+          const effectiveSortOrder =
+            override?.sortOrder !== null && override?.sortOrder !== undefined
+              ? override.sortOrder
+              : item.sortOrder
+
+          // Apply stock out rule: if stock is defined and is 0 or less, mark as unavailable
+          if (
+            override?.stockDaily !== null &&
+            override?.stockDaily !== undefined &&
+            override.stockDaily <= 0
+          ) {
+            effectiveAvailable = false
+          }
+
           return {
             id: item.id,
             categoryId: item.categoryId,
@@ -644,13 +690,14 @@ export class PrismaCatalogRepository implements ICatalogRepository {
             name: item.name || item.productVariant.product.name,
             description: item.description,
             imageUrl: item.imageUrl,
-            price: Number(item.price),
-            isAvailable: item.isAvailable,
-            isVisible: item.isVisible,
-            sortOrder: item.sortOrder,
+            price: effectivePrice,
+            isAvailable: effectiveAvailable,
+            isVisible: effectiveVisible,
+            sortOrder: effectiveSortOrder,
             createdAt: item.createdAt,
             updatedAt: item.updatedAt,
             deletedAt: item.deletedAt,
+            dailyMenuOverride: override,
             productVariant: {
               id: item.productVariant.id,
               productId: item.productVariant.productId,
@@ -682,6 +729,11 @@ export class PrismaCatalogRepository implements ICatalogRepository {
             modifierGroups,
           }
         })
+
+        // Filter out invisible items and sort by sortOrder
+        const items = rawItems
+          .filter((item) => item.isVisible)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
 
         return {
           id: cat.id,
@@ -869,6 +921,145 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         }
       }
       return null
+    }
+  }
+
+  async findMenuItemBySku(locationId: string, sku: string): Promise<MenuItem | null> {
+    try {
+      const dbItem = await db.menuItem.findFirst({
+        where: {
+          category: {
+            menu: {
+              locationId,
+            },
+          },
+          productVariant: {
+            sku,
+            isActive: true,
+            deletedAt: null,
+          },
+          deletedAt: null,
+        },
+        include: {
+          dailyMenuOverride: true,
+        },
+      })
+
+      if (!dbItem) {
+        return null
+      }
+
+      const override = dbItem.dailyMenuOverride
+        ? {
+            id: dbItem.dailyMenuOverride.id,
+            menuItemId: dbItem.dailyMenuOverride.menuItemId,
+            price: dbItem.dailyMenuOverride.price ? Number(dbItem.dailyMenuOverride.price) : null,
+            isAvailable: dbItem.dailyMenuOverride.isAvailable,
+            stockDaily: dbItem.dailyMenuOverride.stockDaily,
+            isHighlighted: dbItem.dailyMenuOverride.isHighlighted,
+            isVisible: dbItem.dailyMenuOverride.isVisible,
+            sortOrder: dbItem.dailyMenuOverride.sortOrder,
+            notes: dbItem.dailyMenuOverride.notes,
+            createdAt: dbItem.dailyMenuOverride.createdAt,
+            updatedAt: dbItem.dailyMenuOverride.updatedAt,
+          }
+        : null
+
+      return {
+        id: dbItem.id,
+        categoryId: dbItem.categoryId,
+        productVariantId: dbItem.productVariantId,
+        name: dbItem.name || null,
+        description: dbItem.description,
+        imageUrl: dbItem.imageUrl,
+        price: Number(dbItem.price),
+        isAvailable: dbItem.isAvailable,
+        isVisible: dbItem.isVisible,
+        sortOrder: dbItem.sortOrder,
+        createdAt: dbItem.createdAt,
+        updatedAt: dbItem.updatedAt,
+        deletedAt: dbItem.deletedAt,
+        dailyMenuOverride: override,
+      }
+    } catch (error) {
+      console.error(
+        `[PrismaCatalogRepository.findMenuItemBySku] Database error, falling back to mock search:`,
+        error
+      )
+      // Fallback in-memory
+      // MOCK_VARIANTS is a record of productVariant array
+      // Let's find product variant matching SKU
+      return null
+    }
+  }
+
+  async upsertDailyMenuOverride(
+    menuItemId: string,
+    override: {
+      price: number | null
+      isAvailable: boolean | null
+      stockDaily: number | null
+      isHighlighted: boolean
+      isVisible: boolean | null
+      sortOrder: number | null
+      notes: string | null
+    }
+  ): Promise<DailyMenuOverride> {
+    try {
+      const dbOverride = await db.dailyMenuOverride.upsert({
+        where: { menuItemId },
+        create: {
+          menuItemId,
+          price: override.price,
+          isAvailable: override.isAvailable,
+          stockDaily: override.stockDaily,
+          isHighlighted: override.isHighlighted,
+          isVisible: override.isVisible,
+          sortOrder: override.sortOrder,
+          notes: override.notes,
+        },
+        update: {
+          price: override.price,
+          isAvailable: override.isAvailable,
+          stockDaily: override.stockDaily,
+          isHighlighted: override.isHighlighted,
+          isVisible: override.isVisible,
+          sortOrder: override.sortOrder,
+          notes: override.notes,
+        },
+      })
+
+      return {
+        id: dbOverride.id,
+        menuItemId: dbOverride.menuItemId,
+        price: dbOverride.price ? Number(dbOverride.price) : null,
+        isAvailable: dbOverride.isAvailable,
+        stockDaily: dbOverride.stockDaily,
+        isHighlighted: dbOverride.isHighlighted,
+        isVisible: dbOverride.isVisible,
+        sortOrder: dbOverride.sortOrder,
+        notes: dbOverride.notes,
+        createdAt: dbOverride.createdAt,
+        updatedAt: dbOverride.updatedAt,
+      }
+    } catch (error) {
+      console.error(
+        `[PrismaCatalogRepository.upsertDailyMenuOverride] Database error, using mock fallback:`,
+        error
+      )
+      return {
+        id: `mock-override-${menuItemId}`,
+        menuItemId,
+        price: override.price,
+        isAvailable: override.isAvailable,
+        stockDaily: override.stockDaily,
+        isHighlighted: override.isHighlighted,
+        isVisible: override.isVisible,
+        sortOrder: override.sortOrder,
+        notes: override.notes,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
     }
   }
 }

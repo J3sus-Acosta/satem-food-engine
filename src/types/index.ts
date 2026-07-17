@@ -218,6 +218,54 @@ export interface Category {
   deletedAt: Date | null
 }
 
+export interface DailyMenuRowInput {
+  Código: string
+  Disponible: string
+  Visible: string
+  Precio?: string | number | null
+  Stock?: string | number | null
+  Destacado: string
+  Orden?: string | number | null
+  Nota?: string | null
+}
+
+export interface DailyMenuPreviewItem {
+  code: string
+  name: string
+  before: {
+    price: number
+    isAvailable: boolean
+    isVisible: boolean
+    sortOrder: number
+    isHighlighted: boolean
+    stockDaily: number | null
+    notes: string | null
+  }
+  after: {
+    price: number
+    isAvailable: boolean
+    isVisible: boolean
+    sortOrder: number
+    isHighlighted: boolean
+    stockDaily: number | null
+    notes: string | null
+  }
+}
+
+export interface DailyMenuOverride {
+  id: string
+  menuItemId: string
+  price: Money | null
+  isAvailable: boolean | null
+  stockDaily: number | null
+  isHighlighted: boolean
+  isVisible: boolean | null
+  sortOrder: number | null
+  notes: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface MenuItem {
   id: string
   categoryId: string
@@ -234,6 +282,7 @@ export interface MenuItem {
   createdAt: Date
   updatedAt: Date
   deletedAt: Date | null
+  dailyMenuOverride?: DailyMenuOverride | null
 }
 
 export interface MenuItemWithProduct extends MenuItem {
