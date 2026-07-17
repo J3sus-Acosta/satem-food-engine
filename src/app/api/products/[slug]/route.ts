@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { productService } from '@/services'
-import { TENANT_CONFIG } from '@/config'
+import { TenantResolver } from '@/server/tenant-resolver'
 import type { ApiResponse, ProductWithFull } from '@/types'
 
 export async function GET(
@@ -10,8 +10,8 @@ export async function GET(
   try {
     const { slug } = await context.params
     const { searchParams } = new URL(req.url)
-    const organizationId =
-      searchParams.get('organizationId') || TENANT_CONFIG.defaultOrganizationSlug
+    const orgIdOrSlug = searchParams.get('organizationId') || searchParams.get('organizationSlug')
+    const organizationId = await TenantResolver.resolveOrganization(orgIdOrSlug)
 
     const product = await productService.getProductBySlug(organizationId, slug)
     return NextResponse.json({ data: product })

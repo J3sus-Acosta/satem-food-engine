@@ -780,8 +780,12 @@ export class PrismaCatalogRepository implements ICatalogRepository {
 
   async findMenuByLocationSlug(locationSlug: string): Promise<MenuWithCategories | null> {
     try {
-      const location = await db.location.findUnique({
-        where: { id: locationSlug }, // Simplificado para esta fase, o buscar por slug real
+      const location = await db.location.findFirst({
+        where: {
+          OR: [{ id: locationSlug }, { slug: locationSlug }],
+          isActive: true,
+          deletedAt: null,
+        },
       })
 
       if (!location) {
@@ -789,7 +793,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
           return null
         }
         console.warn(
-          `[PrismaCatalogRepository] Location not found for slug "${locationSlug}". Falling back to Mock Data.`
+          `[PrismaCatalogRepository] Location not found for slug or ID "${locationSlug}". Falling back to Mock Data.`
         )
         return buildMockMenuWithCategories()
       }

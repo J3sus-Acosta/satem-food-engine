@@ -31,10 +31,11 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 | **FASE 8C**  | **Order Tracking + Preparación de Pago**   | Consulta en tiempo real de estados de preparación del pedido con polling y preparación de flujos de pago (SumUp/Webpay).                         | ✅ Completada |
 | **FASE 9A**  | **Integración de Pagos Reales MVP**        | Integración multi-tenant inyectable, webhook idempotente, polling liviano de status y suite de testing para SumUp y Webpay.                      | ✅ Completada |
 | **FASE 9B**  | **Kitchen Display System (KDS)**           | Panel operativo Kanban de cocina táctil en `/dashboard/kitchen`, polling de 10s y máquina de estados estrictos para preparación.                 | ✅ Completada |
+| **FASE 10A** | **Seed Oficial del Sistema**               | Dataset profesional (cafetería demo), insumos iniciales, clientes, pedidos históricos y chats de prueba 100% idempotente.                        | ✅ Completada |
 
 ### Próxima Etapa
 
-- **Integración con WhatsApp (Fase 10):** Implementación de flujos bidireccionales con WhatsApp Evolution API para notificaciones de pedidos, confirmaciones de pago y alertas de estado a clientes finales.
+- **Integración con WhatsApp (Fase 10B):** Implementación de flujos bidireccionales con WhatsApp Evolution API para notificaciones de pedidos, confirmaciones de pago y alertas de estado a clientes finales.
 
 ---
 
@@ -148,11 +149,25 @@ npx prisma generate
 # 5. Aplicar migraciones iniciales a PostgreSQL
 npx prisma migrate dev
 
-# 6. Levantar servidor de desarrollo local
+# 6. Cargar datos de demostración profesionales (idempotente)
+npm run db:seed
+
+# 7. Levantar servidor de desarrollo local
 npm run dev
 ```
 
 Abra [http://localhost:3000](http://localhost:3000) en el navegador.
+
+### Carga y Reinicio de Datos Demo
+
+Para poblar o restablecer el entorno de base de datos con un dataset profesional completo (Organización, Locales, Usuarios asignados, Canales de venta, 27 Productos con modificadores obligatorios y opcionales, Inventario con stock inicial, Clientes, 8 Pedidos históricos en diversos estados con snapshots, Transacciones de pago y chats de prueba):
+
+```bash
+# Ejecutar el seed (idempotente)
+npm run db:seed
+```
+
+_Nota: Este comando puede ejecutarse de manera reiterada. Los pedidos y mensajes del seed se purgan y recrean de forma limpia para evitar duplicidad, mientras que los datos maestros se actualizan mediante lógica `upsert`._
 
 ---
 

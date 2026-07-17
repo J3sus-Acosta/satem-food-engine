@@ -1,7 +1,7 @@
 import React from 'react'
 import { headers } from 'next/headers'
 import { productService } from '@/services'
-import { TENANT_CONFIG } from '@/config'
+import { TenantResolver } from '@/server/tenant-resolver'
 import { CustomerCartProvider, MenuCustomerView } from '@/components/customer/menu'
 import { CustomerOrderProvider } from '@/components/customer/order/CustomerOrderProvider'
 import { Store, MapPin, Clock } from 'lucide-react'
@@ -12,7 +12,7 @@ interface PageProps {
 
 async function resolveLocationSlug(
   searchParams: Promise<{ slug?: string; location?: string }>
-): Promise<string> {
+): Promise<string | null> {
   const headersList = await headers()
   const host = headersList.get('host') || ''
 
@@ -30,15 +30,16 @@ async function resolveLocationSlug(
     return querySlug
   }
 
-  // 3. Environment Variables / Default Config
-  return TENANT_CONFIG.defaultLocationSlug
+  // 3. Fallback
+  return null
 }
 
 export default async function MenuPage({ searchParams }: PageProps) {
   const locationSlug = await resolveLocationSlug(searchParams)
+  const resolved = await TenantResolver.resolve(locationSlug)
 
   // Fetch menu directly on the server (zero HTTP overhead)
-  const menu = await productService.getMenu(locationSlug)
+  const menu = await productService.getMenu(resolved.locationId)
 
   return (
     <main className="bg-background flex min-h-screen flex-col">

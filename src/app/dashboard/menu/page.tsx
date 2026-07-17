@@ -1,6 +1,6 @@
 import React from 'react'
 import { productService } from '@/services'
-import { TENANT_CONFIG } from '@/config'
+import { TenantResolver } from '@/server/tenant-resolver'
 import MenuDashboardClient from './MenuDashboardClient'
 
 interface PageProps {
@@ -9,7 +9,8 @@ interface PageProps {
 
 export default async function DashboardMenuPage(props: PageProps) {
   const params = await props.searchParams
-  const locationId = params.locationId || TENANT_CONFIG.defaultLocationSlug
+  const resolved = await TenantResolver.resolve(params.locationId)
+  const locationId = resolved.locationId
 
   let initialMenu = null
   let errorMsg = null

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { productService } from '@/services'
-import { TENANT_CONFIG } from '@/config'
+import { TenantResolver } from '@/server/tenant-resolver'
 import type { ApiResponse, MenuWithCategories } from '@/types'
 
 export async function GET(
@@ -8,12 +8,10 @@ export async function GET(
 ): Promise<NextResponse<ApiResponse<MenuWithCategories>>> {
   try {
     const { searchParams } = new URL(req.url)
-    const locationIdOrSlug =
-      searchParams.get('locationId') ||
-      searchParams.get('slug') ||
-      TENANT_CONFIG.defaultLocationSlug
+    const inputLocation = searchParams.get('locationId') || searchParams.get('slug')
+    const resolved = await TenantResolver.resolve(inputLocation)
 
-    const menu = await productService.getMenu(locationIdOrSlug)
+    const menu = await productService.getMenu(resolved.locationId)
 
     return NextResponse.json({ data: menu })
   } catch (error: unknown) {

@@ -1,6 +1,6 @@
 import React from 'react'
 import { kitchenService } from '@/services'
-import { TENANT_CONFIG } from '@/config'
+import { TenantResolver } from '@/server/tenant-resolver'
 import { KitchenBoard } from '@/components/kitchen/KitchenBoard'
 import type { OrderWithItems } from '@/types'
 
@@ -8,7 +8,8 @@ import type { OrderWithItems } from '@/types'
 export const dynamic = 'force-dynamic'
 
 export default async function KitchenDashboardPage() {
-  const defaultLocation = TENANT_CONFIG.defaultLocationSlug
+  const resolved = await TenantResolver.resolve(null)
+  const defaultLocation = resolved.locationId
 
   // Fetch initial kitchen orders queue from Server Side
   let initialOrders: OrderWithItems[] = []

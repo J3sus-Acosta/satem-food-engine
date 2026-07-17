@@ -13,7 +13,8 @@
     "type-check": "tsc --noEmit",
     "prepare": "husky",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,mjs}": [
@@ -52,6 +53,7 @@
     "prettier-plugin-tailwindcss": "^0.6",
     "prisma": "^6",
     "tailwindcss": "^4",
+    "tsx": "^4.19.0",
     "typescript": "^5",
     "vitest": "^3.0.0"
   }

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { productService } from '@/services'
-import { TENANT_CONFIG } from '@/config'
+import { TenantResolver } from '@/server/tenant-resolver'
 import type { ApiResponse, Category } from '@/types'
 
 export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Category[]>>> {
@@ -9,7 +9,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<Ca
     let menuId = searchParams.get('menuId')
 
     if (!menuId) {
-      const defaultMenu = await productService.getMenu(TENANT_CONFIG.defaultLocationSlug)
+      const resolved = await TenantResolver.resolve(null)
+      const defaultMenu = await productService.getMenu(resolved.locationId)
       menuId = defaultMenu.id
     }
 

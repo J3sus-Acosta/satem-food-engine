@@ -15,8 +15,8 @@ export const APP_CONFIG = {
 } as const
 
 export const TENANT_CONFIG = {
-  defaultOrganizationSlug: process.env.NEXT_PUBLIC_DEFAULT_ORGANIZATION_SLUG ?? 'mci-santiago',
-  defaultLocationSlug: process.env.NEXT_PUBLIC_DEFAULT_LOCATION_SLUG ?? 'foodtruck-patio',
+  defaultOrganizationSlug: process.env.NEXT_PUBLIC_DEFAULT_ORGANIZATION_SLUG ?? '',
+  defaultLocationSlug: process.env.NEXT_PUBLIC_DEFAULT_LOCATION_SLUG ?? '',
 } as const
 
 export const ROUTES = {
