@@ -56,6 +56,15 @@ export interface IPaymentRepository {
   markRefunded(id: string): Promise<Payment>
 
   /**
+   * Update the external provider transaction ID and optional metadata.
+   */
+  updateExternalId(
+    id: string,
+    externalId: string,
+    metadata?: Record<string, unknown>
+  ): Promise<Payment>
+
+  /**
    * Update the payment status to any valid value.
    * Prefer the specific methods above over this generic one.
    */

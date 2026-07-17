@@ -378,6 +378,14 @@ export interface ConfirmPaymentInput {
   metadata?: Record<string, unknown>
 }
 
+export interface InitiatePaymentResult {
+  payment: Payment
+  orderNumber: string
+  checkoutUrl: string
+  expiresAt?: Date
+  estimatedPreparationTime?: number // in minutes
+}
+
 // ─── KITCHEN DOMAIN ───────────────────────────────────────────────────────────
 
 export interface KitchenTicket {

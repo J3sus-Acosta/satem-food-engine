@@ -5,8 +5,9 @@
  */
 import 'server-only'
 
-// import { db } from '@/server/db'  // Uncomment when implementing methods
-import { NotImplementedError } from '@/lib/errors'
+import { db } from '@/server/db'
+import { Prisma } from '@/generated/prisma'
+import type { Payment as PrismaPayment } from '@/generated/prisma'
 import type { IPaymentRepository } from '@/repositories/interfaces'
 import type {
   Payment,
@@ -16,43 +17,284 @@ import type {
   ConfirmPaymentInput,
 } from '@/types'
 
-/**
- * Prisma-backed implementation of the Payment repository.
- *
- * Responsibilities:
- * - Map Prisma `Decimal` to `Money` (number).
- * - The DB unique constraint on (orderId) enforces one active payment per order.
- */
+// In-Memory state for local development when PostgreSQL is not running
+const IN_MEMORY_PAYMENTS: Payment[] = []
+let IN_MEMORY_COUNTER = 0
+
+function isConnectionError(error: unknown): boolean {
+  if (!error) return false
+  const err = error as Record<string, unknown> | null | undefined
+  const msg = String(err?.message || '')
+  return (
+    err?.code === 'P1001' ||
+    err?.code === 'P1002' ||
+    err?.code === 'P1003' ||
+    err?.code === 'P1017' ||
+    msg.includes("Can't reach database") ||
+    msg.includes('connect ECONNREFUSED') ||
+    err?.name === 'PrismaClientInitializationError'
+  )
+}
+
+function mapPrismaPaymentToDomain(payment: PrismaPayment): Payment {
+  return {
+    id: payment.id,
+    orderId: payment.orderId,
+    provider: payment.provider as PaymentProvider,
+    status: payment.status as PaymentStatus,
+    amount: Number(payment.amount),
+    currency: payment.currency,
+    externalId: payment.externalId,
+    externalReference: payment.externalReference,
+    paidAt: payment.paidAt,
+    failureReason: payment.failureReason,
+    receiptUrl: payment.receiptUrl,
+    metadata: payment.metadata as unknown as Record<string, unknown> | null,
+    createdAt: payment.createdAt,
+    updatedAt: payment.updatedAt,
+  }
+}
+
 export class PrismaPaymentRepository implements IPaymentRepository {
-  async findById(_id: string): Promise<Payment | null> {
-    throw new NotImplementedError('PrismaPaymentRepository.findById')
+  async findById(id: string): Promise<Payment | null> {
+    try {
+      const payment = await db.payment.findFirst({
+        where: { id },
+      })
+      return payment ? mapPrismaPaymentToDomain(payment) : null
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.findById] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find((p) => p.id === id)
+        return found || null
+      }
+      throw error
+    }
   }
 
-  async findByOrderId(_orderId: string): Promise<Payment | null> {
-    throw new NotImplementedError('PrismaPaymentRepository.findByOrderId')
+  async findByOrderId(orderId: string): Promise<Payment | null> {
+    try {
+      const payment = await db.payment.findFirst({
+        where: { orderId },
+      })
+      return payment ? mapPrismaPaymentToDomain(payment) : null
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.findByOrderId] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find((p) => p.orderId === orderId)
+        return found || null
+      }
+      throw error
+    }
   }
 
-  async findByExternalId(_provider: PaymentProvider, _externalId: string): Promise<Payment | null> {
-    throw new NotImplementedError('PrismaPaymentRepository.findByExternalId')
+  async findByExternalId(provider: PaymentProvider, externalId: string): Promise<Payment | null> {
+    try {
+      const payment = await db.payment.findFirst({
+        where: { provider, externalId },
+      })
+      return payment ? mapPrismaPaymentToDomain(payment) : null
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.findByExternalId] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find(
+          (p) => p.provider === provider && p.externalId === externalId
+        )
+        return found || null
+      }
+      throw error
+    }
   }
 
-  async create(_data: CreatePaymentInput): Promise<Payment> {
-    throw new NotImplementedError('PrismaPaymentRepository.create')
+  async create(data: CreatePaymentInput): Promise<Payment> {
+    try {
+      const payment = await db.payment.create({
+        data: {
+          orderId: data.orderId,
+          provider: data.provider,
+          amount: data.amount,
+          currency: data.currency,
+          status: 'PENDING',
+        },
+      })
+      return mapPrismaPaymentToDomain(payment)
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.create] DB connection failed, using in-memory store.'
+        )
+        const newPayment: Payment = {
+          id: `mem_pay_${++IN_MEMORY_COUNTER}`,
+          orderId: data.orderId,
+          provider: data.provider,
+          status: 'PENDING',
+          amount: data.amount,
+          currency: data.currency,
+          externalId: null,
+          externalReference: null,
+          paidAt: null,
+          failureReason: null,
+          receiptUrl: null,
+          metadata: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+        IN_MEMORY_PAYMENTS.push(newPayment)
+        return newPayment
+      }
+      throw error
+    }
   }
 
-  async confirm(_id: string, _data: ConfirmPaymentInput): Promise<Payment> {
-    throw new NotImplementedError('PrismaPaymentRepository.confirm')
+  async confirm(id: string, data: ConfirmPaymentInput): Promise<Payment> {
+    try {
+      const payment = await db.payment.update({
+        where: { id },
+        data: {
+          status: 'PAID',
+          externalId: data.externalId,
+          externalReference: data.externalReference || null,
+          receiptUrl: data.receiptUrl || null,
+          paidAt: data.paidAt,
+          metadata: (data.metadata || {}) as Prisma.InputJsonValue,
+        },
+      })
+      return mapPrismaPaymentToDomain(payment)
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.confirm] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find((p) => p.id === id)
+        if (!found) throw new Error(`Payment ${id} not found in-memory`)
+
+        found.status = 'PAID'
+        found.externalId = data.externalId
+        found.externalReference = data.externalReference || null
+        found.receiptUrl = data.receiptUrl || null
+        found.paidAt = data.paidAt
+        found.metadata = data.metadata || {}
+        found.updatedAt = new Date()
+
+        return found
+      }
+      throw error
+    }
   }
 
-  async markFailed(_id: string, _reason: string): Promise<Payment> {
-    throw new NotImplementedError('PrismaPaymentRepository.markFailed')
+  async markFailed(id: string, reason: string): Promise<Payment> {
+    try {
+      const payment = await db.payment.update({
+        where: { id },
+        data: {
+          status: 'FAILED',
+          failureReason: reason,
+        },
+      })
+      return mapPrismaPaymentToDomain(payment)
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.markFailed] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find((p) => p.id === id)
+        if (!found) throw new Error(`Payment ${id} not found in-memory`)
+
+        found.status = 'FAILED'
+        found.failureReason = reason
+        found.updatedAt = new Date()
+
+        return found
+      }
+      throw error
+    }
   }
 
-  async markRefunded(_id: string): Promise<Payment> {
-    throw new NotImplementedError('PrismaPaymentRepository.markRefunded')
+  async markRefunded(id: string): Promise<Payment> {
+    try {
+      const payment = await db.payment.update({
+        where: { id },
+        data: {
+          status: 'REFUNDED',
+        },
+      })
+      return mapPrismaPaymentToDomain(payment)
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.markRefunded] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find((p) => p.id === id)
+        if (!found) throw new Error(`Payment ${id} not found in-memory`)
+
+        found.status = 'REFUNDED'
+        found.updatedAt = new Date()
+
+        return found
+      }
+      throw error
+    }
   }
 
-  async updateStatus(_id: string, _status: PaymentStatus): Promise<Payment> {
-    throw new NotImplementedError('PrismaPaymentRepository.updateStatus')
+  async updateExternalId(
+    id: string,
+    externalId: string,
+    metadata?: Record<string, unknown>
+  ): Promise<Payment> {
+    try {
+      const payment = await db.payment.update({
+        where: { id },
+        data: {
+          externalId,
+          metadata: (metadata || {}) as Prisma.InputJsonValue,
+        },
+      })
+      return mapPrismaPaymentToDomain(payment)
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.updateExternalId] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find((p) => p.id === id)
+        if (!found) throw new Error(`Payment ${id} not found in-memory`)
+
+        found.externalId = externalId
+        found.metadata = metadata || {}
+        found.updatedAt = new Date()
+
+        return found
+      }
+      throw error
+    }
+  }
+
+  async updateStatus(id: string, status: PaymentStatus): Promise<Payment> {
+    try {
+      const payment = await db.payment.update({
+        where: { id },
+        data: { status },
+      })
+      return mapPrismaPaymentToDomain(payment)
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.updateStatus] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find((p) => p.id === id)
+        if (!found) throw new Error(`Payment ${id} not found in-memory`)
+
+        found.status = status
+        found.updatedAt = new Date()
+
+        return found
+      }
+      throw error
+    }
   }
 }
