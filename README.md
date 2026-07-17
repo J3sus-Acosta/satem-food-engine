@@ -109,100 +109,82 @@ src/
 └── types/                  ← Tipos de dominio puros de TypeScript (isomórficos)
 ```
 
-### Principios Arquitectónicos
+## Release RC1
 
-- **Sin lógica de negocio en componentes React.** Los componentes solo renderizan UI y manejan estado de presentación. Toda la lógica de negocio vive en `services/`.
-- **Server Components por defecto.** Solo se usa `'use client'` cuando se necesita interactividad real (estado, eventos, APIs del navegador).
-- **`server-only` boundary.** Todo código que no debe llegar al cliente (Prisma, API keys, etc.) vive en `src/server/` o `src/repositories/prisma/` e importa `server-only`.
-- **Llamadas directas en el servidor.** Los Server Components consumen directamente los servicios de dominio de `src/services/` sin realizar peticiones HTTP innecesarias.
-- **API Routes como contratos externos.** Las API Routes de Next.js existen únicamente para integraciones externas (Chatbot, n8n, WhatsApp, Telegram, etc.).
-- **n8n para automatización e integración.** Las integraciones asíncronas y flujos complejos de sincronización (como el CMS de Google Sheets) son responsabilidad de n8n.
+El proyecto ha sido promovido a **Release Candidate 1 (RC1)**. En esta etapa se declara estable el núcleo operativo de:
+
+- Carta digital de autopedido mobile-first (`/menu`).
+- Sistema de cola y preparación KDS Kanban (`/dashboard/kitchen`).
+- Sincronización diaria del catálogo mediante Google Sheets y n8n.
+- Pasarelas de cobro inyectables (SumUp y Webpay Plus) con webhooks criptográficos idempotentes.
 
 ---
 
-## Configuración Inicial
+## Configuración Inicial (Local)
 
 ### Prerrequisitos
 
-- Node.js LTS (≥ 20)
-- npm ≥ 10
-- PostgreSQL (para desarrollo activo con base de datos)
+- Node.js LTS (v20 o superior).
+- npm v10 o superior.
+- Base de datos PostgreSQL v15+ (opcional para desarrollo, el repositorio incluye un motor in-memory si la DB no está disponible).
 
 ### Instalación
 
 ```bash
-# Clonar el repositorio
+# 1. Clonar el repositorio
 git clone <repo-url>
 cd satem-food-engine
 
-# Instalar dependencias
+# 2. Instalar dependencias
 npm install
 
-# Copiar variables de entorno
+# 3. Copiar y configurar el archivo de variables de entorno
 cp .env.example .env
-# → Edita .env con tus valores reales
+# → Abre .env y ajusta los valores mínimos (DATABASE_URL, MENU_SYNC_SECRET)
 
-# Iniciar servidor de desarrollo
+# 4. Generar el cliente de Prisma ORM
+npx prisma generate
+
+# 5. Aplicar migraciones iniciales a PostgreSQL
+npx prisma migrate dev
+
+# 6. Levantar servidor de desarrollo local
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en el navegador.
-
-### Scripts disponibles
-
-| Script               | Descripción                              |
-| -------------------- | ---------------------------------------- |
-| `npm run dev`        | Servidor de desarrollo con hot-reload    |
-| `npm run build`      | Build de producción                      |
-| `npm run start`      | Inicia el servidor de producción         |
-| `npm run lint`       | Ejecuta ESLint                           |
-| `npm run lint:fix`   | Ejecuta ESLint con auto-fix              |
-| `npm run format`     | Formatea todos los archivos con Prettier |
-| `npm run type-check` | Verifica TypeScript sin compilar         |
-
-### Base de datos (Prisma)
-
-```bash
-# Generar cliente Prisma
-npx prisma generate
-
-# Crear migración inicial (cuando haya modelos definidos)
-npx prisma migrate dev --name init
-
-# Abrir Prisma Studio
-npx prisma studio
-```
+Abra [http://localhost:3000](http://localhost:3000) en el navegador.
 
 ---
 
-## Variables de Entorno
+## Scripts Disponibles
 
-Todas las variables necesarias están documentadas en [`.env.example`](.env.example).
-
-> ⚠️ Nunca comitees `.env`. Solo `.env.example` debe estar en el repositorio.
-
----
-
-## Contribución
-
-1. Lee [`AGENTS.md`](AGENTS.md) antes de escribir cualquier código.
-2. Las ramas deben seguir el formato: `feat/`, `fix/`, `chore/`, `docs/`.
-3. El pre-commit hook ejecutará ESLint + Prettier automáticamente.
-4. Usa `npm run type-check` antes de hacer push.
+| Script               | Descripción                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| `npm run dev`        | Inicia el servidor Next.js en modo desarrollo con hot-reload.      |
+| `npm run build`      | Genera la compilación de producción optimizada (Turbopack).        |
+| `npm run start`      | Arranca la aplicación Next.js compilada en producción.             |
+| `npm run lint`       | Ejecuta el análisis estático de código con ESLint.                 |
+| `npm run format`     | Corrige problemas de estilo en todo el proyecto mediante Prettier. |
+| `npm run type-check` | Realiza la verificación de tipos de TypeScript sin compilar.       |
+| `npm run test`       | Ejecuta las 32 pruebas críticas de Vitest en modo monouso.         |
 
 ---
 
-## Workflows n8n
+## Guía de Despliegue en Producción
 
-Este repositorio es completamente autocontenido. Incluye toda la lógica backend, frontend y la orquestación en la nube mediante workflows de n8n versionados como Infrastructure as Code en la carpeta [`/n8n`](n8n).
+Para desplegar esta release candidate en servidores externos:
 
-Puedes importar y configurar directamente los workflows (sincronización de menú, webhooks de pagos, notificaciones de orden, alertas de stock bajo y mantenimiento diario) siguiendo la [**Guía de Importación de n8n**](n8n/import-all.md) sin necesidad de recrearlos manualmente.
+1. Revise la [**Guía de Despliegue Completa** (DEPLOYMENT.md)](DEPLOYMENT.md) para configuraciones Docker, docker-compose, NGINX Reverse Proxy y Let's Encrypt HTTPS.
+2. Siga el [**Manual de Operación** (OPERATIONS.md)](OPERATIONS.md) para conocer las rutinas diarias de soporte, administración del KDS y flujos de conciliación.
+3. Consulte el [**Plan de Respaldo y Recuperación** (BACKUP_RECOVERY.md)](BACKUP_RECOVERY.md) para garantizar los RTO y RPO establecidos ante desastres.
 
 ---
 
-## Primer cliente
+## Contribución y Buenas Prácticas
 
-**Food Truck MCI Santiago** — primera instalación de referencia del sistema.
+1. **Regla de oro**: Lea [`AGENTS.md`](AGENTS.md) completo antes de programar o modificar lógica del dominio.
+2. **TypeScript**: Strict true habilitado en `tsconfig.json`. Queda prohibido el uso de `any`.
+3. **Eventos**: El pre-commit hook de Husky validará el formato de código y lint de manera automatizada.
 
 ---
 
