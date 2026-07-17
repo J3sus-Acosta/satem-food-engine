@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { paymentService } from '@/services'
 import type { ApiResponse, InitiatePaymentResult } from '@/types'
 
+import { handleRouteError } from '@/lib/api'
+
 type RouteParams = {
   params: Promise<{
     id: string
@@ -27,16 +29,6 @@ export async function POST(
     const result = await paymentService.initiatePayment(orderId, provider, Number(amount), currency)
     return NextResponse.json<ApiResponse<InitiatePaymentResult>>({ data: result }, { status: 200 })
   } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    console.error('[POST /api/orders/[id]/pay] Error:', err)
-
-    const isValidationOrNotFound = err.name === 'ValidationError' || err.name === 'NotFoundError'
-
-    const status = isValidationOrNotFound ? 400 : 500
-
-    return NextResponse.json<ApiResponse<never>>(
-      { error: err.message || 'Error al iniciar el pago' },
-      { status }
-    )
+    return handleRouteError(error, 'Error al iniciar el pago', 'POST /api/orders/[id]/pay')
   }
 }

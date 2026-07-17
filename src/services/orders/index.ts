@@ -263,9 +263,7 @@ export class OrderService {
     }
 
     // Disparar conceptualmente: OrderCreatedEvent / OrderPaidEvent
-    console.log(
-      `[Domain Event (Concept)] Discharging OrderPaidEvent / OrderCreatedEvent for order ${order.id}`
-    )
+    // Previsto: emitir evento OrderPaidEvent / OrderCreatedEvent para orderId: order.id
 
     await this.orderRepo.updateStatus(orderId, 'CONFIRMED')
 
@@ -312,7 +310,7 @@ export class OrderService {
     }
 
     // Disparar conceptualmente: OrderReadyEvent
-    console.log(`[Domain Event (Concept)] Discharging OrderReadyEvent for order ${order.id}`)
+    // Previsto: emitir evento OrderReadyEvent para orderId: order.id
 
     await this.orderRepo.updateStatus(orderId, 'READY')
 
@@ -344,22 +342,6 @@ export class OrderService {
   }
 
   /**
-   * Operations for Kitchen: Starts preparation for a paid order.
-   * Transition: CONFIRMED -> PREPARING.
-   */
-  async startPreparation(orderId: string): Promise<OrderWithItems> {
-    return this.startPreparing(orderId)
-  }
-
-  /**
-   * Operations for Kitchen: Completes preparation ready order to delivered/completed.
-   * Transition: READY -> DELIVERED (COMPLETED).
-   */
-  async completeOrder(orderId: string): Promise<OrderWithItems> {
-    return this.markDelivered(orderId)
-  }
-
-  /**
    * Cancels an order and releases any reserved resources.
    */
   async cancelOrder(orderId: string, reason: string): Promise<OrderWithItems> {
@@ -373,9 +355,7 @@ export class OrderService {
     }
 
     // Disparar conceptualmente: OrderCancelledEvent
-    console.log(
-      `[Domain Event (Concept)] Discharging OrderCancelledEvent for order ${order.id}. Reason: ${reason}`
-    )
+    // Previsto: emitir evento OrderCancelledEvent para orderId: order.id, motivo: reason
 
     await this.orderRepo.updateStatus(orderId, 'CANCELLED', { cancellationReason: reason })
 

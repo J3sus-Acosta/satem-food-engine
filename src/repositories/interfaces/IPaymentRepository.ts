@@ -46,6 +46,21 @@ export interface IPaymentRepository {
   confirm(id: string, data: ConfirmPaymentInput): Promise<Payment>
 
   /**
+   * Atomically transitions a payment from PENDING → PAID only if it is still PENDING.
+   *
+   * Uses an atomic `updateMany` with a WHERE status='PENDING' condition so that
+   * concurrent webhook deliveries cannot both confirm the same payment. If the
+   * payment has already been confirmed (or failed), the operation is a no-op.
+   *
+   * @returns `{ confirmed: true, payment }` if the transition occurred.
+   *          `{ confirmed: false, payment }` if the payment was already in a terminal state.
+   */
+  confirmIfPending(
+    id: string,
+    data: ConfirmPaymentInput
+  ): Promise<{ confirmed: boolean; payment: Payment }>
+
+  /**
    * Mark a payment as FAILED with an optional reason.
    */
   markFailed(id: string, reason: string): Promise<Payment>

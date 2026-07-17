@@ -8,6 +8,7 @@ import 'server-only'
 import { db } from '@/server/db'
 import { Prisma } from '@/generated/prisma'
 import type { Payment as PrismaPayment } from '@/generated/prisma'
+import { isConnectionError } from './shared'
 import type { IPaymentRepository } from '@/repositories/interfaces'
 import type {
   Payment,
@@ -20,21 +21,6 @@ import type {
 // In-Memory state for local development when PostgreSQL is not running
 const IN_MEMORY_PAYMENTS: Payment[] = []
 let IN_MEMORY_COUNTER = 0
-
-function isConnectionError(error: unknown): boolean {
-  if (!error) return false
-  const err = error as Record<string, unknown> | null | undefined
-  const msg = String(err?.message || '')
-  return (
-    err?.code === 'P1001' ||
-    err?.code === 'P1002' ||
-    err?.code === 'P1003' ||
-    err?.code === 'P1017' ||
-    msg.includes("Can't reach database") ||
-    msg.includes('connect ECONNREFUSED') ||
-    err?.name === 'PrismaClientInitializationError'
-  )
-}
 
 function mapPrismaPaymentToDomain(payment: PrismaPayment): Payment {
   return {
@@ -183,6 +169,62 @@ export class PrismaPaymentRepository implements IPaymentRepository {
         found.updatedAt = new Date()
 
         return found
+      }
+      throw error
+    }
+  }
+
+  async confirmIfPending(
+    id: string,
+    data: ConfirmPaymentInput
+  ): Promise<{ confirmed: boolean; payment: Payment }> {
+    try {
+      const result = await db.payment.updateMany({
+        where: { id, status: 'PENDING' },
+        data: {
+          status: 'PAID',
+          externalId: data.externalId,
+          externalReference: data.externalReference || null,
+          receiptUrl: data.receiptUrl || null,
+          paidAt: data.paidAt,
+          metadata: (data.metadata || {}) as Prisma.InputJsonValue,
+        },
+      })
+
+      const paymentRecord = await db.payment.findUnique({
+        where: { id },
+      })
+
+      if (!paymentRecord) {
+        throw new Error(`Payment ${id} not found after atomic update`)
+      }
+
+      const payment = mapPrismaPaymentToDomain(paymentRecord)
+      return {
+        confirmed: result.count > 0,
+        payment,
+      }
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaPaymentRepository.confirmIfPending] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_PAYMENTS.find((p) => p.id === id)
+        if (!found) throw new Error(`Payment ${id} not found in-memory`)
+
+        if (found.status === 'PENDING') {
+          found.status = 'PAID'
+          found.externalId = data.externalId
+          found.externalReference = data.externalReference || null
+          found.receiptUrl = data.receiptUrl || null
+          found.paidAt = data.paidAt
+          found.metadata = data.metadata || {}
+          found.updatedAt = new Date()
+
+          return { confirmed: true, payment: found }
+        }
+
+        return { confirmed: false, payment: found }
       }
       throw error
     }

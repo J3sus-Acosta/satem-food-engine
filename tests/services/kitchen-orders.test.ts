@@ -60,7 +60,7 @@ describe('KDS y Ciclo de Cocina (Fase 9B)', () => {
     mockOrderRepo.updateStatus.mockResolvedValue(true)
 
     // Act
-    await orderService.startPreparation('ord-123')
+    await orderService.startPreparing('ord-123')
 
     // Assert
     expect(mockOrderRepo.updateStatus).toHaveBeenCalledWith('ord-123', 'PREPARING')
@@ -94,7 +94,7 @@ describe('KDS y Ciclo de Cocina (Fase 9B)', () => {
     mockOrderRepo.updateStatus.mockResolvedValue(true)
 
     // Act
-    await orderService.completeOrder('ord-123')
+    await orderService.markDelivered('ord-123')
 
     // Assert
     expect(mockOrderRepo.updateStatus).toHaveBeenCalledWith('ord-123', 'DELIVERED')
@@ -110,10 +110,10 @@ describe('KDS y Ciclo de Cocina (Fase 9B)', () => {
     mockOrderRepo.findByIdWithItems.mockResolvedValue(mockDraftOrder)
 
     // Act & Assert (DRAFT to PREPARING should fail)
-    await expect(orderService.startPreparation('ord-draft')).rejects.toThrow(ConflictError)
+    await expect(orderService.startPreparing('ord-draft')).rejects.toThrow(ConflictError)
 
     // Act & Assert (DRAFT to DELIVERED/COMPLETED should fail)
-    await expect(orderService.completeOrder('ord-draft')).rejects.toThrow(ConflictError)
+    await expect(orderService.markDelivered('ord-draft')).rejects.toThrow(ConflictError)
   })
 
   it('6. Pedido sin pago (DRAFT) no debe aparecer en la cola de cocina', async () => {

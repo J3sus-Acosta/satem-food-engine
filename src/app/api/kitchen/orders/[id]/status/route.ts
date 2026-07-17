@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { orderService } from '@/services'
 import type { ApiResponse, OrderWithItems } from '@/types'
 
+import { handleRouteError } from '@/lib/api'
+
 type RouteParams = {
   params: Promise<{
     id: string
@@ -30,13 +32,13 @@ export async function PATCH(
 
     switch (status) {
       case 'PREPARING':
-        updatedOrder = await orderService.startPreparation(orderId)
+        updatedOrder = await orderService.startPreparing(orderId)
         break
       case 'READY':
         updatedOrder = await orderService.markReady(orderId)
         break
       case 'COMPLETED':
-        updatedOrder = await orderService.completeOrder(orderId)
+        updatedOrder = await orderService.markDelivered(orderId)
         break
       default:
         return NextResponse.json(
@@ -47,19 +49,10 @@ export async function PATCH(
 
     return NextResponse.json<ApiResponse<OrderWithItems>>({ data: updatedOrder }, { status: 200 })
   } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    console.error('[PATCH /api/kitchen/orders/[id]/status] KDS transition error:', err)
-
-    const isValidationOrNotFound = err.name === 'ValidationError' || err.name === 'NotFoundError'
-    const isConflict = err.name === 'ConflictError'
-
-    let httpStatus = 500
-    if (isValidationOrNotFound) httpStatus = 400
-    if (isConflict) httpStatus = 409
-
-    return NextResponse.json<ApiResponse<never>>(
-      { error: err.message || 'Error al actualizar el estado del pedido' },
-      { status: httpStatus }
+    return handleRouteError(
+      error,
+      'Error al actualizar el estado del pedido',
+      'PATCH /api/kitchen/orders/[id]/status'
     )
   }
 }

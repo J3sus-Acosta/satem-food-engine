@@ -12,6 +12,7 @@ import type {
   OrderItem as PrismaOrderItem,
   OrderItemModifier as PrismaOrderItemModifier,
 } from '@/generated/prisma'
+import { isConnectionError } from './shared'
 import type { IOrderRepository } from '@/repositories/interfaces'
 import type {
   Order,
@@ -28,21 +29,6 @@ import type {
 // In-Memory state for local development when PostgreSQL is not running
 const IN_MEMORY_ORDERS: OrderWithItems[] = []
 let IN_MEMORY_COUNTER = 0
-
-function isConnectionError(error: unknown): boolean {
-  if (!error) return false
-  const err = error as Record<string, unknown> | null | undefined
-  const msg = String(err?.message || '')
-  return (
-    err?.code === 'P1001' ||
-    err?.code === 'P1002' ||
-    err?.code === 'P1003' ||
-    err?.code === 'P1017' ||
-    msg.includes("Can't reach database") ||
-    msg.includes('connect ECONNREFUSED') ||
-    err?.name === 'PrismaClientInitializationError'
-  )
-}
 
 function mapPrismaOrderToDomain(order: PrismaOrder): Order {
   return {

@@ -25,6 +25,7 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
       findByExternalId: vi.fn(),
       create: vi.fn(),
       confirm: vi.fn(),
+      confirmIfPending: vi.fn(),
       markFailed: vi.fn(),
       updateExternalId: vi.fn(),
       updateStatus: vi.fn(),
@@ -279,9 +280,12 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
     mockPaymentRepo.findByExternalId.mockResolvedValue(mockPaymentPending)
     mockOrderRepo.findById.mockResolvedValue(mockOrder)
     mockTenantConfigRepo.resolvePaymentConfig.mockResolvedValue(mockConfig)
-    mockPaymentRepo.confirm.mockResolvedValue({
-      ...mockPaymentPending,
-      status: 'PAID',
+    mockPaymentRepo.confirmIfPending.mockResolvedValue({
+      confirmed: true,
+      payment: {
+        ...mockPaymentPending,
+        status: 'PAID',
+      },
     })
 
     const headers = { 'x-mock-signature': 'true' }
@@ -297,7 +301,7 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
 
     // Assert
     expect(result.status).toBe('PAID')
-    expect(mockPaymentRepo.confirm).toHaveBeenCalledWith('pay-789', expect.any(Object))
+    expect(mockPaymentRepo.confirmIfPending).toHaveBeenCalledWith('pay-789', expect.any(Object))
     expect(mockOrderService.confirmOrder).toHaveBeenCalledWith('ord-123')
   })
 

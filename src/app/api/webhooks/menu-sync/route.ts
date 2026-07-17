@@ -99,9 +99,9 @@ export async function POST(
     const domainRows = adaptSheetRowsToDomain(rows)
 
     // ── 5. Preview (domain validation — checks existence of codes in DB) ──────
-    let _preview: DailyMenuPreviewItem[]
     try {
-      _preview = await productService.previewDailyMenuOverrides(locationId, domainRows)
+      // Execute preview purely for its validation side-effects (will throw if codes are invalid)
+      await productService.previewDailyMenuOverrides(locationId, domainRows)
     } catch (previewError: unknown) {
       if (previewError instanceof ValidationError) {
         const details = previewError.message.split(' | ')

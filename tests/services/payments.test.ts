@@ -28,6 +28,7 @@ describe('Pagos - Servicios de Dominio e Integraciones', () => {
       findByExternalId: vi.fn(),
       create: vi.fn(),
       confirm: vi.fn(),
+      confirmIfPending: vi.fn(),
       markFailed: vi.fn(),
       refund: vi.fn(),
     }

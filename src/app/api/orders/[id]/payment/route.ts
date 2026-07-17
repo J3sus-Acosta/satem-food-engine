@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { paymentService } from '@/services'
 import type { ApiResponse, PaymentIntentResult } from '@/types'
 
+import { handleRouteError } from '@/lib/api'
+
 type RouteParams = {
   params: Promise<{
     id: string
@@ -20,19 +22,10 @@ export async function POST(
 
     return NextResponse.json<ApiResponse<PaymentIntentResult>>({ data: result }, { status: 201 })
   } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    console.error('[POST /api/orders/[id]/payment] Payment intent creation failed:', err)
-
-    const isValidationOrNotFound = err.name === 'ValidationError' || err.name === 'NotFoundError'
-    const isConflict = err.name === 'ConflictError'
-
-    let status = 500
-    if (isValidationOrNotFound) status = 400
-    if (isConflict) status = 409
-
-    return NextResponse.json<ApiResponse<never>>(
-      { error: err.message || 'Error al iniciar el intento de pago' },
-      { status }
+    return handleRouteError(
+      error,
+      'Error al iniciar el intento de pago',
+      'POST /api/orders/[id]/payment'
     )
   }
 }

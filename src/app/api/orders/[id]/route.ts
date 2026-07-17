@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { orderService } from '@/services'
 import type { ApiResponse, OrderWithItems } from '@/types'
 
+import { handleRouteError } from '@/lib/api'
+
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -11,13 +13,7 @@ export async function GET(
     const order = await orderService.getOrder(id)
     return NextResponse.json({ data: order })
   } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    console.error('[GET /api/orders/[id]] Error retrieving order:', err)
-
-    let status = 500
-    if (err.name === 'NotFoundError') status = 404
-
-    return NextResponse.json({ error: err.message || 'Error al obtener el pedido' }, { status })
+    return handleRouteError(error, 'Error al obtener el pedido', 'GET /api/orders/[id]')
   }
 }
 
@@ -60,14 +56,6 @@ export async function PATCH(
 
     return NextResponse.json({ data: order })
   } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    console.error('[PATCH /api/orders/[id]] Error updating order:', err)
-
-    let status = 500
-    if (err.name === 'NotFoundError') status = 404
-    if (err.name === 'ValidationError') status = 400
-    if (err.name === 'ConflictError') status = 409
-
-    return NextResponse.json({ error: err.message || 'Error al actualizar el pedido' }, { status })
+    return handleRouteError(error, 'Error al actualizar el pedido', 'PATCH /api/orders/[id]')
   }
 }

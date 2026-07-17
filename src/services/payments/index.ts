@@ -177,15 +177,22 @@ export class PaymentService {
 
     // 6. Handle state transition
     if (verified.status === 'PAID') {
-      // Confirm payment in database
-      payment = await this.paymentRepo.confirm(payment.id, {
+      // Confirm payment in database atomically if it is pending
+      const confirmResult = await this.paymentRepo.confirmIfPending(payment.id, {
         externalId: verified.providerTransactionId,
         paidAt: new Date(),
         metadata: { webhookProcessedAt: new Date().toISOString() },
       })
+      payment = confirmResult.payment
 
-      // Update OrderStatus to CONFIRMED (ready for kitchen)
-      await this.orderService.confirmOrder(payment.orderId)
+      if (confirmResult.confirmed) {
+        // Update OrderStatus to CONFIRMED (ready for kitchen)
+        await this.orderService.confirmOrder(payment.orderId)
+      } else {
+        console.log(
+          `[PaymentService.processProviderWebhook] Webhook transaction "${providerTransactionId}" already confirmed concurrently. Ignoring.`
+        )
+      }
     } else if (verified.status === 'FAILED') {
       payment = await this.paymentRepo.markFailed(
         payment.id,

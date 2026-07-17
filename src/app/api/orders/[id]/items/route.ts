@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { orderService } from '@/services'
 import type { ApiResponse, OrderWithItems } from '@/types'
 
+import { handleRouteError } from '@/lib/api'
+
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -31,17 +33,10 @@ export async function POST(
 
     return NextResponse.json({ data: order }, { status: 201 })
   } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error))
-    console.error('[POST /api/orders/[id]/items] Error adding item to order:', err)
-
-    let status = 500
-    if (err.name === 'NotFoundError') status = 404
-    if (err.name === 'ValidationError') status = 400
-    if (err.name === 'ConflictError') status = 409
-
-    return NextResponse.json(
-      { error: err.message || 'Error al agregar el ítem al pedido' },
-      { status }
+    return handleRouteError(
+      error,
+      'Error al agregar el ítem al pedido',
+      'POST /api/orders/[id]/items'
     )
   }
 }
