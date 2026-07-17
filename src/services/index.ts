@@ -4,7 +4,7 @@
  */
 
 export { ProductService, productService } from './products'
-export { OrderService } from './orders'
+export { OrderService, orderService } from './orders'
 export { PaymentService } from './payments'
 export { KitchenService } from './kitchen'
 export { InventoryService } from './inventory'
