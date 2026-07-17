@@ -154,7 +154,7 @@ export class PaymentService {
 
     // 3. Webhook Idempotency Check (run first to avoid queries/sig validation on processed payments)
     if (payment.status === 'PAID' || payment.status === 'FAILED' || payment.status === 'REFUNDED') {
-      console.log(
+      console.info(
         `[PaymentService.processProviderWebhook] Webhook transaction "${providerTransactionId}" already processed (status: ${payment.status}). Ignoring.`
       )
       return payment
@@ -189,7 +189,7 @@ export class PaymentService {
         // Update OrderStatus to CONFIRMED (ready for kitchen)
         await this.orderService.confirmOrder(payment.orderId)
       } else {
-        console.log(
+        console.info(
           `[PaymentService.processProviderWebhook] Webhook transaction "${providerTransactionId}" already confirmed concurrently. Ignoring.`
         )
       }

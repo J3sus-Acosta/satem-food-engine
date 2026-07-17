@@ -588,9 +588,16 @@ export class PrismaOrderRepository implements IOrderRepository {
 
   async softDelete(id: string): Promise<void> {
     try {
-      await db.order.update({
-        where: { id },
-        data: { deletedAt: new Date() },
+      const now = new Date()
+      await db.$transaction(async (tx) => {
+        await tx.order.update({
+          where: { id },
+          data: { deletedAt: now },
+        })
+        await tx.orderItem.updateMany({
+          where: { orderId: id },
+          data: { deletedAt: now },
+        })
       })
     } catch (error) {
       if (isConnectionError(error)) {
@@ -599,7 +606,11 @@ export class PrismaOrderRepository implements IOrderRepository {
         )
         const found = IN_MEMORY_ORDERS.find((o) => o.id === id && o.deletedAt === null)
         if (found) {
-          found.deletedAt = new Date()
+          const now = new Date()
+          found.deletedAt = now
+          found.items.forEach((item) => {
+            item.deletedAt = now
+          })
         }
         return
       }

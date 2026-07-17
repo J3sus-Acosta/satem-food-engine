@@ -42,7 +42,7 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 
 | Capa           | Tecnología                         |
 | -------------- | ---------------------------------- |
-| Framework      | Next.js 15 (App Router)            |
+| Framework      | Next.js 16 (App Router)            |
 | UI Library     | React 19                           |
 | Lenguaje       | TypeScript 5 (strict mode)         |
 | Estilos        | Tailwind CSS 4                     |

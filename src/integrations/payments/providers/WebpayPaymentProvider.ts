@@ -165,7 +165,7 @@ export class WebpayPaymentProvider implements IPaymentProvider {
    * Initiates a mock refund via Webpay.
    */
   async refund(providerTransactionId: string, amount: number): Promise<boolean> {
-    console.log(
+    console.info(
       `[WebpayPaymentProvider] Mock Webpay Refund — tx: ${providerTransactionId}, amount: ${amount}, commerce: ${this.commerceCode}`
     )
     return true

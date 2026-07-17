@@ -194,7 +194,7 @@ export class SumUpPaymentProvider implements IPaymentProvider {
     // TODO: Real implementation should call SumUp POST /v0.1/me/refund/{tx_id}
     // Suppress unused-var warning — will be used in real implementation
     void NotImplementedError // imported for future use consistency
-    console.log(
+    console.info(
       `[SumUpPaymentProvider] Mock refund — tx: ${providerTransactionId}, amount: ${amount}`
     )
     return true

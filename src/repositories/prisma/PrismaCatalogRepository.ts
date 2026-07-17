@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { db } from '@/server/db'
+import { isConnectionError } from './shared'
 import type { ICatalogRepository } from '@/repositories/interfaces'
 import type {
   MenuWithCategories,
@@ -602,10 +603,11 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       })
 
       if (!menu) {
-        // Si no hay datos en la BD pero no falló la conexión, podemos retornar null o usar fallback
-        // Para asegurar una demo funcional en el primer levantamiento, si la tabla está vacía usamos fallback
+        if (process.env.NODE_ENV === 'production') {
+          return null
+        }
         console.warn(
-          `[PrismaCatalogRepository] Menu not found in DB for locationId "${locationId}". Falling back to Mock Data.`
+          `[PrismaCatalogRepository] Menu not found in DB for locationId "${locationId}". Falling back to Mock Data in development.`
         )
         return buildMockMenuWithCategories()
       }
@@ -765,11 +767,14 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         categories,
       }
     } catch (error) {
-      console.error(
-        '[PrismaCatalogRepository.findMenuByLocationId] Database error, falling back to mock data:',
-        error
-      )
-      return buildMockMenuWithCategories()
+      if (isConnectionError(error) || process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[PrismaCatalogRepository.findMenuByLocationId] DB connection failed or non-production fallback to mock data:',
+          error
+        )
+        return buildMockMenuWithCategories()
+      }
+      throw error
     }
   }
 
@@ -780,6 +785,9 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       })
 
       if (!location) {
+        if (process.env.NODE_ENV === 'production') {
+          return null
+        }
         console.warn(
           `[PrismaCatalogRepository] Location not found for slug "${locationSlug}". Falling back to Mock Data.`
         )
@@ -788,11 +796,14 @@ export class PrismaCatalogRepository implements ICatalogRepository {
 
       return this.findMenuByLocationId(location.id)
     } catch (error) {
-      console.error(
-        '[PrismaCatalogRepository.findMenuByLocationSlug] Database error, falling back to mock data:',
-        error
-      )
-      return buildMockMenuWithCategories()
+      if (isConnectionError(error) || process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[PrismaCatalogRepository.findMenuByLocationSlug] DB connection failed or non-production fallback to mock data:',
+          error
+        )
+        return buildMockMenuWithCategories()
+      }
+      throw error
     }
   }
 
@@ -804,11 +815,14 @@ export class PrismaCatalogRepository implements ICatalogRepository {
       })
       return categories
     } catch (error) {
-      console.error(
-        '[PrismaCatalogRepository.findCategoriesByMenuId] Database error, using mock categories:',
-        error
-      )
-      return MOCK_CATEGORIES
+      if (isConnectionError(error) || process.env.NODE_ENV !== 'production') {
+        console.warn(
+          '[PrismaCatalogRepository.findCategoriesByMenuId] DB connection failed or non-production fallback to mock categories:',
+          error
+        )
+        return MOCK_CATEGORIES
+      }
+      throw error
     }
   }
 
