@@ -23,9 +23,13 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 | **FASE 5**   | **Pagos**                                  | Integración de pasarela con SumUp y procesamiento idempotente de webhooks.                                                                       | ✅ Completada |
 | **FASE 5.5** | **Multi-Provider / Multi-Tenant de Pagos** | Arquitectura multi-tenant: proveedor configurable por Organización, Local o `.env`. `ITenantConfigurationRepository` + `PaymentProviderFactory`. | ✅ Completada |
 | **FASE 6**   | **Pantalla de Cocina**                     | Dashboard de cocina táctil Kanban en `/dashboard/kitchen` para gestión de preparación (FIFO).                                                    | ✅ Completada |
-| **FASE 7**   | **Menú Operacional + Google Sheets CMS**   | Sincronización diaria del menú y disponibilidad mediante códigos cortos y n8n para MCI Santiago.                                                 | 🏃 En Curso   |
-| **FASE 8**   | **Inventario**                             | Control e incremento/decremento automático de stock.                                                                                             | 🔜 Pendiente  |
-| **FASE 9**   | **Chatbot IA**                             | Interacción conversacional (consumidor de servicios de dominio).                                                                                 | 🔜 Pendiente  |
+| **FASE 7A**  | **Menú Operacional**                       | Panel administrativo `/dashboard/menu` para overrides manuales táctiles.                                                                         | ✅ Completada |
+| **FASE 7B**  | **Google Sheets CMS + n8n Sync**           | Sincronización automatizada diaria del menú mediante códigos SKU y webhook de n8n.                                                               | ✅ Completada |
+| **FASE 7C**  | **Estabilización MVP**                     | Suite de testing con Vitest, auditoría arquitectónica, endurecimiento de seguridad en producción y documentación.                                | ✅ Completada |
+
+### Próxima Etapa
+
+- **Frontend Público / Experiencia de Cliente:** Construcción de la interfaz pública para clientes finales optimizada para móviles (carta digital, autopedido interactivo y checkout directo).
 
 ---
 

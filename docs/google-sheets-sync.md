@@ -170,3 +170,207 @@ Una vez confirmado un pedido, los precios y nombres se congelan en la comanda (`
 
 - **Idempotencia:** Múltiples ejecuciones del webhook de n8n con los mismos datos del Google Sheet producen exactamente el mismo estado en PostgreSQL, evitando duplicar registros o regenerar IDs.
 - **Resiliencia Operativa:** Los errores de red, fallos en la API de Google, o errores temporales de n8n **nunca detienen el funcionamiento de la carta digital de MCI Santiago**, la cual sigue sirviendo los últimos datos operacionales correctamente guardados en la base de datos o cayendo de vuelta a los valores maestros en el peor de los casos.
+
+---
+
+## 10. Endpoint de Webhook — Contrato Técnico
+
+### Ruta
+
+```
+POST /api/webhooks/menu-sync
+```
+
+### Seguridad
+
+| Header               | Descripción                                                                   |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `x-menu-sync-secret` | Secret compartido. Valor del env `MENU_SYNC_SECRET`. Requerido en producción. |
+
+Si `MENU_SYNC_SECRET` no está configurado en el servidor, el endpoint acepta todas las peticiones (modo desarrollo/local).
+
+### Cuerpo de la Petición (JSON)
+
+```json
+{
+  "locationId": "cmbxxxxxxxxxxxxxx",
+  "rows": [
+    {
+      "Código": "BUR001",
+      "Disponible": "SI",
+      "Visible": "SI",
+      "Precio": 3500,
+      "Stock": 20,
+      "Destacado": "NO",
+      "Orden": 1,
+      "Nota": "¡Recomendado del Chef!"
+    },
+    {
+      "Código": "PAP001",
+      "Disponible": "SI",
+      "Visible": "SI",
+      "Precio": "",
+      "Stock": "",
+      "Destacado": "SI",
+      "Orden": 2,
+      "Nota": ""
+    }
+  ]
+}
+```
+
+### Respuesta Exitosa (HTTP 200)
+
+```json
+{
+  "data": {
+    "appliedCount": 2,
+    "results": [
+      { "code": "BUR001", "status": "success" },
+      { "code": "PAP001", "status": "success" }
+    ]
+  }
+}
+```
+
+### Respuesta de Error de Validación (HTTP 400)
+
+```json
+{
+  "error": "Error de validación en el payload de sincronización",
+  "details": [
+    "Fila 2 - BUR001 - El campo Disponible debe ser 'SI' o 'NO' (recibido: 'Yes')",
+    "Fila 5 - PAP001 - El código 'PAP001' está duplicado en el archivo"
+  ]
+}
+```
+
+### Respuesta No Autorizado (HTTP 401)
+
+```json
+{
+  "error": "No autorizado"
+}
+```
+
+---
+
+## 11. Flujo de Procesamiento Interno
+
+El endpoint `/api/webhooks/menu-sync` orquesta internamente cuatro capas:
+
+```
+n8n HTTP Request
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Route Handler  /api/webhooks/menu-sync/route.ts            │
+│  1. Valida header x-menu-sync-secret                        │
+│  2. Parsea locationId y rows del body                       │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  MenuSyncService  src/services/menu-sync/index.ts           │
+│  validateSheetRows()   — Deduplicación + tipos + booleanos  │
+│  adaptSheetRowsToDomain() — SheetRow → DailyMenuRowInput    │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  ProductService  src/services/products/index.ts             │
+│  previewDailyMenuOverrides() — Valida existencia en DB      │
+│  applyDailyMenuOverrides()   — Upsert DailyMenuOverride     │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  PrismaCatalogRepository                                    │
+│  findMenuItemBySku() — Código → menuItemId                  │
+│  upsertDailyMenuOverride() — Escribe en PostgreSQL          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 12. Configuración del Workflow n8n
+
+El workflow recomendado para MCI Santiago consta de los siguientes nodos:
+
+### Nodo 1 — Schedule Trigger (o Manual Trigger)
+
+```
+Tipo: Schedule Trigger
+Cron: 0 8 * * *   (ejecutar cada día a las 08:00 AM)
+```
+
+También puede dispararse manualmente desde la interfaz de n8n durante la operación.
+
+### Nodo 2 — Google Sheets: Read Rows
+
+```
+Tipo: Google Sheets
+Operation: Read Rows
+Sheet ID: <ID del documento de Google Sheets>
+Sheet Name: Menú Diario
+Range: A2:H100   (omite la fila de encabezado)
+Return All: true
+```
+
+Columns mapping (deben coincidir exactamente con los encabezados de la hoja):
+`Código | Disponible | Visible | Precio | Stock | Destacado | Orden | Nota`
+
+### Nodo 3 — HTTP Request: Webhook Menu Sync
+
+```
+Tipo: HTTP Request
+Method: POST
+URL: https://<tu-dominio>/api/webhooks/menu-sync
+Authentication: None (el secret va en el header)
+Headers:
+  Content-Type:       application/json
+  x-menu-sync-secret: {{ $env.MENU_SYNC_SECRET }}
+Body (JSON):
+  {
+    "locationId": "<locationId de la BD>",
+    "rows": {{ $json.rows }}
+  }
+```
+
+> **Importante:** El campo `locationId` es el ID interno de PostgreSQL de la Location. Debe obtenerse de la BD y configurarse como variable en n8n. No se expone en Google Sheets.
+
+### Nodo 4 — IF: Evaluar Resultado
+
+```
+Tipo: IF
+Condición: {{ $json.data.appliedCount }} > 0
+True → Nodo 5 (Éxito)
+False → Nodo 6 (Sin cambios)
+```
+
+### Nodo 5 — Google Sheets: Update Status (Éxito)
+
+```
+Tipo: Google Sheets
+Operation: Update Row
+Sheet Name: Configuración
+Row: 2, Column: "Última Sincronización"
+Value: "✅ {{ $now.format('DD/MM/YYYY HH:mm') }} — {{ $json.data.appliedCount }} productos actualizados"
+```
+
+### Nodo 6 — Google Sheets: Update Status (Error)
+
+```
+Cuando el HTTP Request devuelve error (código 400 o 500):
+Operation: Update Row
+Value: "❌ {{ $now.format('DD/MM/YYYY HH:mm') }} — ERROR: {{ $json.error }}"
+```
+
+### Variables de Entorno en n8n
+
+Configurar en n8n → Settings → Variables:
+
+| Variable           | Valor                                                   |
+| ------------------ | ------------------------------------------------------- |
+| `MENU_SYNC_SECRET` | Mismo valor que el env `MENU_SYNC_SECRET` del servidor  |
+| `LOCATION_ID`      | ID interno de PostgreSQL de la Location de MCI Santiago |

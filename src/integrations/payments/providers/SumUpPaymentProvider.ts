@@ -64,25 +64,45 @@ export class SumUpPaymentProvider implements IPaymentProvider {
       {} as Record<string, string>
     )
 
+    const isProd = process.env.NODE_ENV === 'production'
+
     // For testing and mock verification
     const mockSig = normalizedHeaders['x-mock-signature']
-    if (mockSig === 'true' || !process.env.SUMUP_WEBHOOK_SECRET) {
-      try {
-        const payload = JSON.parse(rawBody) as Record<string, unknown>
-        return {
-          isValid: true,
-          paymentId: String(payload.paymentId ?? 'unknown_payment'),
-          providerTransactionId: String(payload.providerTransactionId ?? 'unknown_tx'),
-          amount: Number(payload.amount ?? 0),
-          status: (payload.status as 'PAID' | 'FAILED' | 'REFUNDED') ?? 'PAID',
-        }
-      } catch {
+
+    // In production, reject any mock signature and require configured webhook secret
+    if (isProd) {
+      if (!process.env.SUMUP_WEBHOOK_SECRET) {
+        console.error(
+          '[SumUpPaymentProvider] Refusing webhook validation: SUMUP_WEBHOOK_SECRET is not configured in production environment.'
+        )
         return {
           isValid: false,
           paymentId: '',
           providerTransactionId: '',
           amount: 0,
           status: 'FAILED',
+        }
+      }
+    } else {
+      // In development/test mode, allow mock signature or empty secret fallback
+      if (mockSig === 'true' || !process.env.SUMUP_WEBHOOK_SECRET) {
+        try {
+          const payload = JSON.parse(rawBody) as Record<string, unknown>
+          return {
+            isValid: true,
+            paymentId: String(payload.paymentId ?? 'unknown_payment'),
+            providerTransactionId: String(payload.providerTransactionId ?? 'unknown_tx'),
+            amount: Number(payload.amount ?? 0),
+            status: (payload.status as 'PAID' | 'FAILED' | 'REFUNDED') ?? 'PAID',
+          }
+        } catch {
+          return {
+            isValid: false,
+            paymentId: '',
+            providerTransactionId: '',
+            amount: 0,
+            status: 'FAILED',
+          }
         }
       }
     }

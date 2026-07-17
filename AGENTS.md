@@ -379,6 +379,15 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 
 ---
 
+## 11.5 Reglas Críticas del MVP
+
+1. Toda lógica de negocio nueva requiere pruebas.
+2. Nunca acceder directamente a Prisma desde servicios.
+3. Nunca desactivar validaciones de seguridad en producción.
+4. Toda integración externa debe usar adapters.
+
+---
+
 ## 12. Checklist Pre-Commit
 
 Antes de hacer commit, verificar:
