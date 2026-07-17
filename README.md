@@ -14,16 +14,16 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 
 ### Roadmap de Implementación
 
-| Fase       | Título                 | Objetivos Core                                                                                                                              | Estado         |
-| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| **FASE 1** | **Infraestructura**    | Configuración base, TypeScript, ESLint, lint-staged, Husky.                                                                                 | ✅ Completada  |
-| **FASE 2** | **Modelo de Dominio**  | Diseño de base de datos multi-tenant, `schema.prisma` y validaciones.                                                                       | ✅ Completada  |
-| **FASE 3** | **Catálogo Digital**   | Categorías, Productos, Variantes, Modificadores, Disponibilidad, Precios, API y página pública `/menu`. (No chatbot, no pedidos, no pagos). | 🏗️ En Progreso |
-| **FASE 4** | **Pedidos**            | Flujo completo de pedidos utilizando servicios de dominio.                                                                                  | 🔜 Pendiente   |
-| **FASE 5** | **Pagos**              | Integración de pasarela con SumUp.                                                                                                          | 🔜 Pendiente   |
-| **FASE 6** | **Pantalla de Cocina** | Dashboard de cocina para tickets y comandas.                                                                                                | 🔜 Pendiente   |
-| **FASE 7** | **Inventario**         | Control e incremento/decremento automático de stock.                                                                                        | 🔜 Pendiente   |
-| **FASE 8** | **Chatbot IA**         | Interacción conversacional (consumidor de servicios de dominio).                                                                            | 🔜 Pendiente   |
+| Fase       | Título                 | Objetivos Core                                                                                          | Estado        |
+| ---------- | ---------------------- | ------------------------------------------------------------------------------------------------------- | ------------- |
+| **FASE 1** | **Infraestructura**    | Configuración base, TypeScript, ESLint, lint-staged, Husky.                                             | ✅ Completada |
+| **FASE 2** | **Modelo de Dominio**  | Diseño de base de datos multi-tenant, `schema.prisma` y validaciones.                                   | ✅ Completada |
+| **FASE 3** | **Catálogo Digital**   | Categorías, Productos, Variantes, Modificadores, Disponibilidad, Precios, API y página pública `/menu`. | ✅ Completada |
+| **FASE 4** | **Pedidos**            | Flujo completo de pedidos utilizando servicios de dominio.                                              | ✅ Completada |
+| **FASE 5** | **Pagos**              | Integración de pasarela con SumUp y procesamiento idempotente de webhooks.                              | ✅ Completada |
+| **FASE 6** | **Pantalla de Cocina** | Dashboard de cocina táctil Kanban en `/dashboard/kitchen` para gestión de preparación (FIFO).           | ✅ Completada |
+| **FASE 7** | **Inventario**         | Control e incremento/decremento automático de stock.                                                    | 🔜 Pendiente  |
+| **FASE 8** | **Chatbot IA**         | Interacción conversacional (consumidor de servicios de dominio).                                        | 🔜 Pendiente  |
 
 ---
 
