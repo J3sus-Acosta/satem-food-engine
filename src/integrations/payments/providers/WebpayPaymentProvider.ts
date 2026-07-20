@@ -32,8 +32,9 @@ export class WebpayPaymentProvider implements IPaymentProvider {
     amount: number,
     currency: string
   ): Promise<CreatePaymentIntentResult> {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const providerTransactionId = `webpay_tx_${Math.random().toString(36).substring(2, 11)}`
-    const checkoutUrl = `https://mock.webpay.cl/pay/${providerTransactionId}?paymentId=${paymentId}&amount=${amount}&currency=${currency}`
+    const checkoutUrl = `${appUrl}/mock-payment?provider=webpay&paymentId=${paymentId}&amount=${amount}&currency=${currency}&tx=${providerTransactionId}`
     const expiresAt = new Date(Date.now() + 1800 * 1000) // 30 mins
 
     return {

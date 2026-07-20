@@ -171,3 +171,13 @@ Para un control óptimo de cara al cliente y al personal, diferenciamos dos iden
     - Generado de forma secuencial y legible por local (ej. `#001`, `#002`, `#042`).
     - Mostrado en la pantalla de cocina, tickets impresos, mensajes al cliente y detalles del carrito.
     - La generación de este número debe ser atómica en el repositorio para evitar duplicaciones bajo alta concurrencia.
+
+---
+
+## 10. Generación Atómica de Correlativos (`OrderSequence`)
+
+La numeración comercial del pedido (`orderNumber`) utiliza la entidad dedicada `OrderSequence` con una fecha de negocio pura (`@db.Date`) en formato UTC (`YYYY-MM-DD 00:00:00.000Z`).
+
+- **Generador Atómico**: Se ejecuta mediante `tx.orderSequence.upsert({ update: { lastNumber: { increment: 1 } }, create: { lastNumber: 1 } })` en una única transacción de base de datos.
+- **Aislamiento**: Jamás consulta la tabla `Order`, eliminando la necesidad de `findFirst()`, `MAX()`, bloqueos por reintentos `P2002` o consultas dependientes de `createdAt`.
+- **Formateo**: Formatea secuencialmente `#001`, `#002`, ..., `#1000`.

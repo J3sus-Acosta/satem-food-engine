@@ -28,7 +28,17 @@ import type {
 
 // In-Memory state for local development when PostgreSQL is not running
 const IN_MEMORY_ORDERS: OrderWithItems[] = []
-let IN_MEMORY_COUNTER = 0
+const IN_MEMORY_SEQUENCES: Map<string, number> = new Map()
+
+/**
+ * Returns a pure business date (YYYY-MM-DD 00:00:00.000Z) normalized in UTC
+ * to guarantee complete immunity from server timezones.
+ */
+export function getPureBusinessDate(date?: Date): Date {
+  const target = date || new Date()
+  const isoDateStr = target.toISOString().split('T')[0]
+  return new Date(`${isoDateStr}T00:00:00.000Z`)
+}
 
 function mapPrismaOrderToDomain(order: PrismaOrder): Order {
   return {
@@ -263,40 +273,60 @@ export class PrismaOrderRepository implements IOrderRepository {
     }
   }
 
+  /**
+   * Generates the next sequential order number for a location and business date.
+   * Atomically upserts OrderSequence with lastNumber increment inside the active transaction.
+   * NEVER queries the Orders table.
+   */
+  private async generateNextOrderNumber(
+    tx: Prisma.TransactionClient,
+    locationId: string,
+    businessDate: Date
+  ): Promise<string> {
+    const existing = await tx.orderSequence.findFirst({
+      where: {
+        locationId,
+        businessDate,
+      },
+    })
+
+    let startNumber = 1
+    if (!existing) {
+      const latestSeq = await tx.orderSequence.findFirst({
+        where: { locationId },
+        orderBy: { lastNumber: 'desc' },
+      })
+      if (latestSeq) {
+        startNumber = latestSeq.lastNumber + 1
+      }
+    }
+
+    const sequence = await tx.orderSequence.upsert({
+      where: {
+        locationId_businessDate: {
+          locationId,
+          businessDate,
+        },
+      },
+      update: {
+        lastNumber: { increment: 1 },
+      },
+      create: {
+        locationId,
+        businessDate,
+        lastNumber: startNumber,
+      },
+    })
+
+    return `#${String(sequence.lastNumber).padStart(3, '0')}`
+  }
+
   async create(data: CreateOrderInput): Promise<Order> {
-    // ── Atomic order creation with retry on unique constraint collision ────────
-    //
-    // Problem: Reading the last order number and inserting a new one are two
-    // separate operations. Under concurrent load two requests could read the
-    // same "last" number and both attempt to insert, causing a P2002 (unique
-    // constraint violation on locationId + orderNumber).
-    //
-    // Fix: Wrap both operations in a db.$transaction so that PostgreSQL
-    // serialises the read + write. If a concurrent write still sneaks in and
-    // causes a P2002, we retry with the freshly computed next number.
-    const MAX_RETRIES = 5
+    const businessDate = getPureBusinessDate()
 
-    const tryCreate = async (): Promise<Order> => {
-      // Calculate the next order number INSIDE the transaction so the read
-      // and the write are atomic at the database level.
-      return db.$transaction(async (tx) => {
-        const todayStart = new Date()
-        todayStart.setHours(0, 0, 0, 0)
-
-        const latestOrder = await tx.order.findFirst({
-          where: { locationId: data.locationId, createdAt: { gte: todayStart } },
-          orderBy: { orderNumber: 'desc' },
-          select: { orderNumber: true },
-        })
-
-        let orderNumber = '#001'
-        if (latestOrder) {
-          const lastNumStr = latestOrder.orderNumber.replace('#', '')
-          const lastNum = parseInt(lastNumStr, 10)
-          if (!isNaN(lastNum)) {
-            orderNumber = `#${String(lastNum + 1).padStart(3, '0')}`
-          }
-        }
+    try {
+      return await db.$transaction(async (tx) => {
+        const orderNumber = await this.generateNextOrderNumber(tx, data.locationId, businessDate)
 
         const order = await tx.order.create({
           data: {
@@ -316,61 +346,46 @@ export class PrismaOrderRepository implements IOrderRepository {
         })
         return mapPrismaOrderToDomain(order)
       })
-    }
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn('[PrismaOrderRepository.create] DB connection failed, using in-memory store.')
+        const dateKey = businessDate.toISOString().split('T')[0]
+        const sequenceKey = `${data.locationId}_${dateKey}`
+        const currentLast = IN_MEMORY_SEQUENCES.get(sequenceKey) || 0
+        const nextLast = currentLast + 1
+        IN_MEMORY_SEQUENCES.set(sequenceKey, nextLast)
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        return await tryCreate()
-      } catch (error) {
-        const prismaError = error as { code?: string }
-        if (prismaError?.code === 'P2002' && attempt < MAX_RETRIES) {
-          // Unique constraint collision on orderNumber — retry immediately
-          // (the next iteration reads the freshly inserted order number)
-          continue
+        const orderNumber = `#${String(nextLast).padStart(3, '0')}`
+        const newOrder: OrderWithItems = {
+          id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          orderNumber,
+          locationId: data.locationId,
+          customerId: data.customerId || null,
+          channelId: data.channelId,
+          status: 'DRAFT' as OrderStatus,
+          type: (data.type || 'DINE_IN') as OrderType,
+          tableIdentifier: data.tableIdentifier || null,
+          notes: data.notes || null,
+          subtotal: 0,
+          taxAmount: 0,
+          discountAmount: 0,
+          totalAmount: 0,
+          metadata: data.metadata || null,
+          cancellationReason: null,
+          confirmedAt: null,
+          preparedAt: null,
+          deliveredAt: null,
+          cancelledAt: null,
+          deletedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          items: [],
         }
-        if (isConnectionError(error)) {
-          // Fallback to in-memory store when PostgreSQL is unavailable
-          console.warn(
-            '[PrismaOrderRepository.create] DB connection failed, using in-memory store.'
-          )
-          IN_MEMORY_COUNTER++
-          const orderNumber = `#${String(IN_MEMORY_COUNTER).padStart(3, '0')}`
-          const newOrder: OrderWithItems = {
-            id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            orderNumber,
-            locationId: data.locationId,
-            customerId: data.customerId || null,
-            channelId: data.channelId,
-            status: 'DRAFT' as OrderStatus,
-            type: (data.type || 'DINE_IN') as OrderType,
-            tableIdentifier: data.tableIdentifier || null,
-            notes: data.notes || null,
-            subtotal: 0,
-            taxAmount: 0,
-            discountAmount: 0,
-            totalAmount: 0,
-            metadata: data.metadata || null,
-            cancellationReason: null,
-            confirmedAt: null,
-            preparedAt: null,
-            deliveredAt: null,
-            cancelledAt: null,
-            deletedAt: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            items: [],
-          }
-          IN_MEMORY_ORDERS.push(newOrder)
-          return newOrder
-        }
-        throw error
+        IN_MEMORY_ORDERS.push(newOrder)
+        return newOrder
       }
+      throw error
     }
-
-    // Exhausted retries — this should be extremely rare in practice
-    throw new Error(
-      `[PrismaOrderRepository.create] Failed to generate a unique order number for location "${data.locationId}" after ${MAX_RETRIES} attempts.`
-    )
   }
 
   async addItem(
@@ -586,6 +601,48 @@ export class PrismaOrderRepository implements IOrderRepository {
     }
   }
 
+  async updateDiscountAndTotals(
+    id: string,
+    discountAmount: number,
+    notes?: string
+  ): Promise<Order> {
+    try {
+      const order = await db.order.findUnique({ where: { id } })
+      if (!order) throw new Error(`Order ${id} not found`)
+
+      const subtotal = Number(order.subtotal)
+      const validDiscount = Math.min(Math.max(0, discountAmount), subtotal)
+      const totalAmount = Math.max(0, subtotal - validDiscount)
+
+      const updated = await db.order.update({
+        where: { id },
+        data: {
+          discountAmount: validDiscount,
+          totalAmount,
+          notes: notes !== undefined ? notes : order.notes,
+        },
+      })
+      return mapPrismaOrderToDomain(updated)
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaOrderRepository.updateDiscountAndTotals] DB connection failed, using in-memory store.'
+        )
+        const found = IN_MEMORY_ORDERS.find((o) => o.id === id && o.deletedAt === null)
+        if (!found) throw new Error(`Order ${id} not found in-memory`)
+
+        const subtotal = found.subtotal
+        const validDiscount = Math.min(Math.max(0, discountAmount), subtotal)
+        found.discountAmount = validDiscount
+        found.totalAmount = Math.max(0, subtotal - validDiscount)
+        if (notes !== undefined) found.notes = notes
+        found.updatedAt = new Date()
+        return found
+      }
+      throw error
+    }
+  }
+
   async softDelete(id: string): Promise<void> {
     try {
       const now = new Date()
@@ -729,7 +786,13 @@ export class PrismaOrderRepository implements IOrderRepository {
         where: { locationId, isActive: true },
         orderBy: { createdAt: 'asc' },
       })
-      return channel?.id || null
+      if (channel) return channel.id
+
+      const anyChannel = await db.channel.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' },
+      })
+      return anyChannel?.id || 'web-channel'
     } catch (error) {
       if (isConnectionError(error)) {
         console.warn(

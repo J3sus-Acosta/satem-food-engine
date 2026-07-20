@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import crypto from 'crypto'
 import { PaymentService } from '@/services/payments'
 import { PaymentProviderFactory } from '@/integrations/payments/PaymentProviderFactory'
 import { SumUpPaymentProvider } from '@/integrations/payments/providers/SumUpPaymentProvider'
@@ -14,7 +15,7 @@ import type { IPaymentProvider } from '@/integrations'
 import type { OrderService } from '@/services/orders'
 import type { Payment, PaymentConfiguration } from '@/types'
 
-describe('Pagos - Servicios de Dominio e Integraciones', () => {
+describe('Pagos - Servicios de Dominio e Integraciones (Fase 10B SumUp)', () => {
   let paymentService: PaymentService
   let mockPaymentRepo: any
   let mockOrderRepo: any
@@ -91,14 +92,73 @@ describe('Pagos - Servicios de Dominio e Integraciones', () => {
     })
   })
 
-  describe('Resolución Jerárquica Multi-Tenant (Lógica de Negocio)', () => {
-    // La jerarquía se aplica en el repositorio ITenantConfigurationRepository.
-    // Vamos a probar que resolvePaymentConfig funciona de acuerdo a la prioridad:
-    // 1. Location.paymentProvider
-    // 2. Organization.paymentProvider
-    // 3. process.env.PAYMENT_PROVIDER
-    // 4. Fallback SUMUP
+  describe('SumUpPaymentProvider Real Unit Tests', () => {
+    const sumupProvider = new SumUpPaymentProvider({
+      SUMUP_API_KEY: 'sup_sk_mock_test_key',
+      SUMUP_MERCHANT_CODE: 'M3R57S7J',
+      SUMUP_WEBHOOK_SECRET: 'test_webhook_secret_key',
+    })
 
+    it('debe crear un intent de pago y generar checkoutUrl válida', async () => {
+      const intent = await sumupProvider.createIntent('pay-test-1', 12500, 'CLP')
+      expect(intent.providerTransactionId).toBeDefined()
+      expect(intent.checkoutUrl).toContain('sumup')
+    })
+
+    it('debe verificar firma HMAC-SHA256 válida en webhooks', async () => {
+      const rawBody = JSON.stringify({
+        id: 'tx_sumup_100',
+        checkout_reference: 'pay-test-1',
+        amount: 12500,
+        status: 'PAID',
+      })
+
+      const signature = crypto
+        .createHmac('sha256', 'test_webhook_secret_key')
+        .update(rawBody, 'utf8')
+        .digest('hex')
+
+      const result = await sumupProvider.verifyWebhook({ 'sumup-signature': signature }, rawBody)
+
+      expect(result.isValid).toBe(true)
+      expect(result.paymentId).toBe('pay-test-1')
+      expect(result.providerTransactionId).toBe('tx_sumup_100')
+      expect(result.status).toBe('PAID')
+    })
+
+    it('debe rechazar webhooks con firma HMAC-SHA256 inválida', async () => {
+      const rawBody = JSON.stringify({
+        id: 'tx_sumup_100',
+        checkout_reference: 'pay-test-1',
+        amount: 12500,
+        status: 'PAID',
+      })
+
+      const result = await sumupProvider.verifyWebhook(
+        { 'sumup-signature': 'invalid_signature_hex' },
+        rawBody
+      )
+
+      expect(result.isValid).toBe(false)
+      expect(result.status).toBe('FAILED')
+    })
+
+    it('debe consultar estado de pago y realizar reembolsos', async () => {
+      const status = await sumupProvider.fetchStatus('sumup_tx_123')
+      expect(status).toBe('PAID')
+
+      const refundResult = await sumupProvider.refund('sumup_tx_123', 12500)
+      expect(refundResult).toBe(true)
+    })
+
+    it('debe retornar diagnóstico de conectividad en getDiagnostics', async () => {
+      const diag = await sumupProvider.getDiagnostics()
+      expect(diag.environment).toBe('sandbox')
+      expect(diag.merchantCode).toBe('M3R57S7J')
+    })
+  })
+
+  describe('Resolución Jerárquica Multi-Tenant (Lógica de Negocio)', () => {
     it('debe retornar la configuración correspondiente del mockTenantConfigRepo', async () => {
       const expectedConfig: PaymentConfiguration = {
         provider: 'WEBPAY',
@@ -138,7 +198,6 @@ describe('Pagos - Servicios de Dominio e Integraciones', () => {
         status: 'PAID',
       })
 
-      // Buscar por ID externo o interno retorna el pago PAID
       mockPaymentRepo.findByExternalId.mockResolvedValue(fakePayment)
 
       const result = await paymentService.processProviderWebhook(
@@ -148,10 +207,8 @@ describe('Pagos - Servicios de Dominio e Integraciones', () => {
       )
 
       expect(result).toEqual(fakePayment)
-      // No debe llamar a confirm o markFailed en el repositorio porque ya está finalizado
       expect(mockPaymentRepo.confirm).not.toHaveBeenCalled()
       expect(mockPaymentRepo.markFailed).not.toHaveBeenCalled()
-      // No debe invocar al confirmOrder del OrderService
       expect(mockOrderService.confirmOrder).not.toHaveBeenCalled()
     })
   })

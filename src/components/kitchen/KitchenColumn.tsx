@@ -10,6 +10,7 @@ interface KitchenColumnProps {
   colorClass: string
   orders: OrderWithItems[]
   onAction: (orderId: string, nextStatus: 'PREPARING' | 'READY' | 'COMPLETED') => Promise<void>
+  onPrint?: (order: OrderWithItems) => void
 }
 
 export function KitchenColumn({
@@ -18,6 +19,7 @@ export function KitchenColumn({
   colorClass,
   orders,
   onAction,
+  onPrint,
 }: KitchenColumnProps) {
   return (
     <div className="border-border/30 flex h-[calc(100vh-140px)] min-h-[450px] flex-col rounded-3xl border bg-zinc-50/40 dark:bg-zinc-950/20">
@@ -37,7 +39,9 @@ export function KitchenColumn({
       {/* Ticket List Area */}
       <div className="flex-1 scrollbar-thin space-y-4 overflow-y-auto p-4">
         {orders.length > 0 ? (
-          orders.map((order) => <OrderTicket key={order.id} order={order} onAction={onAction} />)
+          orders.map((order) => (
+            <OrderTicket key={order.id} order={order} onAction={onAction} onPrint={onPrint} />
+          ))
         ) : (
           <div className="flex h-full flex-col items-center justify-center py-20 text-center select-none">
             <p className="text-muted-foreground/60 text-xs">Sin pedidos en esta fila</p>

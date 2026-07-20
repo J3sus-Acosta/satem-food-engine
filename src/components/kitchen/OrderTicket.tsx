@@ -1,15 +1,16 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Clock, Play, Check, CheckCircle2 } from 'lucide-react'
+import { Clock, Play, Check, CheckCircle2, Printer } from 'lucide-react'
 import type { OrderWithItems } from '@/types'
 
 interface OrderTicketProps {
   order: OrderWithItems
   onAction: (orderId: string, nextStatus: 'PREPARING' | 'READY' | 'COMPLETED') => Promise<void>
+  onPrint?: (order: OrderWithItems) => void
 }
 
-export function OrderTicket({ order, onAction }: OrderTicketProps) {
+export function OrderTicket({ order, onAction, onPrint }: OrderTicketProps) {
   const [elapsedMinutes, setElapsedMinutes] = useState<number>(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -43,6 +44,9 @@ export function OrderTicket({ order, onAction }: OrderTicketProps) {
     setIsSubmitting(true)
     try {
       if (order.status === 'CONFIRMED') {
+        if (onPrint) {
+          onPrint(order)
+        }
         await onAction(order.id, 'PREPARING')
       } else if (order.status === 'PREPARING') {
         await onAction(order.id, 'READY')
@@ -59,9 +63,23 @@ export function OrderTicket({ order, onAction }: OrderTicketProps) {
       {/* Header Info */}
       <div className="border-border/30 flex items-start justify-between border-b pb-3">
         <div>
-          <span className="text-muted-foreground text-[10px] font-extrabold tracking-wider uppercase">
-            Retiro
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-[10px] font-extrabold tracking-wider uppercase">
+              Retiro
+            </span>
+            {onPrint && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onPrint(order)
+                }}
+                title="Imprimir Comanda Térmica"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg p-1 transition-colors"
+              >
+                <Printer size={14} />
+              </button>
+            )}
+          </div>
           <h4 className="text-lg font-black tracking-tight">#{order.orderNumber}</h4>
         </div>
 

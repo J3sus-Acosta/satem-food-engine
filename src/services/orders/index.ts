@@ -240,6 +240,32 @@ export class OrderService {
   }
 
   /**
+   * Applies a discount amount and optional notes to a draft order.
+   */
+  async applyDiscount(
+    orderId: string,
+    discountAmount: number,
+    notes?: string
+  ): Promise<OrderWithItems> {
+    const order = await this.orderRepo.findByIdWithItems(orderId)
+    if (!order) {
+      throw new NotFoundError('Order', orderId)
+    }
+
+    if (order.status !== 'DRAFT') {
+      throw new ConflictError(
+        `Cannot apply discount to order in status "${order.status}". Only DRAFT orders are editable.`
+      )
+    }
+
+    await this.orderRepo.updateDiscountAndTotals(orderId, discountAmount, notes)
+
+    const updatedOrder = await this.orderRepo.findByIdWithItems(orderId)
+    if (!updatedOrder) throw new NotFoundError('Order', orderId)
+    return updatedOrder
+  }
+
+  /**
    * Confirms a pending order and routes it to the kitchen.
    */
   async confirmOrder(orderId: string): Promise<OrderWithItems> {
@@ -335,6 +361,30 @@ export class OrderService {
     }
 
     await this.orderRepo.updateStatus(orderId, 'DELIVERED')
+
+    const updatedOrder = await this.orderRepo.findByIdWithItems(orderId)
+    if (!updatedOrder) throw new NotFoundError('Order', orderId)
+    return updatedOrder
+  }
+
+  /**
+   * Reopens an order that was marked as DELIVERED or READY by error,
+   * returning it to the active kitchen queue in PREPARING or CONFIRMED status.
+   */
+  async reopenOrder(
+    orderId: string,
+    targetStatus: 'CONFIRMED' | 'PREPARING' = 'PREPARING'
+  ): Promise<OrderWithItems> {
+    const order = await this.orderRepo.findByIdWithItems(orderId)
+    if (!order) {
+      throw new NotFoundError('Order', orderId)
+    }
+
+    if (order.status === 'CANCELLED') {
+      throw new ConflictError(`Cannot reopen a cancelled order.`)
+    }
+
+    await this.orderRepo.updateStatus(orderId, targetStatus)
 
     const updatedOrder = await this.orderRepo.findByIdWithItems(orderId)
     if (!updatedOrder) throw new NotFoundError('Order', orderId)

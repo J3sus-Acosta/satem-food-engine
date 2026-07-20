@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { PaymentService } from '@/services/payments'
+import { ValidationError } from '@/lib/errors'
 import type {
   IPaymentRepository,
   IOrderRepository,
@@ -10,7 +11,7 @@ import type { IPaymentProvider } from '@/integrations'
 import type { OrderService } from '@/services/orders'
 import type { Payment, PaymentConfiguration } from '@/types'
 
-describe('Flujo de Pagos Completo (Fase 9A)', () => {
+describe('Flujo de Pagos Completo (Fase 10B SumUp)', () => {
   let paymentService: PaymentService
   let mockPaymentRepo: any
   let mockOrderRepo: any
@@ -27,6 +28,7 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
       confirm: vi.fn(),
       confirmIfPending: vi.fn(),
       markFailed: vi.fn(),
+      markRefunded: vi.fn(),
       updateExternalId: vi.fn(),
       updateStatus: vi.fn(),
     }
@@ -114,7 +116,7 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
     expect(result.paymentId).toBe('pay-789')
     expect(result.provider).toBe('SUMUP')
     expect(result.externalId).toBe('ext_sumup_abc')
-    expect(result.checkoutUrl).toContain('mock.sumup.com')
+    expect(result.checkoutUrl).toContain('mock-payment?provider=sumup')
   })
 
   it('2. Debe seleccionar Webpay según configuración del tenant', async () => {
@@ -161,7 +163,7 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
     // Assert
     expect(result.provider).toBe('WEBPAY')
     expect(result.externalId).toBe('ext_webpay_abc')
-    expect(result.checkoutUrl).toContain('mock.webpay.cl')
+    expect(result.checkoutUrl).toContain('mock-payment?provider=webpay')
   })
 
   it('3. Debe seleccionar SumUp por fallback (configuración resuelta)', async () => {
@@ -207,7 +209,7 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
 
     // Assert
     expect(result.provider).toBe('SUMUP')
-    expect(result.checkoutUrl).toContain('mock.sumup.com')
+    expect(result.checkoutUrl).toContain('mock-payment?provider=sumup')
   })
 
   it('4. Idempotencia: Webhook duplicado no cambia de estado', async () => {
@@ -216,7 +218,7 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
       id: 'pay-789',
       orderId: 'ord-123',
       provider: 'SUMUP',
-      status: 'PAID', // Already paid
+      status: 'PAID',
       amount: 15000,
       currency: 'CLP',
       externalId: 'sumup_tx_already_done',
@@ -357,5 +359,73 @@ describe('Flujo de Pagos Completo (Fase 9A)', () => {
     expect(result.status).toBe('FAILED')
     expect(mockPaymentRepo.markFailed).toHaveBeenCalledWith('pay-789', expect.any(String))
     expect(mockOrderService.confirmOrder).not.toHaveBeenCalled()
+  })
+
+  it('7. Rechaza webhooks con firma inválida', async () => {
+    const mockPaymentPending: Payment = {
+      id: 'pay-789',
+      orderId: 'ord-123',
+      provider: 'SUMUP',
+      status: 'PENDING',
+      amount: 15000,
+      currency: 'CLP',
+      externalId: 'sumup_tx_invalid_sig',
+      externalReference: null,
+      paidAt: null,
+      failureReason: null,
+      receiptUrl: null,
+      metadata: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    const mockOrder = { id: 'ord-123', locationId: 'loc-abc' }
+    const mockConfig = { provider: 'SUMUP', configuration: { webhookSecret: 'secret_real' } }
+
+    mockPaymentRepo.findByExternalId.mockResolvedValue(mockPaymentPending)
+    mockOrderRepo.findById.mockResolvedValue(mockOrder)
+    mockTenantConfigRepo.resolvePaymentConfig.mockResolvedValue(mockConfig)
+
+    // Raw body and invalid signature
+    const rawBody = JSON.stringify({ providerTransactionId: 'sumup_tx_invalid_sig', amount: 15000 })
+    const headers = { 'sumup-signature': 'invalid_bad_sig' }
+
+    await expect(paymentService.processProviderWebhook('SUMUP', headers, rawBody)).rejects.toThrow(
+      ValidationError
+    )
+  })
+
+  it('8. Permite reembolso y cancela la orden correspondiente', async () => {
+    const mockPaymentPaid: Payment = {
+      id: 'pay-789',
+      orderId: 'ord-123',
+      provider: 'SUMUP',
+      status: 'PAID',
+      amount: 15000,
+      currency: 'CLP',
+      externalId: 'sumup_tx_refund',
+      externalReference: null,
+      paidAt: new Date(),
+      failureReason: null,
+      receiptUrl: null,
+      metadata: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    const mockOrder = { id: 'ord-123', locationId: 'loc-abc' }
+    const mockConfig = { provider: 'SUMUP', configuration: {} }
+
+    mockPaymentRepo.findById.mockResolvedValue(mockPaymentPaid)
+    mockOrderRepo.findById.mockResolvedValue(mockOrder)
+    mockTenantConfigRepo.resolvePaymentConfig.mockResolvedValue(mockConfig)
+    mockPaymentRepo.markRefunded.mockResolvedValue({
+      ...mockPaymentPaid,
+      status: 'REFUNDED',
+    })
+
+    const result = await paymentService.refundPayment('pay-789')
+
+    expect(result.status).toBe('REFUNDED')
+    expect(mockPaymentRepo.markRefunded).toHaveBeenCalledWith('pay-789')
+    expect(mockOrderService.cancelOrder).toHaveBeenCalledWith('ord-123', expect.any(String))
   })
 })

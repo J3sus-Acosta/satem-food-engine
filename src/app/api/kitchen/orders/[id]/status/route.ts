@@ -31,8 +31,20 @@ export async function PATCH(
     let updatedOrder: OrderWithItems
 
     switch (status) {
+      case 'CONFIRMED':
+      case 'REOPEN':
+        updatedOrder = await orderService.reopenOrder(
+          orderId,
+          status === 'CONFIRMED' ? 'CONFIRMED' : 'PREPARING'
+        )
+        break
       case 'PREPARING':
-        updatedOrder = await orderService.startPreparing(orderId)
+        try {
+          updatedOrder = await orderService.startPreparing(orderId)
+        } catch {
+          // If order was already delivered/completed, allow reopen back to PREPARING
+          updatedOrder = await orderService.reopenOrder(orderId, 'PREPARING')
+        }
         break
       case 'READY':
         updatedOrder = await orderService.markReady(orderId)
@@ -42,7 +54,9 @@ export async function PATCH(
         break
       default:
         return NextResponse.json(
-          { error: `Estado "${status}" inválido. Valores permitidos: PREPARING, READY, COMPLETED` },
+          {
+            error: `Estado "${status}" inválido. Valores permitidos: REOPEN, CONFIRMED, PREPARING, READY, COMPLETED`,
+          },
           { status: 400 }
         )
     }

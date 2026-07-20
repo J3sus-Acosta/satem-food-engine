@@ -244,12 +244,14 @@ model Location {
   channels       Channel[]
   inventoryItems InventoryItem[]
   userLocations  UserLocation[]
+  orderSequences OrderSequence[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
   @@index([organizationId, isActive])
   @@map("locations")
 }
+
 
 // ─── CATALOG ──────────────────────────────────────────────────────────────────
 
@@ -898,3 +900,20 @@ model UserLocation {
   @@id([userId, locationId])
   @@map("user_locations")
 }
+
+/// Secuencia de numeración de pedidos por sucursal y fecha de negocio
+model OrderSequence {
+  id           String   @id @default(cuid())
+  locationId   String
+  businessDate DateTime @db.Date
+  lastNumber   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, businessDate])
+  @@index([locationId])
+  @@map("order_sequences")
+}
+

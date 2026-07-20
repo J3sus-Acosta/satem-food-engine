@@ -387,6 +387,7 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 4. Toda integración externa debe usar adapters.
 5. PaymentService nunca instancia proveedores directamente. Siempre debe utilizar PaymentProviderFactory.
 6. Los cambios de estado operacional deben pasar siempre por OrderService. Nunca modificar Order.status directamente desde APIs o componentes.
+7. La generación de `orderNumber` debe realizarse exclusivamente utilizando la entidad `OrderSequence` mediante `upsert` incremental atómico (`{ lastNumber: { increment: 1 } }`) dentro de una transacción Prisma. Queda prohibido consultar la tabla `Order` (`findFirst`, `MAX`) o utilizar expresiones regulares/advisory locks para este fin.
 
 ---
 

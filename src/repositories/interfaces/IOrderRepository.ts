@@ -93,6 +93,12 @@ export interface IOrderRepository {
   linkCustomer(orderId: string, customerId: string): Promise<Order>
 
   /**
+   * Update discount amount and recalculate totalAmount for an order.
+   * Optionally updates notes or metadata.
+   */
+  updateDiscountAndTotals(id: string, discountAmount: number, notes?: string): Promise<Order>
+
+  /**
    * Soft-delete an order.
    */
   softDelete(id: string): Promise<void>

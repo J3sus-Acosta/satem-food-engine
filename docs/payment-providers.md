@@ -109,11 +109,12 @@ interface WebhookVerificationResult {
 
 ## Proveedores actuales
 
-### SumUp (implementado)
+### SumUp (implementado con Cloud API oficial & Sandbox)
 
 - **Activar**: `PAYMENT_PROVIDER=sumup`
-- **Variables requeridas**: `SUMUP_WEBHOOK_SECRET`
-- **Estado**: Implementado en modo mock. Pendiente verificación real de firma HMAC.
+- **Variables requeridas**: `SUMUP_ENVIRONMENT`, `SUMUP_API_KEY`, `SUMUP_MERCHANT_CODE`, `SUMUP_WEBHOOK_SECRET`
+- **Estado**: Integración oficial con SumUp Cloud API (Hosted Checkouts, Terminal API, Webhooks HMAC-SHA256 y Panel de Diagnóstico).
+- **Documentación completa**: [`docs/sumup-cloud-api.md`](./sumup-cloud-api.md)
 - **Archivo**: `src/integrations/payments/providers/SumUpPaymentProvider.ts`
 
 ### Webpay / Transbank (skeleton)

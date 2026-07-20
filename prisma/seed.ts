@@ -1047,6 +1047,45 @@ async function main() {
     '✓ 8 pedidos históricos con estados mezclados, tickets de cocina y transacciones de pago creados'
   )
 
+  // 11.5 INITIALIZE ORDER SEQUENCE FOR DEMO LOCATIONS
+  console.info('11.5 Inicializando OrderSequence para las sucursales demo...')
+  const todayBusinessDate = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00.000Z')
+
+  await db.orderSequence.upsert({
+    where: {
+      locationId_businessDate: {
+        locationId: loc1.id,
+        businessDate: todayBusinessDate,
+      },
+    },
+    update: {
+      lastNumber: 8,
+    },
+    create: {
+      locationId: loc1.id,
+      businessDate: todayBusinessDate,
+      lastNumber: 8,
+    },
+  })
+
+  await db.orderSequence.upsert({
+    where: {
+      locationId_businessDate: {
+        locationId: loc2.id,
+        businessDate: todayBusinessDate,
+      },
+    },
+    update: {
+      lastNumber: 0,
+    },
+    create: {
+      locationId: loc2.id,
+      businessDate: todayBusinessDate,
+      lastNumber: 0,
+    },
+  })
+  console.info('✓ OrderSequence configurado (loc1.lastNumber = 8, loc2.lastNumber = 0)')
+
   // 12. MENSAJES Y CONVERSACIONES (WhatsApp Chat Session)
   console.info('12. Inicializando Conversaciones WhatsApp Demo...')
   const whatsappSession = await db.channelSession.upsert({
