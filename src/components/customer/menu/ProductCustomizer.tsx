@@ -156,7 +156,7 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
       variantId: currentVariant.id,
       name: item.name || product.name,
       displayPrice: basePrice,
-      imageUrl: item.imageUrl,
+      imageUrl: item.imageUrl || product.imageUrl,
       quantity,
       notes: notes.trim() ? notes : null,
       modifiers: chosenModifiers,
@@ -193,9 +193,9 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
       <div className="bg-card text-foreground border-border/80 animate-scale-in relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border shadow-2xl">
         {/* Cover image or colored header */}
         <div className="bg-muted relative h-40 shrink-0 md:h-48">
-          {item.imageUrl ? (
+          {item.imageUrl || product.imageUrl ? (
             <img
-              src={item.imageUrl}
+              src={item.imageUrl || product.imageUrl || ''}
               alt={item.name || product.name}
               className="h-full w-full object-cover"
             />

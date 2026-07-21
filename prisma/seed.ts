@@ -1,3 +1,5 @@
+import fs from 'fs'
+import path from 'path'
 import {
   PrismaClient,
   ChannelType,
@@ -212,7 +214,7 @@ async function main() {
       description: 'Café espresso corto e intenso.',
       basePrice: 1990,
       categoryName: 'Cafés',
-      imageUrl: 'https://images.unsplash.com/photo-1510707577719-0d7dd550a116?w=200',
+      imageUrl: '/images/products/espresso.webp',
     },
     {
       sku: 'SKU-CF-AME',
@@ -220,7 +222,7 @@ async function main() {
       description: 'Espresso diluido con agua caliente.',
       basePrice: 2290,
       categoryName: 'Cafés',
-      imageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200',
+      imageUrl: '/images/products/americano.webp',
     },
     {
       sku: 'SKU-CF-LAT',
@@ -228,7 +230,7 @@ async function main() {
       description: 'Espresso con abundante leche emulsionada.',
       basePrice: 2890,
       categoryName: 'Cafés',
-      imageUrl: 'https://images.unsplash.com/photo-1570968915860-54d5c301fc9f?w=200',
+      imageUrl: '/images/products/latte.webp',
     },
     {
       sku: 'SKU-CF-CAP',
@@ -236,7 +238,7 @@ async function main() {
       description: 'Espresso, leche y espuma a partes iguales.',
       basePrice: 2890,
       categoryName: 'Cafés',
-      imageUrl: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=200',
+      imageUrl: '/images/products/capuccino.webp',
     },
     {
       sku: 'SKU-CF-MOC',
@@ -244,7 +246,7 @@ async function main() {
       description: 'Café con chocolate y leche emulsionada.',
       basePrice: 3200,
       categoryName: 'Cafés',
-      imageUrl: 'https://images.unsplash.com/photo-1607681034540-2c46cc71896d?w=200',
+      imageUrl: '/images/products/mocaccino.webp',
     },
     {
       sku: 'SKU-CF-CHO',
@@ -252,7 +254,7 @@ async function main() {
       description: 'Chocolate suizo derretido con leche.',
       basePrice: 2990,
       categoryName: 'Cafés',
-      imageUrl: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=200',
+      imageUrl: '/images/products/chocolate-caliente.webp',
     },
 
     // Té
@@ -262,7 +264,7 @@ async function main() {
       description: 'Infusión de hojas de té verde seleccionadas.',
       basePrice: 1890,
       categoryName: 'Té',
-      imageUrl: 'https://images.unsplash.com/photo-1627435601357-374b1be7b22a?w=200',
+      imageUrl: '/images/products/te-verde-organico.webp',
     },
     {
       sku: 'SKU-TE-NEG',
@@ -270,7 +272,7 @@ async function main() {
       description: 'Té negro con aroma de bergamota.',
       basePrice: 1890,
       categoryName: 'Té',
-      imageUrl: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=200',
+      imageUrl: '/images/products/te-negro-earl-grey.webp',
     },
 
     // Jugos
@@ -280,7 +282,7 @@ async function main() {
       description: 'Jugo natural de limón, menta fresca y jengibre.',
       basePrice: 2790,
       categoryName: 'Jugos',
-      imageUrl: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=200',
+      imageUrl: '/images/products/limonada-menta-jengibre.webp',
     },
     {
       sku: 'SKU-JG-NAR',
@@ -288,7 +290,7 @@ async function main() {
       description: 'Naranja 100% exprimida en el momento.',
       basePrice: 2990,
       categoryName: 'Jugos',
-      imageUrl: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=200',
+      imageUrl: '/images/products/jugo-natural-naranja.webp',
     },
     {
       sku: 'SKU-JG-FRA',
@@ -296,7 +298,7 @@ async function main() {
       description: 'Jugo de frambuesa fresca licuada.',
       basePrice: 3200,
       categoryName: 'Jugos',
-      imageUrl: 'https://images.unsplash.com/photo-1536882240095-0379873feb4e?w=200',
+      imageUrl: '/images/products/jugo-natural-frambuesa.webp',
     },
 
     // Bebidas Frías
@@ -306,7 +308,7 @@ async function main() {
       description: 'Agua mineral de manantial.',
       basePrice: 1500,
       categoryName: 'Bebidas Frías',
-      imageUrl: 'https://images.unsplash.com/photo-1608885898957-a599fb16ec3d?w=200',
+      imageUrl: '/images/products/agua-mineral-sin-gas.webp',
     },
     {
       sku: 'SKU-BF-AGC',
@@ -314,7 +316,7 @@ async function main() {
       description: 'Agua mineral gasificada.',
       basePrice: 1500,
       categoryName: 'Bebidas Frías',
-      imageUrl: 'https://images.unsplash.com/photo-1551806235-a05be9c25f4d?w=200',
+      imageUrl: '/images/products/agua-mineral-con-gas.webp',
     },
     {
       sku: 'SKU-BF-COK',
@@ -322,7 +324,7 @@ async function main() {
       description: 'Lata de Coca-Cola original de 350ml.',
       basePrice: 1600,
       categoryName: 'Bebidas Frías',
-      imageUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=200',
+      imageUrl: '/images/products/coca-cola-original.webp',
     },
     {
       sku: 'SKU-BF-COZ',
@@ -330,7 +332,7 @@ async function main() {
       description: 'Lata de Coca-Cola Zero de 350ml.',
       basePrice: 1600,
       categoryName: 'Bebidas Frías',
-      imageUrl: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=200',
+      imageUrl: '/images/products/coca-cola-zero.webp',
     },
 
     // Sandwiches
@@ -340,7 +342,7 @@ async function main() {
       description: 'Medialuna de mantequilla horneada.',
       basePrice: 1790,
       categoryName: 'Sandwiches',
-      imageUrl: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=200',
+      imageUrl: '/images/products/croissant-sencillo.webp',
     },
     {
       sku: 'SKU-SD-CRJ',
@@ -348,7 +350,7 @@ async function main() {
       description: 'Croissant relleno de jamón de pavo y queso cheddar caliente.',
       basePrice: 3290,
       categoryName: 'Sandwiches',
-      imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200',
+      imageUrl: '/images/products/croissant-jamon-queso.webp',
     },
     {
       sku: 'SKU-SD-ITA',
@@ -357,7 +359,7 @@ async function main() {
         'Pollo desmenuzado, palta hass, tomate picado y mayonesa casera en pan de molde.',
       basePrice: 4290,
       categoryName: 'Sandwiches',
-      imageUrl: 'https://images.unsplash.com/photo-1521390188846-e2a3a97453a0?w=200',
+      imageUrl: '/images/products/sandwich-ave-italiano.webp',
     },
     {
       sku: 'SKU-SD-AVP',
@@ -365,7 +367,7 @@ async function main() {
       description: 'Pollo desmenuzado y abundante palta hass.',
       basePrice: 3990,
       categoryName: 'Sandwiches',
-      imageUrl: 'https://images.unsplash.com/photo-1619860860774-1e2e17343432?w=200',
+      imageUrl: '/images/products/sandwich-ave-palta.webp',
     },
 
     // Paninis
@@ -375,7 +377,7 @@ async function main() {
       description: 'Pechuga de pollo, queso mozzarella, tomate y salsa de pesto en pan ciabatta.',
       basePrice: 4500,
       categoryName: 'Paninis',
-      imageUrl: 'https://images.unsplash.com/photo-1521390188846-e2a3a97453a0?w=200',
+      imageUrl: '/images/products/panini-pollo-pesto.webp',
     },
     {
       sku: 'SKU-PN-JMQ',
@@ -383,7 +385,7 @@ async function main() {
       description: 'Jamón pierna premium y abundante mozzarella derretido.',
       basePrice: 3990,
       categoryName: 'Paninis',
-      imageUrl: 'https://images.unsplash.com/photo-1481070414801-51fd732d7184?w=200',
+      imageUrl: '/images/products/panini-jamon-queso-mozzarella.webp',
     },
 
     // Ensaladas
@@ -393,7 +395,7 @@ async function main() {
       description: 'Lechuga costina, pollo grillado, crutones, queso parmesano y aderezo césar.',
       basePrice: 4990,
       categoryName: 'Ensaladas',
-      imageUrl: 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=200',
+      imageUrl: '/images/products/ensalada-cesar-pollo.webp',
     },
     {
       sku: 'SKU-EN-MED',
@@ -402,7 +404,7 @@ async function main() {
         'Mix de lechuga, tomate cherry, pepino, aceitunas negras, queso feta y vinagreta.',
       basePrice: 4690,
       categoryName: 'Ensaladas',
-      imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200',
+      imageUrl: '/images/products/ensalada-mediterranea.webp',
     },
 
     // Pastelería
@@ -412,7 +414,7 @@ async function main() {
       description: 'Brownie húmedo de chocolate belga con nueces.',
       basePrice: 2200,
       categoryName: 'Pastelería',
-      imageUrl: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=200',
+      imageUrl: '/images/products/brownie-fudge-chocolate.webp',
     },
     {
       sku: 'SKU-PT-MUF',
@@ -420,7 +422,7 @@ async function main() {
       description: 'Quequito esponjoso relleno de arándanos frescos.',
       basePrice: 1890,
       categoryName: 'Pastelería',
-      imageUrl: 'https://images.unsplash.com/photo-1607958996333-41aef7caefaa?w=200',
+      imageUrl: '/images/products/muffin-arandano.webp',
     },
     {
       sku: 'SKU-PT-COO',
@@ -428,7 +430,7 @@ async function main() {
       description: 'Galleta casera con chispas de chocolate semi-amargo.',
       basePrice: 1200,
       categoryName: 'Pastelería',
-      imageUrl: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=200',
+      imageUrl: '/images/products/cookie-chips-de-chocolate.webp',
     },
 
     // Postres
@@ -438,9 +440,24 @@ async function main() {
       description: 'Tarta de queso crema horneada con salsa de frambuesas.',
       basePrice: 2990,
       categoryName: 'Postres',
-      imageUrl: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?w=200',
+      imageUrl: '/images/products/cheesecake-frambuesa.webp',
     },
   ]
+
+  // Validar existencia de cada archivo de imagen antes de guardar en la DB
+  console.info('   Verificando existencia física de imágenes del catálogo...')
+  for (const p of productsData) {
+    const relPath = p.imageUrl.startsWith('/') ? p.imageUrl.substring(1) : p.imageUrl
+    const fullImgPath = path.join(process.cwd(), 'public', relPath)
+    if (!fs.existsSync(fullImgPath)) {
+      throw new Error(
+        `[SEED ERROR] Falta la imagen para el producto "${p.name}" (${p.sku}). Archivo no encontrado: ${fullImgPath}`
+      )
+    }
+  }
+  console.info(
+    '   ✓ Validación exitosa: Todos los productos cuentan con su archivo WebP correspondiente'
+  )
 
   const mappedProducts: Record<string, { product: Product; variant: ProductVariant }> = {}
 
@@ -458,6 +475,16 @@ async function main() {
           basePrice: pData.basePrice,
           taxCategory: 'STANDARD',
           isActive: true,
+          imageUrl: pData.imageUrl,
+        },
+      })
+    } else {
+      product = await db.product.update({
+        where: { id: product.id },
+        data: {
+          name: pData.name,
+          description: pData.description,
+          basePrice: pData.basePrice,
           imageUrl: pData.imageUrl,
         },
       })
@@ -493,6 +520,15 @@ async function main() {
           isAvailable: true,
           isVisible: true,
           sortOrder: 0,
+          imageUrl: pData.imageUrl,
+        },
+      })
+    } else {
+      await db.menuItem.update({
+        where: { id: existingMI1.id },
+        data: {
+          imageUrl: pData.imageUrl,
+          price: pData.basePrice,
         },
       })
     }
@@ -511,6 +547,15 @@ async function main() {
           isAvailable: true,
           isVisible: true,
           sortOrder: 0,
+          imageUrl: pData.imageUrl,
+        },
+      })
+    } else {
+      await db.menuItem.update({
+        where: { id: existingMI2.id },
+        data: {
+          imageUrl: pData.imageUrl,
+          price: pData.basePrice,
         },
       })
     }

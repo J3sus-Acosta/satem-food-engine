@@ -35,9 +35,9 @@ export function ProductCard({ item, onSelect }: ProductCardProps) {
     >
       {/* Product Image / Thumbnail wrapper */}
       <div className="bg-muted relative aspect-video w-full overflow-hidden select-none">
-        {item.imageUrl ? (
+        {item.imageUrl || product.imageUrl ? (
           <img
-            src={item.imageUrl}
+            src={item.imageUrl || product.imageUrl || ''}
             alt={item.name || product.name}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-103"
           />

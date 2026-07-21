@@ -112,9 +112,9 @@ export function ProductDetailModal({ item, isOpen, onClose }: ProductDetailModal
       <div className="bg-card text-foreground border-border/80 animate-scale-in relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border shadow-2xl">
         {/* Header Image / Color bar */}
         <div className="bg-muted relative h-48 md:h-56">
-          {item.imageUrl ? (
+          {item.imageUrl || product.imageUrl ? (
             <img
-              src={item.imageUrl}
+              src={item.imageUrl || product.imageUrl || ''}
               alt={item.name || product.name}
               className="h-full w-full object-cover"
             />

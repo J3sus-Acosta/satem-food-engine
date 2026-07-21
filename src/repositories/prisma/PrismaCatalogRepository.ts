@@ -39,8 +39,7 @@ const MOCK_CATEGORIES: Category[] = [
     id: 'cat_burgers',
     menuId: 'menu_mci_santiago_default',
     name: 'Hamburguesas 🍔',
-    imageUrl:
-      'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60',
+    imageUrl: '/images/products/hamburguesa-clasica.webp',
     sortOrder: 1,
     isActive: true,
     createdAt: new Date(),
@@ -51,8 +50,7 @@ const MOCK_CATEGORIES: Category[] = [
     id: 'cat_sides',
     menuId: 'menu_mci_santiago_default',
     name: 'Acompañamientos 🍟',
-    imageUrl:
-      'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&auto=format&fit=crop&q=60',
+    imageUrl: '/images/products/papas-fritas.webp',
     sortOrder: 2,
     isActive: true,
     createdAt: new Date(),
@@ -63,8 +61,7 @@ const MOCK_CATEGORIES: Category[] = [
     id: 'cat_drinks',
     menuId: 'menu_mci_santiago_default',
     name: 'Bebidas 🥤',
-    imageUrl:
-      'https://images.unsplash.com/photo-1497534446932-c925b458314e?w=500&auto=format&fit=crop&q=60',
+    imageUrl: '/images/products/coca-cola-original.webp',
     sortOrder: 3,
     isActive: true,
     createdAt: new Date(),
@@ -81,8 +78,7 @@ const MOCK_PRODUCTS: Product[] = [
     name: 'MCI Burger Clásica',
     description:
       '150g de vacuno premium, queso cheddar, lechuga, tomate y salsa especial de la casa.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=60',
+    imageUrl: '/images/products/hamburguesa-clasica.webp',
     basePrice: 6990,
     isAlcoholic: false,
     taxCategory: 'STANDARD',
@@ -98,8 +94,7 @@ const MOCK_PRODUCTS: Product[] = [
     sku: 'SKU-BUR-02',
     name: 'MCI Burger Italiana',
     description: '150g de vacuno premium, palta hass molida, tomate picado y mayonesa casera.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=500&auto=format&fit=crop&q=60',
+    imageUrl: '/images/products/hamburguesa-italiana.webp',
     basePrice: 7490,
     isAlcoholic: false,
     taxCategory: 'STANDARD',
@@ -115,8 +110,7 @@ const MOCK_PRODUCTS: Product[] = [
     sku: 'SKU-SID-01',
     name: 'Papas Fritas Crujientes',
     description: 'Papas cortadas a mano, doble cocción, crujientes por fuera y tiernas por dentro.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&auto=format&fit=crop&q=60',
+    imageUrl: '/images/products/papas-fritas.webp',
     basePrice: 2990,
     isAlcoholic: false,
     taxCategory: 'STANDARD',
@@ -132,8 +126,7 @@ const MOCK_PRODUCTS: Product[] = [
     sku: 'SKU-DRK-01',
     name: 'Coca-Cola',
     description: 'Bebida gaseosa refrescante sabor original.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60',
+    imageUrl: '/images/products/coca-cola-original.webp',
     basePrice: 1500,
     isAlcoholic: false,
     taxCategory: 'STANDARD',
@@ -691,7 +684,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
             productVariantId: item.productVariantId,
             name: item.name || item.productVariant.product.name,
             description: item.description,
-            imageUrl: item.imageUrl,
+            imageUrl: item.imageUrl || product.imageUrl,
             price: effectivePrice,
             isAvailable: effectiveAvailable,
             isVisible: effectiveVisible,

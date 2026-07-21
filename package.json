@@ -14,7 +14,8 @@
     "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "verify:images": "tsx scripts/verify-images.ts"
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,mjs}": [
