@@ -21,6 +21,7 @@ import {
   Loader2,
   Sparkles,
   Printer,
+  Calculator,
 } from 'lucide-react'
 import type {
   MenuWithCategories,
@@ -333,6 +334,13 @@ export function PosBoard({ menu }: PosBoardProps) {
 
         {/* Quick Nav Links */}
         <div className="flex items-center gap-3">
+          <a
+            href="/dashboard/cash"
+            className="bg-muted hover:bg-muted/80 text-foreground border-border/60 flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors"
+          >
+            <Calculator size={16} className="text-primary" />
+            Cierre de Caja
+          </a>
           <a
             href="/dashboard/kitchen"
             target="_blank"
