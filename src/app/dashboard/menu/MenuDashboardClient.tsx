@@ -1,10 +1,24 @@
+/* eslint-disable @next/next/no-img-element */
 'use client'
 
-import React, { useState, useTransition } from 'react'
+import React, { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import type { MenuWithCategories, DailyMenuPreviewItem, MenuItemWithProduct } from '@/types'
 import { Button } from '@/components/ui/button'
 import { transformToDailyMenuRows, type ClientItemState } from '@/lib/menu/daily-menu-transformer'
+import {
+  Search,
+  Star,
+  RefreshCw,
+  X,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Calendar,
+  ShoppingBag,
+  Eye,
+  Save,
+} from 'lucide-react'
 
 interface MenuDashboardClientProps {
   initialMenu: MenuWithCategories | null
@@ -65,32 +79,19 @@ export default function MenuDashboardClient({
   const [previewErrors, setPreviewErrors] = useState<string[]>([])
   const [previewLoading, setPreviewLoading] = useState(false)
 
-  if (!menu) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-slate-100">
-        <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/50 p-6 text-center shadow-xl">
-          <span className="text-4xl">⚠️</span>
-          <h2 className="mt-4 text-xl font-bold text-rose-400">Error al cargar el menú</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            {error || 'No se pudieron recuperar los datos de la sucursal.'}
-          </p>
-          <a
-            href="/dashboard/kitchen"
-            className="mt-6 inline-block rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-700"
-          >
-            Volver a la cocina
-          </a>
-        </div>
-      </div>
-    )
-  }
+  // Operational Filters
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [showAvailableOnly, setShowAvailableOnly] = useState(false)
+  const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false)
+  const [showHighlightedOnly, setShowHighlightedOnly] = useState(false)
 
   // Check if a specific menu item has any modified fields vs its current db state
   const isItemModified = (itemId: string) => {
     const current = changesByMenuItemId[itemId]
     if (!current) return false
 
-    // Find the original item in the menu tree
+    if (!menu) return false
     let originalItem: MenuItemWithProduct | null = null
     for (const cat of menu.categories) {
       const match = cat.items.find((it) => it.id === itemId)
@@ -132,7 +133,6 @@ export default function MenuDashboardClient({
     )
   }
 
-  // Update field in client state
   const handleFieldChange = <K extends keyof ClientItemState>(
     itemId: string,
     field: K,
@@ -147,8 +147,8 @@ export default function MenuDashboardClient({
     }))
   }
 
-  // Reset a single row back to its db configuration
   const handleResetRow = (itemId: string) => {
+    if (!menu) return
     let originalItem: MenuItemWithProduct | null = null
     for (const cat of menu.categories) {
       const match = cat.items.find((it) => it.id === itemId)
@@ -191,7 +191,6 @@ export default function MenuDashboardClient({
     setError(null)
 
     try {
-      // Map edit states to DailyMenuRowInput[] via transformer helper
       const statesList = Object.values(changesByMenuItemId)
       const rows = transformToDailyMenuRows(statesList)
 
@@ -213,7 +212,7 @@ export default function MenuDashboardClient({
         setPreviewItems(json.data || [])
       }
       setPreviewOpen(true)
-    } catch (err: unknown) {
+    } catch (err) {
       const errorObj = err instanceof Error ? err : new Error(String(err))
       setPreviewErrors([errorObj.message || 'Error al conectar con la API de vista previa'])
       setPreviewOpen(true)
@@ -222,7 +221,7 @@ export default function MenuDashboardClient({
     }
   }
 
-  // Apply Changes via API and update state
+  // Apply Changes via API
   const handleApply = async () => {
     setLoading(true)
     setError(null)
@@ -248,12 +247,10 @@ export default function MenuDashboardClient({
         throw new Error(json.error || 'Error al aplicar cambios del menú diario')
       }
 
-      // Trigger Next.js router refresh to pull new server state in transition
       startTransition(() => {
         router.refresh()
       })
 
-      // Update local menu state from API to ensure instant client-side update
       const menuRes = await fetch(`/api/menu?locationId=${locationId}`)
       if (menuRes.ok) {
         const menuJson = await menuRes.json()
@@ -262,7 +259,7 @@ export default function MenuDashboardClient({
 
       setSuccessMessage('¡Menú operacional guardado y aplicado con éxito!')
       setTimeout(() => setSuccessMessage(null), 5000)
-    } catch (err: unknown) {
+    } catch (err) {
       const errorObj = err instanceof Error ? err : new Error(String(err))
       setError(errorObj.message)
     } finally {
@@ -273,63 +270,181 @@ export default function MenuDashboardClient({
   // Count total modified rows
   const modifiedCount = Object.keys(changesByMenuItemId).filter(isItemModified).length
 
+  // Date formatted in Spanish
+  const formattedDate = useMemo(() => {
+    const today = new Date()
+    const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' }
+    const dateStr = today.toLocaleDateString('es-CL', options)
+    return dateStr.replace(/(^\w|\s\w)/g, (m) => m.toUpperCase())
+  }, [])
+
+  // Calculate stats dynamically based on UI state overrides
+  const stats = useMemo(() => {
+    let totalCount = 0
+    let visibleCount = 0
+    let outOfStockCount = 0
+    let highlightedCount = 0
+
+    if (menu) {
+      menu.categories.forEach((cat) => {
+        cat.items.forEach((item) => {
+          totalCount++
+          const state = changesByMenuItemId[item.id]
+          if (state) {
+            if (state.isVisible) visibleCount++
+            const stockValue = state.stockDaily !== '' ? Number(state.stockDaily) : null
+            if (!state.isAvailable || (stockValue !== null && stockValue <= 0)) {
+              outOfStockCount++
+            }
+            if (state.isHighlighted) highlightedCount++
+          }
+        })
+      })
+    }
+
+    return { totalCount, visibleCount, outOfStockCount, highlightedCount }
+  }, [menu, changesByMenuItemId])
+
+  // Filter categories and their items based on UI search/filters
+  const filteredCategories = useMemo(() => {
+    if (!menu) return []
+
+    return menu.categories
+      .map((cat) => {
+        const items = cat.items.filter((item) => {
+          const state = changesByMenuItemId[item.id]
+          if (!state) return false
+
+          // Search query
+          if (search.trim()) {
+            const query = search.toLowerCase()
+            const nameMatch = (item.name || '').toLowerCase().includes(query)
+            const skuMatch = state.code.toLowerCase().includes(query)
+            if (!nameMatch && !skuMatch) return false
+          }
+
+          // Category filter
+          if (categoryFilter !== 'all' && cat.id !== categoryFilter) {
+            return false
+          }
+
+          // Show Available checkbox
+          if (showAvailableOnly && !state.isAvailable) {
+            return false
+          }
+
+          // Show Out of Stock checkbox
+          const stockValue = state.stockDaily !== '' ? Number(state.stockDaily) : null
+          const isAgotado = !state.isAvailable || (stockValue !== null && stockValue <= 0)
+          if (showOutOfStockOnly && !isAgotado) {
+            return false
+          }
+
+          // Show Highlighted checkbox
+          if (showHighlightedOnly && !state.isHighlighted) {
+            return false
+          }
+
+          return true
+        })
+
+        return {
+          ...cat,
+          items,
+        }
+      })
+      .filter((cat) => cat.items.length > 0)
+  }, [
+    menu,
+    changesByMenuItemId,
+    search,
+    categoryFilter,
+    showAvailableOnly,
+    showOutOfStockOnly,
+    showHighlightedOnly,
+  ])
+
+  if (!menu) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6 text-slate-800">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-xl">
+          <span className="text-4xl">⚠️</span>
+          <h2 className="mt-4 text-xl font-bold text-rose-600">Error al cargar el menú</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            {error || 'No se pudieron recuperar los datos de la sucursal.'}
+          </p>
+          <a
+            href="/dashboard"
+            className="mt-6 inline-block rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            Volver al Dashboard
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 p-4 font-sans text-slate-100 select-none">
-      {/* Navigation Bar */}
-      <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-slate-800 pb-3">
+    <div className="min-h-screen bg-slate-50/40 p-4 font-sans text-slate-800 select-none md:p-8">
+      {/* Navigation subnavigation bar */}
+      <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-slate-200 pb-3">
         <a
           href="/dashboard"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
           Dashboard
         </a>
         <a
           href="/dashboard/menu"
-          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
         >
-          Menú Diario
+          Cambios Rápidos Menú
         </a>
         <a
           href="/dashboard/catalog"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
           Catálogo Maestro
         </a>
         <a
           href="/dashboard/kitchen"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
           Cocina
         </a>
         <a
           href="/dashboard/pos"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
           POS
         </a>
         <a
           href="/dashboard/cash"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
           Caja
         </a>
+        <a
+          href="/dashboard/users"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+        >
+          Usuarios
+        </a>
       </div>
 
-      {/* Header bar */}
-      <header className="mb-6 flex flex-col items-start justify-between gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-center">
+      {/* Header section */}
+      <header className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-2xl font-extrabold tracking-tight text-transparent sm:text-3xl">
-            SATEM Menú Operacional 🍔
-          </h1>
-          <p className="mt-1 text-xs text-slate-400 sm:text-sm">
-            Gestión en tiempo real del menú diario de MCI Santiago. Sin tocar datos maestros.
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Cambios Rápidos Menú</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Centro de control y overrides operacionales del menú diario de la sucursal.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {modifiedCount > 0 && (
-            <span className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-400">
-              ⚡ {modifiedCount} cambios pendientes
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
+              ⚡ {modifiedCount} modificaciones pendientes
             </span>
           )}
 
@@ -337,328 +452,498 @@ export default function MenuDashboardClient({
             variant="outline"
             disabled={modifiedCount === 0 || previewLoading || loading || isPending}
             onClick={handlePreview}
-            className="h-10 border-slate-700 text-sm font-extrabold text-slate-200 transition-all hover:bg-slate-800 active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold shadow-sm"
           >
-            {previewLoading ? 'Generando...' : '🔍 Vista previa'}
+            {previewLoading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Search className="h-3.5 w-3.5 text-slate-500" />
+            )}
+            Vista Previa
           </Button>
 
           <Button
             disabled={modifiedCount === 0 || loading || previewLoading || isPending}
             onClick={handleApply}
-            className="h-10 border border-emerald-500 bg-emerald-600 px-5 text-sm font-extrabold text-white transition-all hover:bg-emerald-500 active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800"
           >
-            {loading || isPending ? 'Guardando...' : '💾 Aplicar cambios'}
+            {loading || isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
+            Aplicar Cambios
           </Button>
         </div>
       </header>
 
+      {/* Operational Stats Grid */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-5">
+        <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold tracking-wider uppercase">Hoy</span>
+            <Calendar className="text-slate-350 h-4 w-4 shrink-0" />
+          </div>
+          <div className="mt-2 text-sm leading-tight font-bold tracking-tight text-slate-800">
+            {formattedDate}
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold tracking-wider uppercase">Total Menú</span>
+            <ShoppingBag className="text-slate-350 h-4 w-4 shrink-0" />
+          </div>
+          <div className="mt-2 text-2xl font-black text-slate-900">{stats.totalCount}</div>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold tracking-wider uppercase">Visibles</span>
+            <Eye className="text-slate-350 h-4 w-4 shrink-0" />
+          </div>
+          <div className="text-emerald-650 mt-2 text-2xl font-black">{stats.visibleCount}</div>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold tracking-wider uppercase">Agotados</span>
+            <AlertCircle className="text-slate-350 h-4 w-4 shrink-0" />
+          </div>
+          <div className="mt-2 text-2xl font-black text-rose-600">{stats.outOfStockCount}</div>
+        </div>
+
+        <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-slate-400">
+            <span className="text-[10px] font-bold tracking-wider uppercase">Destacados</span>
+            <Star className="text-slate-350 h-4 w-4 shrink-0" />
+          </div>
+          <div className="mt-2 text-2xl font-black text-amber-500">{stats.highlightedCount}</div>
+        </div>
+      </div>
+
       {/* Message banners */}
       {successMessage && (
-        <div className="animate-fade-in mb-6 flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-400">
-          <span>✅</span>
-          <span>{successMessage}</span>
+        <div className="animate-in fade-in slide-in-from-top mb-6 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-emerald-800 duration-300">
+          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+          <p className="text-sm font-medium">{successMessage}</p>
         </div>
       )}
 
       {error && (
-        <div className="mb-6 flex flex-col gap-1 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold text-rose-400">
-          <div className="flex items-center gap-3">
-            <span>⚠️ Error al procesar:</span>
+        <div className="mb-6 flex flex-col gap-2 rounded-xl border border-rose-100 bg-rose-50 p-4 text-rose-800">
+          <div className="flex items-center gap-2 text-sm font-bold">
+            <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />
+            <span>Error al guardar cambios:</span>
           </div>
-          <pre className="mt-2 overflow-x-auto font-mono text-xs whitespace-pre-wrap text-rose-300">
+          <pre className="overflow-x-auto pl-7 font-mono text-xs whitespace-pre-wrap text-rose-700">
             {error}
           </pre>
         </div>
       )}
 
-      {/* Main Categories list */}
-      <div className="flex flex-col gap-8">
-        {menu.categories.map((category) => {
-          const categoryItems = category.items
-          if (categoryItems.length === 0) return null
+      {/* Main operational table container */}
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        {/* Actions bar (Fila de acciones) */}
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div className="flex max-w-3xl flex-grow flex-wrap items-center gap-3">
+            {/* Search */}
+            <div className="relative w-64">
+              <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">
+                <Search className="h-4 w-4" />
+              </span>
+              <input
+                type="text"
+                placeholder="Buscar por nombre, SKU..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pr-4 pl-10 text-xs text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-slate-900 focus:outline-none"
+              />
+            </div>
 
-          return (
-            <section key={category.id} className="flex flex-col gap-4">
-              <h2 className="flex items-center gap-3 text-xl font-black text-slate-100">
-                {category.name}
-                <span className="bg-slate-850 rounded-md px-2 py-0.5 text-xs font-bold text-slate-400">
-                  {categoryItems.length}
-                </span>
-              </h2>
+            {/* Category Dropdown */}
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 outline-none focus:ring-1 focus:ring-slate-900"
+            >
+              <option value="all">Categoría: Todas</option>
+              {menu.categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
 
-              {/* Items Card List (Optimized for Tablet & Touch Viewport) */}
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                {categoryItems.map((item) => {
-                  const rowState = changesByMenuItemId[item.id]
-                  if (!rowState) return null
+            {/* Checkbox filter group */}
+            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-600">
+              <label className="flex cursor-pointer items-center gap-1.5 select-none">
+                <input
+                  type="checkbox"
+                  checked={showAvailableOnly}
+                  onChange={(e) => setShowAvailableOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 accent-slate-900"
+                />
+                <span>Disponibles</span>
+              </label>
 
-                  // Calculate indicators
-                  // `item.productVariant.product.basePrice` is the original suggested retail price!
-                  const basePrice = item.productVariant.product.basePrice ?? item.price
+              <label className="flex cursor-pointer items-center gap-1.5 select-none">
+                <input
+                  type="checkbox"
+                  checked={showOutOfStockOnly}
+                  onChange={(e) => setShowOutOfStockOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 accent-slate-900"
+                />
+                <span>Agotados</span>
+              </label>
 
-                  const currentPrice = rowState.price !== '' ? Number(rowState.price) : basePrice
-                  const priceDiff = currentPrice - basePrice
-                  const priceDiscountPct =
-                    basePrice > 0 ? Math.round((priceDiff / basePrice) * 100) : 0
+              <label className="flex cursor-pointer items-center gap-1.5 select-none">
+                <input
+                  type="checkbox"
+                  checked={showHighlightedOnly}
+                  onChange={(e) => setShowHighlightedOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 accent-slate-900"
+                />
+                <span>Destacados</span>
+              </label>
+            </div>
+          </div>
 
-                  const isModified = isItemModified(item.id)
-                  const isAvailable = rowState.isAvailable
-                  const isVisible = rowState.isVisible
-                  const isHighlighted = rowState.isHighlighted
+          <div className="flex items-center gap-2">
+            {/* Sync from catalog button placeholder */}
+            <Button
+              disabled
+              variant="outline"
+              className="flex cursor-not-allowed items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-400 opacity-55"
+              title="Próxima integración: sincronizar directamente desde catálogo maestro"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Sincronizar Catálogo
+            </Button>
+          </div>
+        </div>
 
-                  const stockValue = rowState.stockDaily !== '' ? Number(rowState.stockDaily) : null
-                  const isOutOfStock = stockValue !== null && stockValue <= 0
-                  const isLowStock = stockValue !== null && stockValue > 0 && stockValue <= 3
+        {/* Future capabilities row (Grisados / Marcados para futuras implementaciones) */}
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-2.5 text-[11px] font-medium text-slate-400">
+          <span className="mr-2 rounded bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-slate-500 uppercase">
+            Futuras Acciones
+          </span>
+          <button disabled className="hover:text-slate-650 cursor-not-allowed opacity-60">
+            ☑ Selección Múltiple
+          </button>
+          <span className="text-slate-300">|</span>
+          <button disabled className="hover:text-slate-650 cursor-not-allowed opacity-60">
+            Duplicar menú de ayer
+          </button>
+          <span className="text-slate-300">|</span>
+          <button disabled className="hover:text-slate-650 cursor-not-allowed opacity-60">
+            Programar menú
+          </button>
+          <span className="text-slate-300">|</span>
+          <button disabled className="hover:text-slate-650 cursor-not-allowed opacity-60">
+            Importar menú
+          </button>
+        </div>
 
-                  // Style configurations
-                  const cardBorderColor = isModified
-                    ? 'border-amber-500/50 bg-amber-950/5'
-                    : !isAvailable
-                      ? 'border-rose-950 bg-rose-950/5'
-                      : 'border-slate-850 bg-slate-900/40'
+        {/* Unified Table View */}
+        <div className="overflow-x-auto">
+          {filteredCategories.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 italic">
+              No se encontraron productos que coincidan con los filtros activos.
+            </div>
+          ) : (
+            <table className="w-full border-collapse text-left text-xs text-slate-500">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/70 font-semibold text-slate-600">
+                  <th className="w-10 px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      disabled
+                      className="border-slate-350 h-3.5 w-3.5 cursor-not-allowed rounded bg-slate-100 opacity-40"
+                    />
+                  </th>
+                  <th className="min-w-[240px] px-6 py-4">Producto</th>
+                  <th className="w-28 px-4 py-4 text-center">Precio Diario ($)</th>
+                  <th className="w-24 px-4 py-4 text-center">Stock Diario</th>
+                  <th className="w-24 px-4 py-4 text-center">Disponible</th>
+                  <th className="w-24 px-4 py-4 text-center">Destacado</th>
+                  <th className="w-24 px-4 py-4 text-center">Visible</th>
+                  <th className="w-20 px-4 py-4 text-center">Orden</th>
+                  <th className="w-28 px-6 py-4 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredCategories.map((cat) => (
+                  <React.Fragment key={cat.id}>
+                    {/* Category Divider Header Row */}
+                    <tr className="bg-slate-55 bg-slate-100/50">
+                      <td
+                        colSpan={9}
+                        className="text-slate-550 px-4 py-2 text-xs font-bold tracking-wider uppercase select-none"
+                      >
+                        📂 {cat.name}
+                      </td>
+                    </tr>
 
-                  return (
-                    <div
-                      key={item.id}
-                      className={`flex flex-col gap-4 rounded-2xl border p-4 md:flex-row ${cardBorderColor} transition-all duration-200`}
-                    >
-                      {/* Left Block: Image & Basic Info */}
-                      <div className="flex gap-4 md:w-1/2">
-                        {item.imageUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={item.imageUrl}
-                            alt={item.name || ''}
-                            className="border-slate-850 h-20 w-20 shrink-0 rounded-xl border object-cover md:h-24 md:w-24"
-                          />
-                        ) : (
-                          <div className="border-slate-850 flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border bg-slate-900 text-2xl md:h-24 md:w-24">
-                            🍔
-                          </div>
-                        )}
-                        <div className="flex min-w-0 flex-col justify-between py-1">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="truncate text-base font-extrabold text-slate-100">
-                                {item.name}
-                              </span>
-                              {isHighlighted && (
-                                <span className="rounded border border-amber-400/20 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-black tracking-wider text-amber-400 uppercase">
-                                  ★ Destacado
+                    {/* Products Row */}
+                    {cat.items.map((item) => {
+                      const state = changesByMenuItemId[item.id]
+                      if (!state) return null
+
+                      const basePrice = item.productVariant.product.basePrice ?? item.price
+                      const currentPrice = state.price !== '' ? Number(state.price) : basePrice
+                      const priceDiff = currentPrice - basePrice
+                      const priceDiscountPct =
+                        basePrice > 0 ? Math.round((priceDiff / basePrice) * 100) : 0
+
+                      const isModified = isItemModified(item.id)
+                      const stockValue = state.stockDaily !== '' ? Number(state.stockDaily) : null
+                      const isOutOfStock =
+                        !state.isAvailable || (stockValue !== null && stockValue <= 0)
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`group transition-all hover:bg-slate-50/70 ${
+                            isModified ? 'bg-amber-50/30' : ''
+                          }`}
+                        >
+                          {/* Selection Checkbox (disabled placeholder) */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <input
+                              type="checkbox"
+                              disabled
+                              className="h-3.5 w-3.5 cursor-not-allowed rounded border-slate-300 opacity-40"
+                            />
+                          </td>
+
+                          {/* Product Image, Name, SKU, and Daily Note Input */}
+                          <td className="px-6 py-4 align-middle">
+                            <div className="flex items-center gap-3">
+                              {item.imageUrl ? (
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.name || ''}
+                                  className="h-10 w-10 shrink-0 rounded-lg border border-slate-200 object-cover shadow-sm"
+                                />
+                              ) : (
+                                <div className="bg-slate-150 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-base shadow-sm">
+                                  🍔
+                                </div>
+                              )}
+                              <div className="flex min-w-0 flex-grow flex-col">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="text-sm leading-tight font-bold text-slate-800">
+                                    {item.name}
+                                  </span>
+                                  {state.isHighlighted && (
+                                    <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 select-none">
+                                      ★ Destacado
+                                    </span>
+                                  )}
+                                  {isOutOfStock && (
+                                    <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-700 select-none">
+                                      Agotado
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="mt-0.5 font-mono text-[9px] text-slate-400">
+                                  SKU: {state.code}
+                                </span>
+
+                                {/* Daily Note inline input */}
+                                <input
+                                  type="text"
+                                  placeholder="Escribir nota del día (ej. Papas fritas grandes)..."
+                                  value={state.notes}
+                                  onChange={(e) =>
+                                    handleFieldChange(item.id, 'notes', e.target.value)
+                                  }
+                                  className="mt-1.5 w-full max-w-sm rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700 transition-all placeholder:text-slate-400 focus:bg-white focus:ring-1 focus:ring-slate-900 focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Daily Price Input */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <div className="inline-flex flex-col items-center gap-1">
+                              <input
+                                type="number"
+                                placeholder={String(basePrice)}
+                                value={state.price}
+                                onChange={(e) =>
+                                  handleFieldChange(item.id, 'price', e.target.value)
+                                }
+                                className="h-8 w-20 rounded-lg border border-slate-200 px-2 text-center text-xs font-bold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
+                              />
+                              {priceDiff !== 0 && (
+                                <span
+                                  className={`text-[9px] font-bold ${
+                                    priceDiff < 0 ? 'text-emerald-600' : 'text-rose-600'
+                                  }`}
+                                >
+                                  {priceDiff < 0 ? `${priceDiscountPct}%` : `+$${priceDiff}`}
                                 </span>
                               )}
                             </div>
-                            <span className="mt-0.5 block font-mono text-[11px] tracking-wider text-slate-400 uppercase">
-                              SKU: {rowState.code}
-                            </span>
-                          </div>
+                          </td>
 
-                          {/* Quick Badge Indicators */}
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {!isAvailable && (
-                              <span className="rounded border border-rose-500/20 bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-400">
-                                No Disponible
-                              </span>
-                            )}
-                            {isOutOfStock && (
-                              <span className="animate-pulse rounded border border-rose-500/30 bg-rose-600/20 px-2 py-0.5 text-[10px] font-bold text-rose-400">
-                                AGOTADO
-                              </span>
-                            )}
-                            {isLowStock && (
-                              <span className="rounded border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-400">
-                                STOCK BAJO ({stockValue})
-                              </span>
-                            )}
-                            {!isVisible && (
-                              <span className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-slate-400">
-                                Oculto de la Carta
-                              </span>
-                            )}
-                            {priceDiff !== 0 && (
-                              <span
-                                className={`rounded border px-2 py-0.5 text-[10px] font-bold ${
-                                  priceDiff < 0
-                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400'
-                                    : 'border-rose-500/20 bg-rose-500/10 text-rose-400'
-                                }`}
-                              >
-                                {priceDiff < 0
-                                  ? `Descuento ${priceDiscountPct}%`
-                                  : `Recargo +$${priceDiff}`}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right Block: Controls / Inputs (Touch & Tablet Optimized) */}
-                      <div className="flex flex-col justify-between gap-3 border-t border-slate-800/80 pt-3 md:w-1/2 md:border-t-0 md:border-l md:pt-0 md:pl-4">
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          {/* Price input */}
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-extrabold tracking-wide text-slate-400 uppercase">
-                              Precio del día ($)
-                            </label>
+                          {/* Daily Stock Input */}
+                          <td className="px-4 py-4 text-center align-middle">
                             <input
                               type="number"
-                              placeholder={`Base: ${basePrice}`}
-                              value={rowState.price}
-                              onChange={(e) => handleFieldChange(item.id, 'price', e.target.value)}
-                              className="h-9 w-full rounded-lg border border-slate-800 bg-slate-950 px-2.5 text-sm font-bold text-slate-100 outline-none focus:border-emerald-500"
-                            />
-                          </div>
-
-                          {/* Stock input */}
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-extrabold tracking-wide text-slate-400 uppercase">
-                              Stock Diario
-                            </label>
-                            <input
-                              type="number"
-                              placeholder="Sin límite"
-                              value={rowState.stockDaily}
+                              placeholder="Ilimitado"
+                              value={state.stockDaily}
                               onChange={(e) =>
                                 handleFieldChange(item.id, 'stockDaily', e.target.value)
                               }
-                              className="h-9 w-full rounded-lg border border-slate-800 bg-slate-950 px-2.5 text-sm font-bold text-slate-100 outline-none focus:border-emerald-500"
+                              className="h-8 w-16 rounded-lg border border-slate-200 px-2 text-center text-xs font-bold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
                             />
-                          </div>
+                          </td>
 
-                          {/* Orden input */}
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-extrabold tracking-wide text-slate-400 uppercase">
-                              Orden Visual
-                            </label>
+                          {/* Available Switch (Touch optimized size) */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleFieldChange(item.id, 'isAvailable', !state.isAvailable)
+                              }
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                state.isAvailable ? 'bg-emerald-600' : 'bg-slate-200'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  state.isAvailable ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </td>
+
+                          {/* Highlighted Switch */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleFieldChange(item.id, 'isHighlighted', !state.isHighlighted)
+                              }
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                state.isHighlighted ? 'bg-amber-500' : 'bg-slate-200'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  state.isHighlighted ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </td>
+
+                          {/* Visible Switch */}
+                          <td className="px-4 py-4 text-center align-middle">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleFieldChange(item.id, 'isVisible', !state.isVisible)
+                              }
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                state.isVisible ? 'bg-slate-800' : 'bg-slate-200'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  state.isVisible ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </td>
+
+                          {/* Sort Order Input */}
+                          <td className="px-4 py-4 text-center align-middle">
                             <input
                               type="number"
-                              value={rowState.sortOrder}
+                              value={state.sortOrder}
                               onChange={(e) =>
                                 handleFieldChange(item.id, 'sortOrder', e.target.value)
                               }
-                              className="h-9 w-full rounded-lg border border-slate-800 bg-slate-950 px-2.5 text-sm font-bold text-slate-100 outline-none focus:border-emerald-500"
+                              className="h-8 w-12 rounded-lg border border-slate-200 px-2 text-center text-xs font-bold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
                             />
-                          </div>
+                          </td>
 
-                          {/* Destacado & Available & Visible toggles */}
-                          <div className="flex flex-col justify-end gap-1">
-                            <div className="flex h-9 items-center gap-4">
-                              <label className="flex cursor-pointer items-center gap-1.5 font-semibold text-slate-200">
-                                <input
-                                  type="checkbox"
-                                  checked={rowState.isHighlighted}
-                                  onChange={(e) =>
-                                    handleFieldChange(item.id, 'isHighlighted', e.target.checked)
-                                  }
-                                  className="h-4 w-4 cursor-pointer rounded border-slate-800 bg-slate-950 text-emerald-500 accent-emerald-500 focus:ring-0"
-                                />
-                                ⭐
-                              </label>
-
-                              <label className="flex cursor-pointer items-center gap-1.5 font-semibold text-slate-200">
-                                <input
-                                  type="checkbox"
-                                  checked={rowState.isAvailable}
-                                  onChange={(e) =>
-                                    handleFieldChange(item.id, 'isAvailable', e.target.checked)
-                                  }
-                                  className="h-4 w-4 cursor-pointer rounded border-slate-800 bg-slate-950 text-emerald-500 accent-emerald-500 focus:ring-0"
-                                />
-                                🟢 Disp.
-                              </label>
-
-                              <label className="flex cursor-pointer items-center gap-1.5 font-semibold text-slate-200">
-                                <input
-                                  type="checkbox"
-                                  checked={rowState.isVisible}
-                                  onChange={(e) =>
-                                    handleFieldChange(item.id, 'isVisible', e.target.checked)
-                                  }
-                                  className="h-4 w-4 cursor-pointer rounded border-slate-800 bg-slate-950 text-emerald-500 accent-emerald-500 focus:ring-0"
-                                />
-                                👁️ Vis.
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Note & Reset button */}
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            placeholder="Nota del día (ej. Salsa extra gratis)"
-                            value={rowState.notes}
-                            onChange={(e) => handleFieldChange(item.id, 'notes', e.target.value)}
-                            className="border-slate-855 h-8 flex-grow rounded-lg border bg-slate-950 px-2.5 text-xs text-slate-300 outline-none focus:border-emerald-500"
-                          />
-                          {isModified && (
-                            <button
-                              onClick={() => handleResetRow(item.id)}
-                              className="h-8 rounded-lg bg-slate-800 px-2.5 text-xs font-bold text-slate-400 transition hover:bg-slate-700 hover:text-slate-200 active:scale-95"
-                              title="Restablecer valores originales"
-                            >
-                              ↩️ Reset
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          )
-        })}
+                          {/* Reset / Actions column */}
+                          <td className="px-6 py-4 text-right align-middle">
+                            {isModified ? (
+                              <button
+                                onClick={() => handleResetRow(item.id)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800 active:scale-95"
+                                title="Deshacer cambios de esta fila"
+                              >
+                                Deshacer
+                              </button>
+                            ) : (
+                              <span className="text-slate-350 text-[10px] font-medium italic select-none">
+                                Sin cambios
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
-      {/* Modal / Dialog Backdrop for Preview Changes */}
+      {/* PREVIEW AND APPLY CHANGES DIALOG MODAL */}
       {previewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="animate-scale-up flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-800 p-5">
-              <h3 className="flex items-center gap-2 text-lg font-extrabold text-slate-100">
-                🔍 Vista Previa del Cambio
-              </h3>
-              <button
-                onClick={() => setPreviewOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              >
-                ✕
-              </button>
-            </div>
+        <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm duration-200">
+          <div className="animate-in zoom-in-95 relative flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-xl duration-200">
+            {/* Close button */}
+            <button
+              onClick={() => setPreviewOpen(false)}
+              className="absolute top-4 right-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
+            >
+              <X className="h-5 w-5" />
+            </button>
 
-            {/* Content area */}
-            <div className="flex-grow overflow-y-auto p-6">
+            <h3 className="text-base font-bold text-slate-900">🔍 Vista Previa del Cambio</h3>
+            <p className="mt-1 border-b border-slate-100 pb-3 text-xs text-slate-500">
+              Confirma los overrides temporales del menú diario antes de aplicarlos.
+            </p>
+
+            {/* Modal Body */}
+            <div className="flex-grow overflow-y-auto py-4">
               {previewErrors.length > 0 ? (
-                <div className="flex flex-col gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-5 text-rose-400">
-                  <span className="flex items-center gap-2 text-base font-extrabold">
-                    ❌ Errores de Validación en los Datos
+                <div className="flex flex-col gap-2 rounded-xl border border-rose-100 bg-rose-50 p-4 text-rose-800">
+                  <span className="flex items-center gap-2 text-xs font-bold">
+                    <AlertCircle className="h-4.5 w-4.5 text-rose-600" />
+                    Errores de Validación en los Datos
                   </span>
-                  <p className="text-sm text-rose-300">
-                    Se encontraron los siguientes problemas. Corrígelos antes de guardar:
-                  </p>
-                  <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-xs font-semibold text-rose-200">
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-[11px] font-semibold text-rose-700">
                     {previewErrors.map((err, idx) => (
                       <li key={idx}>{err}</li>
                     ))}
                   </ul>
                 </div>
               ) : previewItems.length === 0 ? (
-                <p className="py-6 text-center text-slate-400 italic">
-                  No hay cambios operacionales detectados.
+                <p className="py-8 text-center text-xs text-slate-400 italic">
+                  No se encontraron cambios pendientes a guardar.
                 </p>
               ) : (
-                <div className="flex flex-col gap-4">
-                  <p className="text-sm font-medium text-slate-400">
-                    A continuación se listan los cambios operacionales temporales que se guardarán
-                    en la base de datos:
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-slate-500">
+                    Los siguientes cambios se escribirán como overrides en la base de datos de la
+                    sucursal:
                   </p>
 
-                  <div className="border-slate-855 overflow-hidden rounded-xl border bg-slate-950/30">
-                    <table className="w-full border-collapse text-left text-sm">
+                  <div className="overflow-hidden rounded-xl border border-slate-200">
+                    <table className="w-full border-collapse text-left text-xs text-slate-500">
                       <thead>
-                        <tr className="border-slate-855 border-b bg-slate-950/60 text-xs font-bold tracking-wider text-slate-400 uppercase">
+                        <tr className="border-b border-slate-200 bg-slate-50 font-semibold text-slate-600">
                           <th className="p-3">Producto</th>
                           <th className="p-3">SKU</th>
                           <th className="p-3">Campo</th>
@@ -666,7 +951,7 @@ export default function MenuDashboardClient({
                           <th className="p-3">Después</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-slate-855 divide-y">
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                         {previewItems.map((item) => {
                           const diffs: { field: string; before: string; after: string }[] = []
 
@@ -680,22 +965,22 @@ export default function MenuDashboardClient({
                           if (item.before.isAvailable !== item.after.isAvailable) {
                             diffs.push({
                               field: 'Disponible',
-                              before: item.before.isAvailable ? 'SÍ' : 'NO',
-                              after: item.after.isAvailable ? 'SÍ' : 'NO',
+                              before: item.before.isAvailable ? 'Sí' : 'No',
+                              after: item.after.isAvailable ? 'Sí' : 'No',
                             })
                           }
                           if (item.before.isVisible !== item.after.isVisible) {
                             diffs.push({
                               field: 'Visible',
-                              before: item.before.isVisible ? 'SÍ' : 'NO',
-                              after: item.after.isVisible ? 'SÍ' : 'NO',
+                              before: item.before.isVisible ? 'Sí' : 'No',
+                              after: item.after.isVisible ? 'Sí' : 'No',
                             })
                           }
                           if (item.before.isHighlighted !== item.after.isHighlighted) {
                             diffs.push({
                               field: 'Destacado',
-                              before: item.before.isHighlighted ? 'SÍ' : 'NO',
-                              after: item.after.isHighlighted ? 'SÍ' : 'NO',
+                              before: item.before.isHighlighted ? 'Sí' : 'No',
+                              after: item.after.isHighlighted ? 'Sí' : 'No',
                             })
                           }
                           if (item.before.stockDaily !== item.after.stockDaily) {
@@ -704,11 +989,11 @@ export default function MenuDashboardClient({
                               before:
                                 item.before.stockDaily !== null
                                   ? String(item.before.stockDaily)
-                                  : 'Sin límite',
+                                  : 'Ilimitado',
                               after:
                                 item.after.stockDaily !== null
                                   ? String(item.after.stockDaily)
-                                  : 'Sin límite',
+                                  : 'Ilimitado',
                             })
                           }
                           if (item.before.sortOrder !== item.after.sortOrder) {
@@ -731,31 +1016,26 @@ export default function MenuDashboardClient({
                           return (
                             <React.Fragment key={item.code}>
                               {diffs.map((diff, idx) => (
-                                <tr
-                                  key={`${item.code}-${idx}`}
-                                  className="font-medium hover:bg-slate-900/30"
-                                >
+                                <tr key={`${item.code}-${idx}`} className="hover:bg-slate-50">
                                   {idx === 0 ? (
                                     <>
                                       <td
-                                        className="p-3 align-middle font-bold text-slate-200"
+                                        className="p-3 align-middle font-bold text-slate-800"
                                         rowSpan={diffs.length}
                                       >
                                         {item.name}
                                       </td>
                                       <td
-                                        className="p-3 align-middle font-mono text-xs text-slate-400"
+                                        className="p-3 align-middle font-mono text-[10px] text-slate-400"
                                         rowSpan={diffs.length}
                                       >
                                         {item.code}
                                       </td>
                                     </>
                                   ) : null}
-                                  <td className="p-3 font-bold text-slate-300">{diff.field}</td>
-                                  <td className="p-3 text-slate-500 line-through">{diff.before}</td>
-                                  <td className="p-3 font-extrabold text-emerald-400">
-                                    {diff.after}
-                                  </td>
+                                  <td className="text-slate-650 p-3 font-bold">{diff.field}</td>
+                                  <td className="p-3 text-slate-400 line-through">{diff.before}</td>
+                                  <td className="p-3 font-bold text-emerald-600">{diff.after}</td>
                                 </tr>
                               ))}
                             </React.Fragment>
@@ -768,21 +1048,24 @@ export default function MenuDashboardClient({
               )}
             </div>
 
-            {/* Footer */}
-            <div className="flex justify-end gap-3 border-t border-slate-800 bg-slate-950/40 p-5">
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => setPreviewOpen(false)}
-                className="h-10 border-slate-700 text-sm text-slate-200"
+                className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500"
               >
                 Cerrar
               </Button>
               {previewErrors.length === 0 && previewItems.length > 0 && (
                 <Button
                   onClick={handleApply}
-                  className="h-10 border border-emerald-500 bg-emerald-600 px-6 font-bold text-white hover:bg-emerald-500"
+                  disabled={loading}
+                  className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800"
                 >
-                  Guardar y Aplicar
+                  {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Confirmar y Guardar
                 </Button>
               )}
             </div>

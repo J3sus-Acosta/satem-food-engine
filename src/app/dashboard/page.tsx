@@ -7,6 +7,7 @@ import {
   Calculator,
   LayoutDashboard,
   TrendingUp,
+  Users,
 } from 'lucide-react'
 
 export const metadata = {
@@ -17,7 +18,7 @@ export const metadata = {
 export default function DashboardHubPage() {
   const modules = [
     {
-      title: 'Menú Diario',
+      title: 'Cambios Rápidos Menú',
       description: 'Control de disponibilidad diaria, precios del día y stock operacional rápido.',
       href: '/dashboard/menu',
       icon: BookOpen,
@@ -58,6 +59,14 @@ export default function DashboardHubPage() {
       icon: MonitorPlay,
       color: 'from-violet-500 to-purple-400',
       badge: 'Ventas',
+    },
+    {
+      title: 'Gestión de Usuarios',
+      description: 'Administración de accesos, roles, estados y contraseñas del personal interno.',
+      href: '/dashboard/users',
+      icon: Users,
+      color: 'from-cyan-500 to-sky-400',
+      badge: 'Seguridad',
     },
   ]
 

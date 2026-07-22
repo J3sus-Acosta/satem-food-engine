@@ -11,6 +11,7 @@ import {
   Product,
   ProductVariant,
 } from '../src/generated/prisma'
+import { hashPassword } from '../src/lib/password-crypto'
 
 const db = new PrismaClient()
 
@@ -69,41 +70,87 @@ async function main() {
 
   // 3. USUARIOS (Personal Interno)
   console.info('3. Creando Usuarios y Asignaciones...')
+  const demoPasswordHash = hashPassword('Admin@123')
+
   await db.user.upsert({
     where: { email: 'admin@satem.cl' },
-    update: { name: 'Administrador Demo', role: 'ADMIN', isActive: true },
+    update: {
+      name: 'Administrador Demo',
+      role: 'ADMIN',
+      isActive: true,
+      username: 'admin-demo',
+      passwordHash: demoPasswordHash,
+    },
     create: {
       organizationId: org.id,
       email: 'admin@satem.cl',
       name: 'Administrador Demo',
       role: 'ADMIN',
       isActive: true,
+      username: 'admin-demo',
+      passwordHash: demoPasswordHash,
     },
   })
 
   const userCashier = await db.user.upsert({
     where: { email: 'cajero@satem.cl' },
-    update: { name: 'Cajero Demo', role: 'CASHIER', isActive: true },
+    update: {
+      name: 'Cajero Demo',
+      role: 'CASHIER',
+      isActive: true,
+      username: 'cajero-demo',
+      passwordHash: demoPasswordHash,
+    },
     create: {
       organizationId: org.id,
       email: 'cajero@satem.cl',
       name: 'Cajero Demo',
       role: 'CASHIER',
       isActive: true,
+      username: 'cajero-demo',
+      passwordHash: demoPasswordHash,
     },
   })
 
   const userKitchen = await db.user.upsert({
     where: { email: 'cocinero@satem.cl' },
-    update: { name: 'Cocinero Demo', role: 'KITCHEN', isActive: true },
+    update: {
+      name: 'Cocinero Demo',
+      role: 'KITCHEN',
+      isActive: true,
+      username: 'cocinero-demo',
+      passwordHash: demoPasswordHash,
+    },
     create: {
       organizationId: org.id,
       email: 'cocinero@satem.cl',
       name: 'Cocinero Demo',
       role: 'KITCHEN',
       isActive: true,
+      username: 'cocinero-demo',
+      passwordHash: demoPasswordHash,
     },
   })
+
+  // Usuario Administrador Inicial Requerido (admin)
+  const initialAdminExists = await db.user.findUnique({
+    where: { username: 'admin' },
+  })
+  if (!initialAdminExists) {
+    console.info('Creando Usuario Administrador Inicial (admin)...')
+    await db.user.create({
+      data: {
+        organizationId: org.id,
+        username: 'admin',
+        name: 'Administrador',
+        passwordHash: hashPassword('Admin@123'),
+        role: 'ADMIN',
+        isActive: true,
+      },
+    })
+  } else {
+    console.info('Usuario Administrador Inicial (admin) ya existe. Omitiendo.')
+  }
 
   // Asociar Cajero y Cocinero al Local 1 (Casa Matriz)
   await db.userLocation.upsert({

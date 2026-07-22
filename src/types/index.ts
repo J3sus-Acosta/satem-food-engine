@@ -59,7 +59,16 @@ export type IngredientUnit = 'KG' | 'G' | 'L' | 'ML' | 'UNITS'
 
 export type StockMovementType = 'PURCHASE' | 'SALE' | 'WASTE' | 'ADJUSTMENT' | 'RETURN'
 
-export type UserRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'CASHIER' | 'KITCHEN'
+export type UserRole =
+  | 'OWNER'
+  | 'ADMIN'
+  | 'MANAGER'
+  | 'CASHIER'
+  | 'KITCHEN'
+  | 'CAJERO'
+  | 'COCINA'
+  | 'OPERADOR'
+  | 'LECTURA'
 
 export type LoyaltyTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM'
 
@@ -721,6 +730,22 @@ export interface ProductCatalogListFilters {
   search?: string
   sortBy?: 'name' | 'sku' | 'basePrice' | 'updatedAt' | 'sortOrder'
   sortOrder?: 'asc' | 'desc'
+}
+
+export interface User {
+  id: string
+  organizationId: string
+  locationId: string | null
+  name: string
+  username: string
+  email: string | null
+  avatarUrl: string | null
+  role: UserRole
+  isActive: boolean
+  lastLoginAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date | null
 }
 
 export * from './checkout'

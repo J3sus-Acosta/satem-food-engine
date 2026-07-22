@@ -20,3 +20,38 @@ export {
   validateMenuSyncSecret,
 } from './menu-sync'
 export type { SheetRow, SheetRowValidationError, SheetValidationResult } from './menu-sync'
+
+// User Management Services
+import { PrismaUserRepository } from '@/repositories/prisma/PrismaUserRepository'
+import {
+  CreateUserService,
+  UpdateUserService,
+  ChangePasswordService,
+  EnableUserService,
+  DisableUserService,
+  DeleteUserService,
+  FindUserService,
+  ListUsersService,
+} from './users'
+
+const userRepo = new PrismaUserRepository()
+
+export const createUserService = new CreateUserService(userRepo)
+export const updateUserService = new UpdateUserService(userRepo)
+export const changePasswordService = new ChangePasswordService(userRepo)
+export const enableUserService = new EnableUserService(userRepo)
+export const disableUserService = new DisableUserService(userRepo)
+export const deleteUserService = new DeleteUserService(userRepo)
+export const findUserService = new FindUserService(userRepo)
+export const listUsersService = new ListUsersService(userRepo)
+
+export {
+  CreateUserService,
+  UpdateUserService,
+  ChangePasswordService,
+  EnableUserService,
+  DisableUserService,
+  DeleteUserService,
+  FindUserService,
+  ListUsersService,
+} from './users'

@@ -158,6 +158,10 @@ enum UserRole {
   MANAGER // Gerente: acceso a locales asignados
   CASHIER // Cajero: pedidos y pagos
   KITCHEN // Cocina: solo vista de tickets
+  CAJERO
+  COCINA
+  OPERADOR
+  LECTURA
 }
 
 /// Nivel de fidelización del cliente
@@ -249,6 +253,7 @@ model Location {
   orderSequences OrderSequence[]
   cashSessions   CashSession[]
   cashAudits     CashAudit[]
+  users          User[]          @relation("LocationUsers")
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -941,9 +946,10 @@ model Message {
 model User {
   id             String    @id @default(cuid())
   organizationId String
-  /// Único globalmente: un email no puede pertenecer a dos organizaciones
-  email          String    @unique
+  username       String    @unique
+  email          String?   @unique
   name           String
+  passwordHash   String
   avatarUrl      String?
   role           UserRole  @default(CASHIER)
   isActive       Boolean   @default(true)
@@ -951,9 +957,11 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
+  locationId     String?
 
   // Relations
   organization     Organization      @relation(fields: [organizationId], references: [id])
+  location         Location?         @relation("LocationUsers", fields: [locationId], references: [id])
   userLocations    UserLocation[]
   stockMovements   StockMovement[]
   productVersions  ProductVersion[]
@@ -963,6 +971,7 @@ model User {
   cashAudits       CashAudit[]
 
   @@index([organizationId])
+  @@index([locationId])
   @@map("users")
 }
 

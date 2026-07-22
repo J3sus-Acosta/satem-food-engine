@@ -33,7 +33,7 @@ interface CashDashboardClientProps {
   organizationId: string
   locationId: string
   locations: { id: string; name: string }[]
-  users: { id: string; name: string; email: string; role: string }[]
+  users: { id: string; name: string; email: string | null; role: string }[]
   channels: { id: string; name: string }[]
 }
 
@@ -335,7 +335,7 @@ export default function CashDashboardClient({
               className="rounded-lg border border-blue-200 bg-white p-1.5 text-xs font-semibold text-slate-700 outline-none"
             >
               {users.map((u) => (
-                <option key={u.id} value={u.email}>
+                <option key={u.id} value={u.email || ''}>
                   {u.name} ({u.role === 'ADMIN' ? 'Administrador' : 'Cajero'})
                 </option>
               ))}
@@ -370,7 +370,7 @@ export default function CashDashboardClient({
           href="/dashboard/menu"
           className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
-          Menú Diario
+          Cambios Rápidos Menú
         </a>
         <a
           href="/dashboard/catalog"
@@ -395,6 +395,12 @@ export default function CashDashboardClient({
           className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
         >
           Caja
+        </a>
+        <a
+          href="/dashboard/users"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+        >
+          Usuarios
         </a>
       </div>
 

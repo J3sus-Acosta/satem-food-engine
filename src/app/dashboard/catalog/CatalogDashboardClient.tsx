@@ -502,7 +502,7 @@ export default function CatalogDashboardClient({
           href="/dashboard/menu"
           className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
-          Menú Diario
+          Cambios Rápidos Menú
         </a>
         <a
           href="/dashboard/catalog"
@@ -527,6 +527,12 @@ export default function CatalogDashboardClient({
           className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
         >
           Caja
+        </a>
+        <a
+          href="/dashboard/users"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+        >
+          Usuarios
         </a>
       </div>
 
