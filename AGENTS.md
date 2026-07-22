@@ -389,6 +389,8 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 6. Los cambios de estado operacional deben pasar siempre por OrderService. Nunca modificar Order.status directamente desde APIs o componentes.
 7. La generación de `orderNumber` debe realizarse exclusivamente utilizando la entidad `OrderSequence` mediante `upsert` incremental atómico (`{ lastNumber: { increment: 1 } }`) dentro de una transacción Prisma. Queda prohibido consultar la tabla `Order` (`findFirst`, `MAX`) o utilizar expresiones regulares/advisory locks para este fin.
 8. Todo cambio estructural en el Catálogo Maestro de Productos (`Product`) debe registrar de forma transaccional un snapshot completo del estado previo en `ProductVersion` y un log operacional en `CatalogAuditLog`.
+9. El flujo operacional de Caja (`CashSession`, `CashMovement`, `CashAudit`) debe validarse siempre mediante servicios del dominio (`CashService`). Queda prohibida la modificación directa de estados de sesión o saldos fuera del flujo de cuadratura.
+10. Las acciones de reapertura de cajas cerradas son de uso exclusivo de usuarios con rol `ADMIN`, debiendo siempre justificar la acción mediante una descripción textual de motivo obligatoria.
 
 ---
 

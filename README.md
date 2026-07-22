@@ -32,6 +32,7 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 | **FASE 9A**  | **Integración de Pagos Reales MVP**        | Integración multi-tenant inyectable, webhook idempotente, polling liviano de status y suite de testing para SumUp y Webpay.                      | ✅ Completada |
 | **FASE 10A** | **Integración Oficial SumUp Cloud API**    | Integración oficial SumUp (Sandbox/Prod), Terminal API, HMAC-SHA256, Panel de Diagnóstico y generador atómico `OrderSequence`.                   | ✅ Completada |
 | **FASE 10B** | **Administración del Catálogo Maestro**    | Módulo completo `/dashboard/catalog` para definir productos, control de versiones (snapshots), logs de auditoría e ingredientes.                 | ✅ Completada |
+| **FASE 11**  | **Caja / Cierre de Caja**                  | Control de turnos de caja, arqueo físico, flujos de ingresos/egresos, reportes consolidados y reaperturas administrativas.                       | ✅ Completada |
 
 ---
 
@@ -177,7 +178,7 @@ _Nota: Este comando puede ejecutarse de manera reiterada. Los pedidos y mensajes
 | `npm run lint`       | Ejecuta el análisis estático de código con ESLint.                 |
 | `npm run format`     | Corrige problemas de estilo en todo el proyecto mediante Prettier. |
 | `npm run type-check` | Realiza la verificación de tipos de TypeScript sin compilar.       |
-| `npm run test`       | Ejecuta las 32 pruebas críticas de Vitest en modo monouso.         |
+| `npm run test`       | Ejecuta las 64 pruebas críticas de Vitest en modo monouso.         |
 
 ---
 
