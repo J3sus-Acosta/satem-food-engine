@@ -10,6 +10,7 @@ export { KitchenService, kitchenService } from './kitchen'
 export { InventoryService } from './inventory'
 export { CustomerService } from './customers'
 export { ChatService } from './chat'
+export { ProductCatalogService, productCatalogService } from './catalog'
 export {
   validateSheetRows,
   adaptSheetRowsToDomain,

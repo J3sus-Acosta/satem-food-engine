@@ -461,7 +461,16 @@ async function main() {
 
   const mappedProducts: Record<string, { product: Product; variant: ProductVariant }> = {}
 
+  const slugify = (text: string) =>
+    text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)+/g, '')
+
   for (const pData of productsData) {
+    const productSlug = slugify(pData.name)
     let product = await db.product.findFirst({
       where: { organizationId: org.id, sku: pData.sku },
     })
@@ -470,6 +479,7 @@ async function main() {
         data: {
           organizationId: org.id,
           sku: pData.sku,
+          slug: productSlug,
           name: pData.name,
           description: pData.description,
           basePrice: pData.basePrice,
@@ -483,6 +493,7 @@ async function main() {
         where: { id: product.id },
         data: {
           name: pData.name,
+          slug: productSlug,
           description: pData.description,
           basePrice: pData.basePrice,
           imageUrl: pData.imageUrl,

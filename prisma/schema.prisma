@@ -259,31 +259,102 @@ model Location {
 /// Existe a nivel de Organization, no de Location.
 /// El precio efectivo se define en MenuItem (por menú y sucursal).
 model Product {
-  id             String      @id @default(cuid())
-  organizationId String
-  sku            String?
-  name           String
-  description    String?
-  imageUrl       String?
+  id                   String              @id @default(cuid())
+  organizationId       String
+  sku                  String?
+  slug                 String?             @unique
+  name                 String
+  description          String?
+  shortDescription     String?             @map("short_description")
+  longDescription      String?             @map("long_description")
+  imageUrl             String?
   /// Precio de referencia sugerido (no vinculante; cada MenuItem define su precio)
-  basePrice      Decimal?    @db.Decimal(10, 2)
-  isAlcoholic    Boolean     @default(false)
-  taxCategory    TaxCategory @default(STANDARD)
-  isActive       Boolean     @default(true)
+  basePrice            Decimal?            @db.Decimal(10, 2)
+  cost                 Decimal?            @db.Decimal(10, 2)
+  isAlcoholic          Boolean             @default(false)
+  taxCategory          TaxCategory         @default(STANDARD)
+  isActive             Boolean             @default(true)
+  visibleByDefault     Boolean             @default(true) @map("visible_by_default")
+  highlightedByDefault Boolean             @default(false) @map("highlighted_by_default")
+  estimatedPrepTime    Int?                @map("estimated_prep_time")
+  notes                String?
+  sortOrder            Int                 @default(0) @map("sort_order")
   /// Metadatos libres: alérgenos, tags, info nutricional
-  metadata       Json        @default("{}")
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  deletedAt      DateTime?
+  metadata             Json                @default("{}")
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  deletedAt            DateTime?
 
   // Relations
-  organization   Organization     @relation(fields: [organizationId], references: [id])
+  organization   Organization        @relation(fields: [organizationId], references: [id])
   variants       ProductVariant[]
   modifierGroups ModifierGroup[]
+  versions       ProductVersion[]
+  auditLogs      CatalogAuditLog[]
+  ingredients    ProductIngredient[]
 
   @@index([organizationId])
   @@index([organizationId, isActive])
   @@map("products")
+}
+
+/// Historial de versiones y snapshots de un producto para trazabilidad.
+model ProductVersion {
+  id                  String   @id @default(cuid())
+  productId           String   @map("product_id")
+  versionNumber       Int      @map("version_number")
+  createdAt           DateTime @default(now()) @map("created_at")
+  userId              String?  @map("user_id")
+  changeReason        String?  @map("change_reason")
+  
+  productSnapshot     Json     @map("product_snapshot")
+  variantsSnapshot    Json     @map("variants_snapshot")
+  modifiersSnapshot   Json     @map("modifiers_snapshot")
+  ingredientsSnapshot Json     @map("ingredients_snapshot")
+  pricesSnapshot      Json     @map("prices_snapshot")
+  configSnapshot      Json     @map("config_snapshot")
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([productId, versionNumber])
+  @@map("product_versions")
+}
+
+/// Registro de auditoría de eventos del catálogo maestro.
+model CatalogAuditLog {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  event     String   // "CREATED", "UPDATED", "DELETED", "RESTORED", "DUPLICATED", "VERSION_RESTORED"
+  details   Json?
+  userId    String?  @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([createdAt])
+  @@map("catalog_audit_logs")
+}
+
+/// Relación pivote entre Product e Ingredient para definir la receta.
+model ProductIngredient {
+  id           String   @id @default(cuid())
+  productId    String   @map("product_id")
+  ingredientId String   @map("ingredient_id")
+  quantity     Decimal  @db.Decimal(10, 3)
+  cost         Decimal  @db.Decimal(10, 2)
+
+  // Relations
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+  @@map("product_ingredients")
 }
 
 /// Variante dimensional de un Product (tamaño, configuración, versión).
@@ -663,8 +734,9 @@ model Ingredient {
   deletedAt      DateTime?
 
   // Relations
-  organization   Organization    @relation(fields: [organizationId], references: [id])
-  inventoryItems InventoryItem[]
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  inventoryItems     InventoryItem[]
+  productIngredients ProductIngredient[]
 
   @@index([organizationId])
   @@map("ingredients")
@@ -877,9 +949,11 @@ model User {
   deletedAt      DateTime?
 
   // Relations
-  organization   Organization    @relation(fields: [organizationId], references: [id])
-  userLocations  UserLocation[]
-  stockMovements StockMovement[]
+  organization     Organization      @relation(fields: [organizationId], references: [id])
+  userLocations    UserLocation[]
+  stockMovements   StockMovement[]
+  productVersions  ProductVersion[]
+  catalogAuditLogs CatalogAuditLog[]
 
   @@index([organizationId])
   @@map("users")

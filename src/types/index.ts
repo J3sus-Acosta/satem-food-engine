@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Global TypeScript type definitions for SATEM Food Engine.
  *
@@ -97,15 +98,26 @@ export interface Product {
   id: string
   organizationId: string
   sku: string | null
+  slug: string | null
   name: string
   description: string | null
+  shortDescription: string | null
+  longDescription: string | null
   imageUrl: string | null
   /** Suggested retail price. The effective price is on MenuItem. */
   basePrice: Money | null
+  cost: Money | null
   isAlcoholic: boolean
   taxCategory: TaxCategory
   isActive: boolean
+  visibleByDefault: boolean
+  highlightedByDefault: boolean
+  estimatedPrepTime: number | null
+  notes: string | null
+  sortOrder: number
   metadata: Record<string, unknown>
+  defaultCategoryId: string | null
+  defaultCategoryName: string | null
   createdAt: Date
   updatedAt: Date
   deletedAt: Date | null
@@ -157,28 +169,49 @@ export interface ProductWithVariants extends Product {
 
 export interface ProductWithFull extends ProductWithVariants {
   modifierGroups: (ModifierGroup & { modifiers: Modifier[] })[]
+  ingredients: ProductIngredient[]
 }
 
 export interface CreateProductInput {
   organizationId: string
   name: string
+  slug?: string
   description?: string
+  shortDescription?: string
+  longDescription?: string
   imageUrl?: string
   sku?: string
   basePrice?: Money
+  cost?: Money
   isAlcoholic?: boolean
   taxCategory?: TaxCategory
+  isActive?: boolean
+  visibleByDefault?: boolean
+  highlightedByDefault?: boolean
+  estimatedPrepTime?: number
+  notes?: string
+  sortOrder?: number
   metadata?: Record<string, unknown>
 }
 
 export interface UpdateProductInput {
   name?: string
+  slug?: string | null
   description?: string | null
+  shortDescription?: string | null
+  longDescription?: string | null
   imageUrl?: string | null
   sku?: string | null
   basePrice?: Money | null
+  cost?: Money | null
   isAlcoholic?: boolean
   taxCategory?: TaxCategory
+  isActive?: boolean
+  visibleByDefault?: boolean
+  highlightedByDefault?: boolean
+  estimatedPrepTime?: number | null
+  notes?: string | null
+  sortOrder?: number
   metadata?: Record<string, unknown>
 }
 
@@ -635,6 +668,54 @@ export interface Message {
   type: MessageType
   metadata: Record<string, unknown> | null
   createdAt: Date
+}
+
+// ─── CATALOG MASTER DOMAIN (FASE 10B) ──────────────────────────────────────────
+
+export interface ProductVersion {
+  id: string
+  productId: string
+  versionNumber: number
+  createdAt: Date
+  userId: string | null
+  changeReason: string | null
+  productSnapshot: Record<string, any>
+  variantsSnapshot: Record<string, any>[]
+  modifiersSnapshot: Record<string, any>[]
+  ingredientsSnapshot: Record<string, any>[]
+  pricesSnapshot: Record<string, any>
+  configSnapshot: Record<string, any>
+}
+
+export interface CatalogAuditLog {
+  id: string
+  productId: string
+  event: string
+  details: Record<string, any> | null
+  userId: string | null
+  createdAt: Date
+}
+
+export interface ProductIngredient {
+  id: string
+  productId: string
+  ingredientId: string
+  quantity: number
+  cost: number
+  ingredient?: {
+    name: string
+    unit: string
+  }
+}
+
+export interface ProductCatalogListFilters {
+  status?: 'all' | 'active' | 'inactive' | 'deleted'
+  hasImage?: 'all' | 'with' | 'without'
+  hasVariants?: 'all' | 'with' | 'without'
+  hasModifiers?: 'all' | 'with' | 'without'
+  search?: string
+  sortBy?: 'name' | 'sku' | 'basePrice' | 'updatedAt' | 'sortOrder'
+  sortOrder?: 'asc' | 'desc'
 }
 
 export * from './checkout'
