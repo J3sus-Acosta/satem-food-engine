@@ -597,7 +597,10 @@ function buildMockMenuItem(
  * Prisma implementation of ICatalogRepository with fallback to mock data on connection failure.
  */
 export class PrismaCatalogRepository implements ICatalogRepository {
-  async findMenuByLocationId(locationId: string): Promise<MenuWithCategories | null> {
+  async findMenuByLocationId(
+    locationId: string,
+    includeInvisible = false
+  ): Promise<MenuWithCategories | null> {
     try {
       // Intentar consulta real a la base de datos
       const menu = await db.menu.findFirst({
@@ -784,7 +787,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
 
         // Filter out invisible items and sort by sortOrder
         const items = rawItems
-          .filter((item) => item.isVisible)
+          .filter((item) => includeInvisible || item.isVisible)
           .sort((a, b) => a.sortOrder - b.sortOrder)
 
         return {
@@ -828,7 +831,10 @@ export class PrismaCatalogRepository implements ICatalogRepository {
     }
   }
 
-  async findMenuByLocationSlug(locationSlug: string): Promise<MenuWithCategories | null> {
+  async findMenuByLocationSlug(
+    locationSlug: string,
+    includeInvisible = false
+  ): Promise<MenuWithCategories | null> {
     try {
       const location = await db.location.findFirst({
         where: {
@@ -848,7 +854,7 @@ export class PrismaCatalogRepository implements ICatalogRepository {
         return buildMockMenuWithCategories()
       }
 
-      return this.findMenuByLocationId(location.id)
+      return this.findMenuByLocationId(location.id, includeInvisible)
     } catch (error) {
       if (isConnectionError(error) || process.env.NODE_ENV !== 'production') {
         console.warn(

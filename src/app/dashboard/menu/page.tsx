@@ -16,7 +16,7 @@ export default async function DashboardMenuPage(props: PageProps) {
   let errorMsg = null
 
   try {
-    initialMenu = await productService.getMenu(locationId)
+    initialMenu = await productService.getMenu(locationId, true)
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err))
     console.error('[DashboardMenuPage] Error loading menu:', error)

@@ -19,12 +19,18 @@ export interface ICatalogRepository {
    * Retrieves the full active menu with all categories, menu items, variants,
    * modifier groups, and modifiers for a specific location.
    */
-  findMenuByLocationId(locationId: string): Promise<MenuWithCategories | null>
+  findMenuByLocationId(
+    locationId: string,
+    includeInvisible?: boolean
+  ): Promise<MenuWithCategories | null>
 
   /**
    * Retrieves the full active menu using the location slug.
    */
-  findMenuByLocationSlug(locationSlug: string): Promise<MenuWithCategories | null>
+  findMenuByLocationSlug(
+    locationSlug: string,
+    includeInvisible?: boolean
+  ): Promise<MenuWithCategories | null>
 
   /**
    * Retrieves all active categories associated with a menu.

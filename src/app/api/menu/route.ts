@@ -11,7 +11,8 @@ export async function GET(
     const inputLocation = searchParams.get('locationId') || searchParams.get('slug')
     const resolved = await TenantResolver.resolve(inputLocation)
 
-    const menu = await productService.getMenu(resolved.locationId)
+    const includeInvisible = searchParams.get('includeInvisible') === 'true'
+    const menu = await productService.getMenu(resolved.locationId, includeInvisible)
 
     return NextResponse.json({ data: menu })
   } catch (error: unknown) {

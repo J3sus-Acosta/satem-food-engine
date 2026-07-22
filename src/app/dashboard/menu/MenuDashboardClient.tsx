@@ -85,6 +85,7 @@ export default function MenuDashboardClient({
   const [showAvailableOnly, setShowAvailableOnly] = useState(false)
   const [showOutOfStockOnly, setShowOutOfStockOnly] = useState(false)
   const [showHighlightedOnly, setShowHighlightedOnly] = useState(false)
+  const [showHiddenOnly, setShowHiddenOnly] = useState(false)
 
   // Check if a specific menu item has any modified fields vs its current db state
   const isItemModified = (itemId: string) => {
@@ -251,7 +252,7 @@ export default function MenuDashboardClient({
         router.refresh()
       })
 
-      const menuRes = await fetch(`/api/menu?locationId=${locationId}`)
+      const menuRes = await fetch(`/api/menu?locationId=${locationId}&includeInvisible=true`)
       if (menuRes.ok) {
         const menuJson = await menuRes.json()
         setMenu(menuJson.data)
@@ -345,6 +346,11 @@ export default function MenuDashboardClient({
             return false
           }
 
+          // Show Hidden checkbox
+          if (showHiddenOnly && state.isVisible) {
+            return false
+          }
+
           return true
         })
 
@@ -362,6 +368,7 @@ export default function MenuDashboardClient({
     showAvailableOnly,
     showOutOfStockOnly,
     showHighlightedOnly,
+    showHiddenOnly,
   ])
 
   if (!menu) {
@@ -502,7 +509,12 @@ export default function MenuDashboardClient({
             <span className="text-[10px] font-bold tracking-wider uppercase">Visibles</span>
             <Eye className="text-slate-350 h-4 w-4 shrink-0" />
           </div>
-          <div className="text-emerald-650 mt-2 text-2xl font-black">{stats.visibleCount}</div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-emerald-650 text-2xl font-black">{stats.visibleCount}</span>
+            <span className="text-xs font-semibold text-slate-400">
+              / {stats.totalCount - stats.visibleCount} ocultos
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -605,6 +617,16 @@ export default function MenuDashboardClient({
                   className="h-4 w-4 rounded border-slate-300 accent-slate-900"
                 />
                 <span>Destacados</span>
+              </label>
+
+              <label className="flex cursor-pointer items-center gap-1.5 select-none">
+                <input
+                  type="checkbox"
+                  checked={showHiddenOnly}
+                  onChange={(e) => setShowHiddenOnly(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 accent-slate-900"
+                />
+                <span>Ocultos</span>
               </label>
             </div>
           </div>

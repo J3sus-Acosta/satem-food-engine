@@ -33,12 +33,12 @@ export class ProductService {
    * Retrieves the full active menu/catalog with all items, categories, variants, and modifiers
    * for a given location slug or ID.
    */
-  async getMenu(locationSlugOrId: string): Promise<MenuWithCategories> {
+  async getMenu(locationSlugOrId: string, includeInvisible = false): Promise<MenuWithCategories> {
     // Try by slug first
-    let menu = await this.catalogRepo.findMenuByLocationSlug(locationSlugOrId)
+    let menu = await this.catalogRepo.findMenuByLocationSlug(locationSlugOrId, includeInvisible)
     if (!menu) {
       // Try by ID
-      menu = await this.catalogRepo.findMenuByLocationId(locationSlugOrId)
+      menu = await this.catalogRepo.findMenuByLocationId(locationSlugOrId, includeInvisible)
     }
 
     if (!menu) {
