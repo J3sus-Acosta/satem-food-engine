@@ -201,6 +201,8 @@ model Organization {
   customers       Customer[]
   ingredients     Ingredient[]
   loyaltyAccounts LoyaltyAccount[]
+  cashSessions    CashSession[]
+  cashAudits      CashAudit[]
 
   @@index([isActive])
   @@map("organizations")
@@ -245,6 +247,8 @@ model Location {
   inventoryItems InventoryItem[]
   userLocations  UserLocation[]
   orderSequences OrderSequence[]
+  cashSessions   CashSession[]
+  cashAudits     CashAudit[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -954,6 +958,9 @@ model User {
   stockMovements   StockMovement[]
   productVersions  ProductVersion[]
   catalogAuditLogs CatalogAuditLog[]
+  cashSessions     CashSession[]     @relation("SessionOperator")
+  reopenedSessions CashSession[]     @relation("SessionReopener")
+  cashAudits       CashAudit[]
 
   @@index([organizationId])
   @@map("users")
@@ -991,3 +998,102 @@ model OrderSequence {
   @@map("order_sequences")
 }
 
+// ─── CASH MANAGEMENT (Fase Cierre de Caja) ────────────────────────────────────
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashMovementType {
+  IN
+  OUT
+}
+
+enum CashAuditAction {
+  OPEN_SESSION
+  CLOSE_SESSION
+  REOPEN_SESSION
+  PRINT_REPORT
+  EXPORT_PDF
+  EXPORT_EXCEL
+}
+
+model CashSession {
+  id                    String            @id @default(cuid())
+  organizationId        String            @map("organization_id")
+  locationId            String            @map("location_id")
+  userId                String            @map("user_id")
+  registerName          String            @default("Caja Principal") @map("register_name")
+  status                CashSessionStatus @default(OPEN)
+  openedAt              DateTime          @default(now()) @map("opened_at")
+  closedAt              DateTime?         @map("closed_at")
+  openingBalance        Decimal           @db.Decimal(10, 2) @map("opening_balance")
+  closingBalance        Decimal?          @db.Decimal(10, 2) @map("closing_balance")
+  expectedBalance       Decimal?          @db.Decimal(10, 2) @map("expected_balance")
+  difference            Decimal?          @db.Decimal(10, 2) @map("difference")
+  observations          String?
+  
+  // Reopening control
+  reopenedAt            DateTime?         @map("reopened_at")
+  reopenedById          String?           @map("reopened_by_id")
+  reopenedReason        String?           @map("reopened_reason")
+  
+  closingReportSnapshot Json?             @map("closing_report_snapshot")
+
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  deletedAt             DateTime?         @map("deleted_at")
+
+  // Relations
+  organization          Organization      @relation(fields: [organizationId], references: [id])
+  location              Location          @relation(fields: [locationId], references: [id])
+  user                  User              @relation("SessionOperator", fields: [userId], references: [id])
+  reopenedBy            User?             @relation("SessionReopener", fields: [reopenedById], references: [id])
+  movements             CashMovement[]
+  auditLogs             CashAudit[]
+
+  @@index([organizationId])
+  @@index([locationId])
+  @@index([userId])
+  @@map("cash_sessions")
+}
+
+model CashMovement {
+  id          String           @id @default(cuid())
+  sessionId   String           @map("session_id")
+  amount      Decimal          @db.Decimal(10, 2)
+  type        CashMovementType
+  reason      String
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  session     CashSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("cash_movements")
+}
+
+model CashAudit {
+  id             String          @id @default(cuid())
+  organizationId String          @map("organization_id")
+  locationId     String          @map("location_id")
+  userId         String          @map("user_id")
+  sessionId      String?         @map("session_id")
+  action         CashAuditAction
+  ipAddress      String?         @map("ip_address")
+  details        Json?
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  session        CashSession?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  location       Location        @relation(fields: [locationId], references: [id])
+  user           User            @relation(fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([locationId])
+  @@index([userId])
+  @@index([sessionId])
+  @@map("cash_audits")
+}

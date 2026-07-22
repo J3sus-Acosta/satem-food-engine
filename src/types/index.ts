@@ -358,6 +358,7 @@ export interface Order {
   createdAt: Date
   updatedAt: Date
   deletedAt: Date | null
+  payment?: Payment
 }
 
 export interface OrderItem {
@@ -394,6 +395,10 @@ export interface OrderItemModifier {
 
 export interface OrderWithItems extends Order {
   items: (OrderItem & { modifiers: OrderItemModifier[] })[]
+}
+
+export interface OrderDetailed extends OrderWithItems {
+  payment?: Payment
 }
 
 export interface CreateOrderInput {

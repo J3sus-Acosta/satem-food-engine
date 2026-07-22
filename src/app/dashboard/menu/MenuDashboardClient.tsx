@@ -275,6 +275,46 @@ export default function MenuDashboardClient({
 
   return (
     <div className="min-h-screen bg-slate-950 p-4 font-sans text-slate-100 select-none">
+      {/* Navigation Bar */}
+      <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-slate-800 pb-3">
+        <a
+          href="/dashboard"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+        >
+          Dashboard
+        </a>
+        <a
+          href="/dashboard/menu"
+          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+        >
+          Menú Diario
+        </a>
+        <a
+          href="/dashboard/catalog"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+        >
+          Catálogo Maestro
+        </a>
+        <a
+          href="/dashboard/kitchen"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+        >
+          Cocina
+        </a>
+        <a
+          href="/dashboard/pos"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+        >
+          POS
+        </a>
+        <a
+          href="/dashboard/cash"
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-900 hover:text-slate-100"
+        >
+          Caja
+        </a>
+      </div>
+
       {/* Header bar */}
       <header className="mb-6 flex flex-col items-start justify-between gap-3 border-b border-slate-800 pb-4 sm:flex-row sm:items-center">
         <div>

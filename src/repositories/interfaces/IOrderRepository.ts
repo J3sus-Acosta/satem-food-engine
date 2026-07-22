@@ -1,6 +1,7 @@
 import type {
   Order,
   OrderWithItems,
+  OrderDetailed,
   CreateOrderInput,
   AddOrderItemInput,
   OrderFilters,
@@ -123,4 +124,9 @@ export interface IOrderRepository {
    * Resolves the default active channel ID for a location.
    */
   findDefaultChannelId(locationId: string): Promise<string | null>
+
+  /**
+   * List orders with full items, modifiers, and payment details.
+   */
+  findDetailedOrders(locationId: string, filters?: OrderFilters): Promise<OrderDetailed[]>
 }

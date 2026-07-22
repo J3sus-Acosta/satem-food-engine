@@ -17,6 +17,7 @@ import type { IOrderRepository } from '@/repositories/interfaces'
 import type {
   Order,
   OrderWithItems,
+  OrderDetailed,
   OrderStatus,
   OrderType,
   CreateOrderInput,
@@ -24,6 +25,8 @@ import type {
   OrderFilters,
   OrderItem,
   OrderItemModifier,
+  PaymentProvider,
+  PaymentStatus,
 } from '@/types'
 
 // In-Memory state for local development when PostgreSQL is not running
@@ -40,7 +43,25 @@ export function getPureBusinessDate(date?: Date): Date {
   return new Date(`${isoDateStr}T00:00:00.000Z`)
 }
 
+interface PrismaPaymentPayload {
+  id: string
+  orderId: string
+  provider: PaymentProvider
+  status: PaymentStatus
+  amount: { toString(): string } | number
+  currency: string
+  externalId: string | null
+  externalReference: string | null
+  paidAt: Date | null
+  failureReason: string | null
+  receiptUrl: string | null
+  metadata: unknown
+  createdAt: Date
+  updatedAt: Date
+}
+
 function mapPrismaOrderToDomain(order: PrismaOrder): Order {
+  const orderWithPayment = order as unknown as { payment?: PrismaPaymentPayload }
   return {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -64,6 +85,24 @@ function mapPrismaOrderToDomain(order: PrismaOrder): Order {
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
     deletedAt: order.deletedAt,
+    payment: orderWithPayment.payment
+      ? {
+          id: orderWithPayment.payment.id,
+          orderId: orderWithPayment.payment.orderId,
+          provider: orderWithPayment.payment.provider,
+          status: orderWithPayment.payment.status,
+          amount: Number(orderWithPayment.payment.amount),
+          currency: orderWithPayment.payment.currency,
+          externalId: orderWithPayment.payment.externalId,
+          externalReference: orderWithPayment.payment.externalReference,
+          paidAt: orderWithPayment.payment.paidAt,
+          failureReason: orderWithPayment.payment.failureReason,
+          receiptUrl: orderWithPayment.payment.receiptUrl,
+          metadata: orderWithPayment.payment.metadata as Record<string, unknown> | null,
+          createdAt: orderWithPayment.payment.createdAt,
+          updatedAt: orderWithPayment.payment.updatedAt,
+        }
+      : undefined,
   }
 }
 
@@ -799,6 +838,88 @@ export class PrismaOrderRepository implements IOrderRepository {
           '[PrismaOrderRepository.findDefaultChannelId] DB connection failed, using in-memory mock channel.'
         )
         return 'web-channel'
+      }
+      throw error
+    }
+  }
+
+  async findDetailedOrders(locationId: string, filters?: OrderFilters): Promise<OrderDetailed[]> {
+    try {
+      const where: Prisma.OrderWhereInput = { locationId, deletedAt: null }
+      if (filters?.status) {
+        if (Array.isArray(filters.status)) {
+          where.status = { in: filters.status }
+        } else {
+          where.status = filters.status
+        }
+      }
+      if (filters?.type) {
+        where.type = filters.type
+      }
+      if (filters?.channelId) {
+        where.channelId = filters.channelId
+      }
+      if (filters?.customerId) {
+        where.customerId = filters.customerId
+      }
+      if (filters?.from || filters?.to) {
+        where.createdAt = {}
+        if (filters.from) {
+          where.createdAt.gte = filters.from
+        }
+        if (filters.to) {
+          where.createdAt.lte = filters.to
+        }
+      }
+
+      const orders = await db.order.findMany({
+        where,
+        include: {
+          payment: true,
+          items: {
+            where: { deletedAt: null },
+            include: {
+              modifiers: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: filters?.limit,
+        skip: filters?.page && filters?.limit ? (filters.page - 1) * filters.limit : undefined,
+      })
+
+      return orders.map(mapPrismaOrderWithItemsToDomain) as OrderDetailed[]
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaOrderRepository.findDetailedOrders] DB connection failed, using in-memory store.'
+        )
+        let result = IN_MEMORY_ORDERS.filter(
+          (o) => o.locationId === locationId && o.deletedAt === null
+        )
+        if (filters?.status) {
+          const statuses = Array.isArray(filters.status) ? filters.status : [filters.status]
+          result = result.filter((o) => statuses.includes(o.status))
+        }
+        if (filters?.type) {
+          result = result.filter((o) => o.type === filters.type)
+        }
+        if (filters?.channelId) {
+          result = result.filter((o) => o.channelId === filters.channelId)
+        }
+        if (filters?.customerId) {
+          result = result.filter((o) => o.customerId === filters.customerId)
+        }
+        if (filters?.from) {
+          result = result.filter((o) => o.createdAt.getTime() >= filters.from!.getTime())
+        }
+        if (filters?.to) {
+          result = result.filter((o) => o.createdAt.getTime() <= filters.to!.getTime())
+        }
+        const page = filters?.page || 1
+        const limit = filters?.limit || 100
+        const start = (page - 1) * limit
+        return result.slice(start, start + limit) as OrderDetailed[]
       }
       throw error
     }
