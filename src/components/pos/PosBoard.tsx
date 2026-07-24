@@ -30,6 +30,7 @@ import type {
   OrderWithItems,
 } from '@/types'
 import { KitchenTicketPrinter } from '../kitchen/KitchenTicketPrinter'
+import { getStockCardBgClass } from '@/lib/stock-status'
 
 interface PosBoardProps {
   menu: MenuWithCategories
@@ -96,7 +97,9 @@ export function PosBoard({ menu }: PosBoardProps) {
   // Filter Categories & Items
   const categories = menu.categories || []
   const allItems = useMemo(() => {
-    return categories.flatMap((cat) => cat.items || [])
+    return categories
+      .flatMap((cat) => cat.items || [])
+      .filter((item) => item.isVisible && item.dailyMenuOverride?.isVisible !== false)
   }, [categories])
 
   const filteredItems = useMemo(() => {
@@ -131,6 +134,14 @@ export function PosBoard({ menu }: PosBoardProps) {
 
   // Cart operations
   const handleItemClick = (item: MenuItemWithProduct) => {
+    const stockVal = item.dailyMenuOverride?.stockDaily
+    const isAvailable =
+      item.isAvailable &&
+      item.dailyMenuOverride?.isAvailable !== false &&
+      (stockVal === null || stockVal === undefined || stockVal > 0)
+
+    if (!isAvailable) return
+
     if (item.modifierGroups && item.modifierGroups.length > 0) {
       // Open modifier selection modal
       setActiveItemForModifiers(item)
@@ -392,19 +403,24 @@ export function PosBoard({ menu }: PosBoardProps) {
               >
                 Todos ({allItems.length})
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`rounded-xl px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
-                    selectedCategory === cat.id
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-                  }`}
-                >
-                  {cat.name} ({cat.items?.length || 0})
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const visibleCount = (cat.items || []).filter(
+                  (item) => item.isVisible && item.dailyMenuOverride?.isVisible !== false
+                ).length
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`rounded-xl px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
+                      selectedCategory === cat.id
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                    }`}
+                  >
+                    {cat.name} ({visibleCount})
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -419,39 +435,82 @@ export function PosBoard({ menu }: PosBoardProps) {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {filteredItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleItemClick(item)}
-                    className="group bg-card border-border/60 hover:border-primary/50 flex flex-col justify-between overflow-hidden rounded-2xl border p-3.5 text-left transition-all hover:shadow-md active:scale-[0.98]"
-                  >
-                    <div>
-                      <div className="flex items-start justify-between gap-1">
-                        <h3 className="text-foreground line-clamp-2 text-sm font-bold tracking-tight">
-                          {item.name}
-                        </h3>
-                        {item.modifierGroups && item.modifierGroups.length > 0 && (
-                          <span className="bg-primary/10 text-primary rounded-full px-1.5 py-0.5 text-[10px] font-bold">
-                            +Opciones
-                          </span>
+                {filteredItems.map((item) => {
+                  const stockVal = item.dailyMenuOverride?.stockDaily
+                  const isAvailable =
+                    item.isAvailable &&
+                    item.dailyMenuOverride?.isAvailable !== false &&
+                    (stockVal === null || stockVal === undefined || stockVal > 0)
+                  const cardBgClass = getStockCardBgClass(stockVal)
+
+                  return (
+                    <button
+                      key={item.id}
+                      disabled={!isAvailable}
+                      onClick={() => isAvailable && handleItemClick(item)}
+                      className={`group ${cardBgClass} border-border/60 flex flex-col justify-between overflow-hidden rounded-2xl border p-3.5 text-left transition-all ${
+                        isAvailable
+                          ? 'hover:border-primary/50 hover:shadow-md active:scale-[0.98]'
+                          : 'cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-1">
+                          <h3 className="text-foreground line-clamp-2 text-sm font-bold tracking-tight">
+                            {item.name}
+                          </h3>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            {item.modifierGroups &&
+                              item.modifierGroups.length > 0 &&
+                              isAvailable && (
+                                <span className="bg-primary/10 text-primary rounded-full px-1.5 py-0.5 text-[10px] font-bold">
+                                  +Opciones
+                                </span>
+                              )}
+                            {!isAvailable ? (
+                              <span className="rounded-md border border-red-500/40 bg-red-600/25 px-1.5 py-0.5 text-[10px] font-black tracking-tight text-red-950 dark:text-red-200">
+                                {stockVal === 0 ? 'Stock: 0 (Agotado)' : 'Agotado'}
+                              </span>
+                            ) : (
+                              stockVal !== null &&
+                              stockVal !== undefined &&
+                              stockVal < 15 && (
+                                <span
+                                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-black tracking-tight ${
+                                    stockVal < 4
+                                      ? 'border border-red-500/30 bg-red-600/20 text-red-950 dark:text-red-200'
+                                      : 'border border-amber-500/30 bg-amber-600/20 text-amber-950 dark:text-amber-200'
+                                  }`}
+                                >
+                                  Stock: {stockVal}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+                        {item.description && (
+                          <p className="text-muted-foreground mt-1 line-clamp-1 text-xs">
+                            {item.description}
+                          </p>
                         )}
                       </div>
-                      {item.description && (
-                        <p className="text-muted-foreground mt-1 line-clamp-1 text-xs">
-                          {item.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="border-border/30 mt-3 flex items-center justify-between border-t pt-2">
-                      <span className="text-foreground text-sm font-black">
-                        ${Number(item.price).toLocaleString('es-CL')}
-                      </span>
-                      <div className="bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground flex h-7 w-7 items-center justify-center rounded-lg transition-colors">
-                        <Plus size={16} />
+                      <div className="border-border/30 mt-3 flex items-center justify-between border-t pt-2">
+                        <span className="text-foreground text-sm font-black">
+                          ${Number(item.price).toLocaleString('es-CL')}
+                        </span>
+                        <div
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
+                            isAvailable
+                              ? 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
+                          <Plus size={16} />
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>

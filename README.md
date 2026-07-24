@@ -34,6 +34,7 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 | **FASE 10B** | **Administración del Catálogo Maestro**    | Módulo completo `/dashboard/catalog` para definir productos, control de versiones (snapshots), logs de auditoría e ingredientes.                 | ✅ Completada |
 | **FASE 11**  | **Caja / Cierre de Caja**                  | Control de turnos de caja, arqueo físico, flujos de ingresos/egresos, reportes consolidados y reaperturas administrativas.                       | ✅ Completada |
 | **FASE 12A** | **Gestión de Usuarios (Admin)**            | Módulo completo `/dashboard/users` para administrar accesos, roles (ADMIN, MANAGER, CAJERO, etc.), estados y contraseñas de personal interno.    | ✅ Completada |
+| **FASE 12B** | **Cambios Rápidos Menú (Rediseño UX/UI)**  | Módulo `/dashboard/menu` rediseñado a tema claro, optimizado para tablet 10" con controles directos en tabla y agrupado por categorías.          | ✅ Completada |
 
 ---
 

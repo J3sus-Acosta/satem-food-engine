@@ -391,6 +391,8 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 8. Todo cambio estructural en el Catálogo Maestro de Productos (`Product`) debe registrar de forma transaccional un snapshot completo del estado previo en `ProductVersion` y un log operacional en `CatalogAuditLog`.
 9. El flujo operacional de Caja (`CashSession`, `CashMovement`, `CashAudit`) debe validarse siempre mediante servicios del dominio (`CashService`). Queda prohibida la modificación directa de estados de sesión o saldos fuera del flujo de cuadratura.
 10. Las acciones de reapertura de cajas cerradas son de uso exclusivo de usuarios con rol `ADMIN`, debiendo siempre justificar la acción mediante una descripción textual de motivo obligatoria.
+11. El almacenamiento de contraseñas de usuarios debe realizarse siempre utilizando la función nativa de criptografía PBKDF2 para hashing seguro en tiempo constante. Queda prohibido el almacenamiento de contraseñas en texto plano.
+12. La desactivación de la visibilidad de un producto (`isVisible = false`) en Cambios Rápidos Menú no debe filtrar ni ocultar el registro de la vista del administrador, debiendo utilizar el parámetro `includeInvisible = true` para permitir su reactivación. La exclusión definitiva es exclusiva del Catálogo Maestro.
 
 ---
 
