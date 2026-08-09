@@ -97,7 +97,12 @@ export interface IOrderRepository {
    * Update discount amount and recalculate totalAmount for an order.
    * Optionally updates notes or metadata.
    */
-  updateDiscountAndTotals(id: string, discountAmount: number, notes?: string): Promise<Order>
+  updateDiscountAndTotals(
+    id: string,
+    discountAmount: number,
+    notes?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<Order>
 
   /**
    * Soft-delete an order.

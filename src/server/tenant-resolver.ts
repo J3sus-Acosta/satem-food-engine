@@ -96,4 +96,55 @@ export class TenantResolver {
 
     return org.id
   }
+
+  /**
+   * Retrieves all active locations accessible by a specific user.
+   * If the user is assigned a specific locationId and has no UserLocation overrides, returns that location.
+   * If the user has explicit UserLocation entries, returns those locations.
+   * If locationId is null and no UserLocation overrides exist, returns all active locations of their organization.
+   */
+  static async getAccessibleLocations(
+    userId: string
+  ): Promise<Array<{ id: string; name: string; slug: string }>> {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      include: {
+        userLocations: {
+          include: { location: true },
+        },
+      },
+    })
+
+    if (!user || !user.isActive || user.deletedAt) {
+      return []
+    }
+
+    // 1. Check explicit UserLocation table mappings
+    const grantedLocations = user.userLocations
+      .map((ul) => ul.location)
+      .filter((loc) => loc && loc.isActive && !loc.deletedAt)
+
+    if (grantedLocations.length > 0) {
+      return grantedLocations.map((l) => ({ id: l.id, name: l.name, slug: l.slug }))
+    }
+
+    // 2. Check user's direct single locationId assignment
+    if (user.locationId) {
+      const loc = await db.location.findFirst({
+        where: { id: user.locationId, isActive: true, deletedAt: null },
+      })
+      if (loc) {
+        return [{ id: loc.id, name: loc.name, slug: loc.slug }]
+      }
+    }
+
+    // 3. Fallback for multi-branch users (locationId === null): return all active locations in organization
+    const orgLocations = await db.location.findMany({
+      where: { organizationId: user.organizationId, isActive: true, deletedAt: null },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, slug: true },
+    })
+
+    return orgLocations
+  }
 }

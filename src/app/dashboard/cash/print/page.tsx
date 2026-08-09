@@ -2,7 +2,6 @@
 import React from 'react'
 import { cashService, reportingService } from '@/services'
 import { TenantResolver } from '@/server/tenant-resolver'
-import { db } from '@/server/db'
 import type { ReportResult } from '@/services'
 
 interface PrintPageProps {
@@ -12,7 +11,6 @@ interface PrintPageProps {
 export default async function PrintCashPage(props: PrintPageProps) {
   const search = await props.searchParams
   const sessionId = search.sessionId
-  const operatorEmail = search.operatorEmail || 'cajero@satem.cl'
 
   if (!sessionId) {
     return (
@@ -233,7 +231,38 @@ export default async function PrintCashPage(props: PrintPageProps) {
             </td>
           </tr>
           <tr>
-            <td>Efectivo Esperado (Ventas + Aportes - Retiros)</td>
+            <td>Ventas en Efectivo</td>
+            <td className="text-right">
+              $
+              {(report.payments.find((p) => p.method === 'CASH')?.amount || 0).toLocaleString(
+                'es-CL'
+              )}
+            </td>
+          </tr>
+          <tr>
+            <td>Ingresos Manuales (+)</td>
+            <td className="text-right">
+              +$
+              {(
+                session.movements
+                  ?.filter((m) => m.type === 'IN')
+                  .reduce((sum, m) => sum + Number(m.amount), 0) || 0
+              ).toLocaleString('es-CL')}
+            </td>
+          </tr>
+          <tr>
+            <td>Egresos Manuales (-)</td>
+            <td className="text-right">
+              -$
+              {(
+                session.movements
+                  ?.filter((m) => m.type === 'OUT')
+                  .reduce((sum, m) => sum + Number(m.amount), 0) || 0
+              ).toLocaleString('es-CL')}
+            </td>
+          </tr>
+          <tr style={{ fontWeight: 'bold' }}>
+            <td>Efectivo Esperado en Caja</td>
             <td className="text-right">
               ${Number(session.expectedBalance || 0).toLocaleString('es-CL')}
             </td>
@@ -252,6 +281,37 @@ export default async function PrintCashPage(props: PrintPageProps) {
           </tr>
         </tbody>
       </table>
+
+      {session.movements && session.movements.length > 0 && (
+        <>
+          <div className="section-title">Detalle de Movimientos Manuales</div>
+          <table className="table-data">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Motivo / Descripción</th>
+                <th className="text-right">Monto</th>
+                <th className="text-right">Hora</th>
+              </tr>
+            </thead>
+            <tbody>
+              {session.movements.map((m) => (
+                <tr key={m.id}>
+                  <td>{m.type === 'IN' ? 'Ingreso' : 'Egreso'}</td>
+                  <td>{m.reason}</td>
+                  <td className="text-right">${Number(m.amount).toLocaleString('es-CL')}</td>
+                  <td className="text-right">
+                    {new Date(m.createdAt).toLocaleTimeString('es-CL', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
 
       {session.observations && (
         <div style={{ fontSize: '10pt', fontStyle: 'italic', marginTop: 5 }}>

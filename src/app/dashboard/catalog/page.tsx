@@ -2,17 +2,40 @@
 import React from 'react'
 import { TenantResolver } from '@/server/tenant-resolver'
 import { productCatalogService } from '@/services'
+import { requireAuth } from '@/lib/auth-server'
+import { hasPermission } from '@/lib/permissions'
+import { UnauthorizedPage } from '@/components/layout/UnauthorizedPage'
+import type { UserRole } from '@/types'
 import CatalogDashboardClient from './CatalogDashboardClient'
+
+export const dynamic = 'force-dynamic'
 
 interface PageProps {
   searchParams: Promise<{ locationId?: string }>
 }
 
 export default async function DashboardCatalogPage(props: PageProps) {
+  const session = await requireAuth()
+  const role = session.role as UserRole
+
+  if (!hasPermission(role, 'catalog.manage')) {
+    return <UnauthorizedPage activeTab="catalog" currentUserRole={session.role} />
+  }
+
+  const organizationId = session.organizationId
   const params = await props.searchParams
-  const resolved = await TenantResolver.resolve(params.locationId)
-  const organizationId = resolved.organizationId
-  const locationId = resolved.locationId
+
+  // Enforce location lock if user is restricted to a single location.
+  // Otherwise, default to parameter or first resolved location.
+  let locationId = session.locationId
+  if (!locationId) {
+    if (params.locationId) {
+      locationId = params.locationId
+    } else {
+      const resolved = await TenantResolver.resolve(null)
+      locationId = resolved.locationId
+    }
+  }
 
   let categories: { id: string; name: string }[] = []
   let ingredients: any[] = []
@@ -34,6 +57,7 @@ export default async function DashboardCatalogPage(props: PageProps) {
       categories={categories}
       ingredients={ingredients}
       errorMsg={errorMsg}
+      currentUserRole={session.role}
     />
   )
 }

@@ -1,12 +1,13 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { cashService } from '@/services'
-import { db } from '@/server/db'
+import { requireAuth } from '@/lib/auth-server'
 import type { ApiResponse } from '@/types'
 
 export async function POST(req: NextRequest) {
   try {
+    const authSession = await requireAuth()
     const body = await req.json()
-    const { sessionId, reason, reopenedByEmail } = body
+    const { sessionId, reason } = body
 
     if (!sessionId) {
       return NextResponse.json<ApiResponse<never>>(
@@ -22,18 +23,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const email = reopenedByEmail || 'admin@satem.cl'
-    const user = await db.user.findFirst({ where: { email, deletedAt: null } })
-    if (!user) {
-      return NextResponse.json<ApiResponse<never>>(
-        { error: `No se encontró el administrador con email "${email}".` },
-        { status: 404 }
-      )
-    }
-
     const session = await cashService.reopenSession(
       sessionId,
-      user.id,
+      authSession.userId,
       reason,
       req.headers.get('x-forwarded-for') || '127.0.0.1'
     )

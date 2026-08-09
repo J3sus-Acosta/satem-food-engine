@@ -1,13 +1,12 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   Search,
   ShoppingCart,
   Plus,
   Minus,
   Trash2,
-  Tag,
   DollarSign,
   CreditCard,
   Utensils,
@@ -22,18 +21,25 @@ import {
   Sparkles,
   Printer,
   Calculator,
+  AlertCircle,
 } from 'lucide-react'
 import type {
   MenuWithCategories,
   MenuItemWithProduct,
-  ModifierGroup,
   OrderWithItems,
+  DiscountCredit,
+  DiscountCreditSnapshot,
 } from '@/types'
 import { KitchenTicketPrinter } from '../kitchen/KitchenTicketPrinter'
 import { getStockCardBgClass } from '@/lib/stock-status'
 
 interface PosBoardProps {
   menu: MenuWithCategories
+  locationId?: string
+  initialDiscounts?: DiscountCredit[]
+  hasOpenCashSession?: boolean
+  canManageCash?: boolean
+  currentUserRole?: string
 }
 
 interface CartItemModifier {
@@ -52,13 +58,20 @@ interface CartItem {
   notes?: string
 }
 
-export function PosBoard({ menu }: PosBoardProps) {
+export function PosBoard({
+  menu,
+  locationId,
+  initialDiscounts = [],
+  hasOpenCashSession = true,
+  canManageCash = true,
+  currentUserRole = 'CASHIER',
+}: PosBoardProps) {
   // Navigation & Filter states
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
 
   // Order Details
-  const [orderType, setOrderType] = useState<'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'>('TAKEAWAY')
+  const [orderType, setOrderType] = useState<'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'>('DINE_IN')
   const [customerName, setCustomerName] = useState<string>('')
   const [customerPhone, setCustomerPhone] = useState<string>('')
   const [staffNote, setStaffNote] = useState<string>('')
@@ -68,6 +81,29 @@ export function PosBoard({ menu }: PosBoardProps) {
   const [discountPercent, setDiscountPercent] = useState<number>(0)
   const [customDiscountAmount, setCustomDiscountAmount] = useState<number>(0)
   const [isStaffMeal, setIsStaffMeal] = useState<boolean>(false)
+  const [activeDiscountCredits, setActiveDiscountCredits] =
+    useState<DiscountCredit[]>(initialDiscounts)
+  const [selectedDiscountCredit, setSelectedDiscountCredit] = useState<DiscountCredit | null>(null)
+
+  // Fetch active discount credits for POS
+  useEffect(() => {
+    async function loadActiveDiscountCredits() {
+      const targetLocationId = locationId || ''
+      try {
+        const res = await fetch(`/api/discounts/active?locationId=${targetLocationId}`)
+        const json = await res.json()
+        if (res.ok && json.data) {
+          setActiveDiscountCredits(json.data)
+        }
+      } catch (err) {
+        console.error('Error loading active benefits:', err)
+      }
+    }
+
+    if (initialDiscounts.length === 0) {
+      loadActiveDiscountCredits()
+    }
+  }, [locationId, initialDiscounts])
 
   // Modals & UI States
   const [activeItemForModifiers, setActiveItemForModifiers] = useState<MenuItemWithProduct | null>(
@@ -75,6 +111,7 @@ export function PosBoard({ menu }: PosBoardProps) {
   )
   const [selectedModifiersModal, setSelectedModifiersModal] = useState<Record<string, string[]>>({})
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false)
+  const [isCashModalOpen, setIsCashModalOpen] = useState<boolean>(!hasOpenCashSession)
 
   // Payment & Printing states
   const [paymentMethod, setPaymentMethod] = useState<
@@ -95,7 +132,7 @@ export function PosBoard({ menu }: PosBoardProps) {
   const [errorMsg, setErrorMsg] = useState<string>('')
 
   // Filter Categories & Items
-  const categories = menu.categories || []
+  const categories = useMemo(() => menu.categories || [], [menu.categories])
   const allItems = useMemo(() => {
     return categories
       .flatMap((cat) => cat.items || [])
@@ -123,10 +160,17 @@ export function PosBoard({ menu }: PosBoardProps) {
 
   const discountAmount = useMemo(() => {
     if (isStaffMeal) return subtotal // 100% discount for employee staff meal
+    if (selectedDiscountCredit) {
+      if (selectedDiscountCredit.valueType === 'PERCENTAGE') {
+        return Math.min(Math.round((subtotal * selectedDiscountCredit.value) / 100), subtotal)
+      } else {
+        return Math.min(Number(selectedDiscountCredit.value), subtotal)
+      }
+    }
     if (customDiscountAmount > 0) return Math.min(customDiscountAmount, subtotal)
     if (discountPercent > 0) return Math.round((subtotal * discountPercent) / 100)
     return 0
-  }, [subtotal, isStaffMeal, customDiscountAmount, discountPercent])
+  }, [subtotal, isStaffMeal, selectedDiscountCredit, customDiscountAmount, discountPercent])
 
   const totalAmount = useMemo(() => {
     return Math.max(0, subtotal - discountAmount)
@@ -134,6 +178,11 @@ export function PosBoard({ menu }: PosBoardProps) {
 
   // Cart operations
   const handleItemClick = (item: MenuItemWithProduct) => {
+    if (!hasOpenCashSession) {
+      setIsCashModalOpen(true)
+      return
+    }
+
     const stockVal = item.dailyMenuOverride?.stockDaily
     const isAvailable =
       item.isAvailable &&
@@ -160,6 +209,11 @@ export function PosBoard({ menu }: PosBoardProps) {
   }
 
   const addDirectToCart = (item: MenuItemWithProduct, modifiers: CartItemModifier[]) => {
+    if (!hasOpenCashSession) {
+      setIsCashModalOpen(true)
+      return
+    }
+
     setCart((prev) => {
       const cartItemId = `${item.id}_${modifiers.map((m) => m.modifierId).join('-')}`
       const existing = prev.find((i) => i.id === cartItemId)
@@ -204,6 +258,10 @@ export function PosBoard({ menu }: PosBoardProps) {
   }
 
   const updateQuantity = (cartItemId: string, delta: number) => {
+    if (!hasOpenCashSession) {
+      setIsCashModalOpen(true)
+      return
+    }
     setCart(
       (prev) =>
         prev
@@ -222,6 +280,7 @@ export function PosBoard({ menu }: PosBoardProps) {
     setIsStaffMeal((prev) => !prev)
     setDiscountPercent(0)
     setCustomDiscountAmount(0)
+    setSelectedDiscountCredit(null)
     if (!isStaffMeal && !staffNote) {
       setStaffNote('Colación Empleado (Cortesía $0)')
     }
@@ -231,6 +290,7 @@ export function PosBoard({ menu }: PosBoardProps) {
     setCart([])
     setDiscountPercent(0)
     setCustomDiscountAmount(0)
+    setSelectedDiscountCredit(null)
     setIsStaffMeal(false)
     setStaffNote('')
     setCustomerName('')
@@ -248,14 +308,26 @@ export function PosBoard({ menu }: PosBoardProps) {
     setErrorMsg('')
 
     try {
+      const discountCreditSnapshot: DiscountCreditSnapshot | null = selectedDiscountCredit
+        ? {
+            discountCreditId: selectedDiscountCredit.id,
+            discountCreditName: selectedDiscountCredit.name,
+            discountCreditType: selectedDiscountCredit.type,
+            discountCreditValueType: selectedDiscountCredit.valueType,
+            discountCreditValue: Number(selectedDiscountCredit.value),
+            discountCreditAppliedAmount: discountAmount,
+          }
+        : null
+
       // 1. Create POS Order
       const posPayload = {
-        locationId: menu.locationId,
+        locationId: locationId || '',
         type: orderType,
         customerName: customerName || (isStaffMeal ? 'Empleado / Colación' : 'Cliente Caja'),
         customerPhone: customerPhone || undefined,
         notes: staffNote || undefined,
         discountAmount,
+        discountCreditSnapshot: discountCreditSnapshot || undefined,
         items: cart.map((item) => ({
           menuItemId: item.menuItemId,
           quantity: item.quantity,
@@ -664,40 +736,84 @@ export function PosBoard({ menu }: PosBoardProps) {
 
                 {/* Percentage Discount Options */}
                 {!isStaffMeal && (
-                  <div className="grid grid-cols-4 gap-1 pt-1">
-                    {[10, 20, 50].map((pct) => (
+                  <>
+                    <div className="grid grid-cols-4 gap-1 pt-1">
+                      {[10, 20, 50].map((pct) => (
+                        <button
+                          key={pct}
+                          onClick={() => {
+                            setDiscountPercent(discountPercent === pct ? 0 : pct)
+                            setCustomDiscountAmount(0)
+                            setSelectedDiscountCredit(null)
+                          }}
+                          className={`rounded-lg border py-1 text-xs font-bold transition-all ${
+                            discountPercent === pct
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-card text-muted-foreground border-border/50 hover:bg-muted'
+                          }`}
+                        >
+                          {pct}%
+                        </button>
+                      ))}
                       <button
-                        key={pct}
                         onClick={() => {
-                          setDiscountPercent(discountPercent === pct ? 0 : pct)
-                          setCustomDiscountAmount(0)
+                          const val = prompt('Ingresa monto de descuento fijo ($ CLP):')
+                          if (val && !isNaN(Number(val))) {
+                            setCustomDiscountAmount(Number(val))
+                            setDiscountPercent(0)
+                            setSelectedDiscountCredit(null)
+                          }
                         }}
                         className={`rounded-lg border py-1 text-xs font-bold transition-all ${
-                          discountPercent === pct
+                          customDiscountAmount > 0
                             ? 'bg-primary text-primary-foreground border-primary'
                             : 'bg-card text-muted-foreground border-border/50 hover:bg-muted'
                         }`}
                       >
-                        {pct}%
+                        {customDiscountAmount > 0 ? `$${customDiscountAmount}` : 'Fijo'}
                       </button>
-                    ))}
-                    <button
-                      onClick={() => {
-                        const val = prompt('Ingresa monto de descuento fijo ($ CLP):')
-                        if (val && !isNaN(Number(val))) {
-                          setCustomDiscountAmount(Number(val))
-                          setDiscountPercent(0)
-                        }
-                      }}
-                      className={`rounded-lg border py-1 text-xs font-bold transition-all ${
-                        customDiscountAmount > 0
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-card text-muted-foreground border-border/50 hover:bg-muted'
-                      }`}
-                    >
-                      {customDiscountAmount > 0 ? `$${customDiscountAmount}` : 'Fijo'}
-                    </button>
-                  </div>
+                    </div>
+
+                    {/* Descuento o crédito Selector */}
+                    {activeDiscountCredits.length > 0 && (
+                      <div className="space-y-1 pt-2">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">
+                          Descuento o crédito
+                        </label>
+                        <select
+                          value={selectedDiscountCredit?.id || ''}
+                          onChange={(e) => {
+                            const id = e.target.value
+                            if (!id) {
+                              setSelectedDiscountCredit(null)
+                            } else {
+                              const found = activeDiscountCredits.find((dc) => dc.id === id)
+                              if (found) {
+                                setSelectedDiscountCredit(found)
+                                setDiscountPercent(0)
+                                setCustomDiscountAmount(0)
+                              }
+                            }
+                          }}
+                          className="bg-card border-border/60 focus:ring-primary/20 w-full rounded-xl border px-3 py-2.5 text-xs font-semibold text-slate-700 focus:ring-2 focus:outline-none"
+                        >
+                          <option value="">Seleccionar beneficio...</option>
+                          {activeDiscountCredits.map((dc) => {
+                            const valString =
+                              dc.valueType === 'PERCENTAGE'
+                                ? `${dc.value}%`
+                                : `$${Number(dc.value).toLocaleString('es-CL')}`
+                            const typeLabel = dc.type === 'DISCOUNT' ? 'Descuento' : 'Crédito'
+                            return (
+                              <option key={dc.id} value={dc.id}>
+                                [{typeLabel}] {dc.name} — {valString}
+                              </option>
+                            )
+                          })}
+                        </select>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {/* Note / Staff Name Input */}
@@ -1013,6 +1129,86 @@ export function PosBoard({ menu }: PosBoardProps) {
           order={activeTicketToPrint}
           onClose={() => setActiveTicketToPrint(null)}
         />
+      )}
+
+      {/* Cash Shift Requirement Modal */}
+      {(!hasOpenCashSession || isCashModalOpen) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm select-none">
+          <div className="bg-card border-border/60 animate-in fade-in zoom-in w-full max-w-md space-y-5 rounded-3xl border p-6 shadow-2xl duration-200">
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+                  canManageCash
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                    : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                }`}
+              >
+                {canManageCash ? (
+                  <Calculator className="h-6 w-6" />
+                ) : (
+                  <AlertCircle className="h-6 w-6" />
+                )}
+              </div>
+              <div>
+                <h3 className="text-foreground text-lg font-extrabold tracking-tight">
+                  {canManageCash ? 'Apertura de Caja Requerida' : 'Sin Permisos de Caja'}
+                </h3>
+                <p className="text-muted-foreground text-xs font-semibold">
+                  {canManageCash ? 'Módulo Punto de Venta (POS)' : 'Acceso Restringido'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              {canManageCash ? (
+                <>
+                  No se ha aperturado un turno de caja para tu usuario en esta sucursal.
+                  <br />
+                  <span className="text-foreground font-bold">Debes abrir la caja</span> antes de
+                  registrar ventas y agregar productos al carrito en el POS.
+                </>
+              ) : (
+                <>
+                  El rol <strong className="text-foreground">&quot;{currentUserRole}&quot;</strong>{' '}
+                  no tiene los permisos necesarios para utilizar el módulo de caja ni aperturar
+                  turnos.
+                </>
+              )}
+            </p>
+
+            <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+              {canManageCash ? (
+                <>
+                  <button
+                    onClick={() => {
+                      window.location.href = '/dashboard'
+                    }}
+                    className="bg-muted hover:bg-muted/80 text-foreground border-border/60 w-full rounded-2xl border px-4 py-2.5 text-xs font-bold transition-all sm:w-auto"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.location.href = '/dashboard/cash'
+                    }}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-2xl px-4 py-2.5 text-xs font-bold shadow-md transition-all sm:w-auto"
+                  >
+                    Ir a Caja / Cierre de Caja
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    window.location.href = '/dashboard'
+                  }}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-2xl px-6 py-2.5 text-xs font-bold shadow-md transition-all sm:w-auto"
+                >
+                  ACEPTAR
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

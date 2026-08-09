@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { SubNavBar } from '@/components/layout/SubNavBar'
 import {
   Search,
   Plus,
@@ -14,7 +15,6 @@ import {
   UserCheck,
   UserX,
   X,
-  Key,
   Shield,
   MapPin,
   RefreshCw,
@@ -25,11 +25,13 @@ import type { User, UserRole } from '@/types'
 interface UserDashboardClientProps {
   locationId: string
   locations: { id: string; name: string }[]
+  currentUserRole: string
 }
 
 export default function UserDashboardClient({
   locationId: initialLocationId,
   locations,
+  currentUserRole,
 }: UserDashboardClientProps) {
   // State lists
   const [users, setUsers] = useState<User[]>([])
@@ -53,9 +55,9 @@ export default function UserDashboardClient({
   const [formName, setFormName] = useState('')
   const [formUsername, setFormUsername] = useState('')
   const [formEmail, setFormEmail] = useState('')
+  const [formRole, setFormRole] = useState<UserRole>('ADMIN')
   const [formPassword, setFormPassword] = useState('')
   const [formConfirmPassword, setFormConfirmPassword] = useState('')
-  const [formRole, setFormRole] = useState<UserRole>('ADMIN')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formAssignedLocationId, setFormAssignedLocationId] = useState('')
 
@@ -63,9 +65,6 @@ export default function UserDashboardClient({
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [modalError, setModalError] = useState<string | null>(null)
-
-  // Operator Simulation (similar to Cash Dashboard for ease of manual testing)
-  const [simulatedRole, setSimulatedRole] = useState<string>('ADMIN')
 
   // Fetch Users
   const fetchUsers = useCallback(async () => {
@@ -326,70 +325,8 @@ export default function UserDashboardClient({
 
   return (
     <div className="min-h-screen bg-slate-50/40 p-4 font-sans text-slate-800 select-none md:p-8">
-      {/* Security Simulation Bar */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-blue-800">
-          <Key className="h-4 w-4" />
-          <span>SIMULACIÓN DE SEGURIDAD (VISTA PREVIA):</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-blue-700">Simular Rol Activo:</span>
-          <select
-            value={simulatedRole}
-            onChange={(e) => setSimulatedRole(e.target.value)}
-            className="rounded-lg border border-blue-200 bg-white p-1.5 text-xs font-semibold text-slate-700 outline-none"
-          >
-            <option value="ADMIN">ADMIN (Permiso Completo)</option>
-            <option value="CASHIER">CASHIER (Lectura / Sin acciones)</option>
-          </select>
-        </div>
-      </div>
-
       {/* Navigation Sub-bar */}
-      <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-slate-200 pb-3">
-        <a
-          href="/dashboard"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Dashboard
-        </a>
-        <a
-          href="/dashboard/menu"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Cambios Rápidos Menú
-        </a>
-        <a
-          href="/dashboard/catalog"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Catálogo Maestro
-        </a>
-        <a
-          href="/dashboard/kitchen"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Cocina
-        </a>
-        <a
-          href="/dashboard/pos"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          POS
-        </a>
-        <a
-          href="/dashboard/cash"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Caja
-        </a>
-        <a
-          href="/dashboard/users"
-          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-        >
-          Usuarios
-        </a>
-      </div>
+      <SubNavBar activeTab="users" currentUserRole={currentUserRole} />
 
       {/* Header */}
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -403,7 +340,7 @@ export default function UserDashboardClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {simulatedRole === 'ADMIN' && (
+          {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
             <Button
               onClick={() => {
                 setModalError(null)
@@ -464,14 +401,11 @@ export default function UserDashboardClient({
               className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 outline-none"
             >
               <option value="all">Rol: Todos los roles</option>
-              <option value="ADMIN">ADMIN</option>
-              <option value="MANAGER">MANAGER</option>
-              <option value="CASHIER">CASHIER</option>
-              <option value="KITCHEN">KITCHEN</option>
-              <option value="CAJERO">CAJERO</option>
-              <option value="COCINA">COCINA</option>
-              <option value="OPERADOR">OPERADOR</option>
-              <option value="LECTURA">LECTURA</option>
+              <option value="OWNER">Propietario (OWNER)</option>
+              <option value="ADMIN">Administrador (ADMIN)</option>
+              <option value="MANAGER">Gerente (MANAGER)</option>
+              <option value="CASHIER">Cajero (CASHIER)</option>
+              <option value="KITCHEN">Cocina (KITCHEN)</option>
             </select>
           </div>
 
@@ -524,7 +458,9 @@ export default function UserDashboardClient({
                   <th className="px-6 py-4">Estado</th>
                   <th className="px-6 py-4">Último Acceso</th>
                   <th className="px-6 py-4">Fecha Creación</th>
-                  {simulatedRole === 'ADMIN' && <th className="px-6 py-4 text-right">Acciones</th>}
+                  {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
+                    <th className="px-6 py-4 text-right">Acciones</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -533,9 +469,31 @@ export default function UserDashboardClient({
                     <td className="px-6 py-4 font-semibold text-slate-900">{user.name}</td>
                     <td className="px-6 py-4 font-mono">{user.username}</td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          user.role === 'OWNER'
+                            ? 'border border-purple-200 bg-purple-100 text-purple-700'
+                            : user.role === 'ADMIN'
+                              ? 'bg-slate-900 text-white'
+                              : user.role === 'MANAGER'
+                                ? 'border border-blue-200 bg-blue-100 text-blue-700'
+                                : user.role === 'KITCHEN'
+                                  ? 'border border-orange-200 bg-orange-100 text-orange-700'
+                                  : 'border border-emerald-200 bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
                         <Shield className="h-3 w-3" />
-                        {user.role}
+                        {user.role === 'OWNER'
+                          ? 'Propietario'
+                          : user.role === 'ADMIN'
+                            ? 'Administrador'
+                            : user.role === 'MANAGER'
+                              ? 'Gerente'
+                              : user.role === 'CASHIER'
+                                ? 'Cajero'
+                                : user.role === 'KITCHEN'
+                                  ? 'Cocina'
+                                  : user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-600">
@@ -551,7 +509,10 @@ export default function UserDashboardClient({
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        disabled={simulatedRole !== 'ADMIN' || isActionLoading}
+                        disabled={
+                          (currentUserRole !== 'ADMIN' && currentUserRole !== 'OWNER') ||
+                          isActionLoading
+                        }
                         onClick={() => handleToggleActive(user)}
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all ${
                           user.isActive
@@ -576,7 +537,7 @@ export default function UserDashboardClient({
                     <td className="px-6 py-4 font-medium text-slate-400">
                       {formatDateTime(user.createdAt)}
                     </td>
-                    {simulatedRole === 'ADMIN' && (
+                    {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1.5">
                           <Button
@@ -717,14 +678,11 @@ export default function UserDashboardClient({
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 focus:outline-none"
                   >
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="MANAGER">MANAGER</option>
-                    <option value="CASHIER">CASHIER</option>
-                    <option value="KITCHEN">KITCHEN</option>
-                    <option value="CAJERO">CAJERO</option>
-                    <option value="COCINA">COCINA</option>
-                    <option value="OPERADOR">OPERADOR</option>
-                    <option value="LECTURA">LECTURA</option>
+                    <option value="OWNER">Propietario (OWNER)</option>
+                    <option value="ADMIN">Administrador (ADMIN)</option>
+                    <option value="MANAGER">Gerente (MANAGER)</option>
+                    <option value="CASHIER">Cajero (CASHIER)</option>
+                    <option value="KITCHEN">Cocina (KITCHEN)</option>
                   </select>
                 </div>
                 <div>
@@ -845,14 +803,11 @@ export default function UserDashboardClient({
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 focus:outline-none"
                   >
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="MANAGER">MANAGER</option>
-                    <option value="CASHIER">CASHIER</option>
-                    <option value="KITCHEN">KITCHEN</option>
-                    <option value="CAJERO">CAJERO</option>
-                    <option value="COCINA">COCINA</option>
-                    <option value="OPERADOR">OPERADOR</option>
-                    <option value="LECTURA">LECTURA</option>
+                    <option value="OWNER">Propietario (OWNER)</option>
+                    <option value="ADMIN">Administrador (ADMIN)</option>
+                    <option value="MANAGER">Gerente (MANAGER)</option>
+                    <option value="CASHIER">Cajero (CASHIER)</option>
+                    <option value="KITCHEN">Cocina (KITCHEN)</option>
                   </select>
                 </div>
                 <div>

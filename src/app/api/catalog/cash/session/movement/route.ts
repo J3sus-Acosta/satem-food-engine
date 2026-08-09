@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { cashService } from '@/services'
 import { db } from '@/server/db'
+import { requireAuth } from '@/lib/auth-server'
 import type { ApiResponse } from '@/types'
 
 export async function POST(req: NextRequest) {
   try {
+    const authSession = await requireAuth()
     const body = await req.json()
-    const { sessionId, amount, type, reason, operatorEmail } = body
+    const { sessionId, amount, type, reason, operatorEmail, operatorUserId } = body
 
     if (!sessionId) {
       return NextResponse.json<ApiResponse<never>>(
@@ -36,13 +38,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const email = operatorEmail || 'cajero@satem.cl'
-    const user = await db.user.findFirst({ where: { email, deletedAt: null } })
-    if (!user) {
-      return NextResponse.json<ApiResponse<never>>(
-        { error: `No se encontró el operador con email "${email}".` },
-        { status: 404 }
-      )
+    let targetUserId = authSession.userId
+    if (operatorUserId) {
+      const user = await db.user.findFirst({ where: { id: operatorUserId, deletedAt: null } })
+      if (user) targetUserId = user.id
+    } else if (operatorEmail) {
+      const user = await db.user.findFirst({
+        where: {
+          OR: [{ email: operatorEmail }, { username: operatorEmail }],
+          deletedAt: null,
+        },
+      })
+      if (user) targetUserId = user.id
     }
 
     const movement = await cashService.addMovement(
@@ -50,7 +57,7 @@ export async function POST(req: NextRequest) {
       Number(amount),
       type,
       reason,
-      user.id,
+      targetUserId,
       req.headers.get('x-forwarded-for') || '127.0.0.1'
     )
 

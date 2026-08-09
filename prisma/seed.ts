@@ -1245,6 +1245,78 @@ async function main() {
   })
   console.info('✓ Chat de WhatsApp cargado en base de datos para Juan Pérez')
 
+  // 12. DESCUENTOS Y CRÉDITOS
+  console.info('12. Creando Descuentos y Créditos...')
+  await db.discountCredit.upsert({
+    where: { id: 'discount_demo_cliente_frecuente' },
+    update: {
+      organizationId: org.id,
+      name: 'Cliente frecuente',
+      description: 'Beneficio del 10% para clientes frecuentes',
+      type: 'DISCOUNT',
+      valueType: 'PERCENTAGE',
+      value: 10.0,
+      isActive: true,
+    },
+    create: {
+      id: 'discount_demo_cliente_frecuente',
+      organizationId: org.id,
+      name: 'Cliente frecuente',
+      description: 'Beneficio del 10% para clientes frecuentes',
+      type: 'DISCOUNT',
+      valueType: 'PERCENTAGE',
+      value: 10.0,
+      isActive: true,
+    },
+  })
+
+  await db.discountCredit.upsert({
+    where: { id: 'discount_demo_promo_especial' },
+    update: {
+      organizationId: org.id,
+      name: 'Promoción especial',
+      description: 'Descuento de $5.000',
+      type: 'DISCOUNT',
+      valueType: 'FIXED_AMOUNT',
+      value: 5000.0,
+      isActive: true,
+    },
+    create: {
+      id: 'discount_demo_promo_especial',
+      organizationId: org.id,
+      name: 'Promoción especial',
+      description: 'Descuento de $5.000',
+      type: 'DISCOUNT',
+      valueType: 'FIXED_AMOUNT',
+      value: 5000.0,
+      isActive: true,
+    },
+  })
+
+  await db.discountCredit.upsert({
+    where: { id: 'discount_demo_compensacion' },
+    update: {
+      organizationId: org.id,
+      name: 'Compensación',
+      description: 'Crédito de compensación de $10.000 (Desactivado)',
+      type: 'CREDIT',
+      valueType: 'FIXED_AMOUNT',
+      value: 10000.0,
+      isActive: false,
+    },
+    create: {
+      id: 'discount_demo_compensacion',
+      organizationId: org.id,
+      name: 'Compensación',
+      description: 'Crédito de compensación de $10.000 (Desactivado)',
+      type: 'CREDIT',
+      valueType: 'FIXED_AMOUNT',
+      value: 10000.0,
+      isActive: false,
+    },
+  })
+  console.info('✓ Descuentos y Créditos demo inicializados con éxito')
+
   console.info('=== SATEM Food Engine: Carga de Seed Completada con Éxito ===')
 }
 

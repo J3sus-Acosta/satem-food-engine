@@ -153,15 +153,11 @@ enum StockMovementType {
 
 /// Rol del usuario (personal interno)
 enum UserRole {
-  OWNER // Dueño: acceso total a toda la organización
-  ADMIN // Administrador: acceso a todos los locales
-  MANAGER // Gerente: acceso a locales asignados
-  CASHIER // Cajero: pedidos y pagos
+  OWNER   // Dueño: acceso total a toda la organización
+  ADMIN   // Administrador: acceso a todos los locales
+  MANAGER // Gerente: acceso a locales asignados, sin gestión de usuarios
+  CASHIER // Cajero: pedidos, pagos y caja
   KITCHEN // Cocina: solo vista de tickets
-  CAJERO
-  COCINA
-  OPERADOR
-  LECTURA
 }
 
 /// Nivel de fidelización del cliente
@@ -170,6 +166,18 @@ enum LoyaltyTier {
   SILVER
   GOLD
   PLATINUM
+}
+
+/// Tipo de beneficio comercial
+enum DiscountCreditType {
+  DISCOUNT // Descuento sobre el subtotal
+  CREDIT   // Crédito / beneficio monetario fijo
+}
+
+/// Modalidad del valor del beneficio
+enum DiscountCreditValueType {
+  PERCENTAGE   // Porcentaje (0 < value <= 100)
+  FIXED_AMOUNT // Monto fijo en la moneda del local (value > 0)
 }
 
 // ─── TENANCY ──────────────────────────────────────────────────────────────────
@@ -199,14 +207,15 @@ model Organization {
   paymentConfiguration Json?            @map("payment_configuration")
 
   // Relations
-  locations       Location[]
-  products        Product[]
-  users           User[]
-  customers       Customer[]
-  ingredients     Ingredient[]
-  loyaltyAccounts LoyaltyAccount[]
-  cashSessions    CashSession[]
-  cashAudits      CashAudit[]
+  locations        Location[]
+  products         Product[]
+  users            User[]
+  customers        Customer[]
+  ingredients      Ingredient[]
+  loyaltyAccounts  LoyaltyAccount[]
+  cashSessions     CashSession[]
+  cashAudits       CashAudit[]
+  discountCredits  DiscountCredit[]
 
   @@index([isActive])
   @@map("organizations")
@@ -254,6 +263,7 @@ model Location {
   cashSessions   CashSession[]
   cashAudits     CashAudit[]
   users          User[]          @relation("LocationUsers")
+  discountCredits DiscountCredit[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -1105,4 +1115,35 @@ model CashAudit {
   @@index([userId])
   @@index([sessionId])
   @@map("cash_audits")
+}
+
+// ─── DISCOUNTS & CREDITS (Fase 13) ───────────────────────────────────────────
+
+/// Beneficio comercial reutilizable: descuentos porcentuales, montos fijos o créditos.
+/// Pertenece a una Organization y opcionalmente a una Location.
+/// SNAPSHOT PATTERN: la Order persiste el snapshot del beneficio en Order.metadata
+/// para garantizar trazabilidad histórica independiente del registro maestro.
+model DiscountCredit {
+  id             String                 @id @default(cuid())
+  organizationId String                 @map("organization_id")
+  /// Null = aplica a todos los locales de la organización
+  locationId     String?                @map("location_id")
+  name           String
+  description    String?
+  type           DiscountCreditType
+  valueType      DiscountCreditValueType @map("value_type")
+  /// Para PERCENTAGE: 0 < value <= 100. Para FIXED_AMOUNT: value > 0.
+  value          Decimal                @db.Decimal(10, 2)
+  isActive       Boolean                @default(true) @map("is_active")
+  createdAt      DateTime               @default(now()) @map("created_at")
+  updatedAt      DateTime               @updatedAt @map("updated_at")
+  deletedAt      DateTime?              @map("deleted_at")
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  location     Location?    @relation(fields: [locationId], references: [id])
+
+  @@index([organizationId, isActive])
+  @@index([locationId])
+  @@map("discount_credits")
 }

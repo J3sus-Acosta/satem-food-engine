@@ -59,18 +59,13 @@ export type IngredientUnit = 'KG' | 'G' | 'L' | 'ML' | 'UNITS'
 
 export type StockMovementType = 'PURCHASE' | 'SALE' | 'WASTE' | 'ADJUSTMENT' | 'RETURN'
 
-export type UserRole =
-  | 'OWNER'
-  | 'ADMIN'
-  | 'MANAGER'
-  | 'CASHIER'
-  | 'KITCHEN'
-  | 'CAJERO'
-  | 'COCINA'
-  | 'OPERADOR'
-  | 'LECTURA'
+export type UserRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'CASHIER' | 'KITCHEN'
 
 export type LoyaltyTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM'
+
+export type DiscountCreditType = 'DISCOUNT' | 'CREDIT'
+
+export type DiscountCreditValueType = 'PERCENTAGE' | 'FIXED_AMOUNT'
 
 // ─── API Response Wrappers ────────────────────────────────────────────────────
 
@@ -746,6 +741,68 @@ export interface User {
   createdAt: Date
   updatedAt: Date
   deletedAt: Date | null
+}
+
+// ─── DISCOUNT CREDIT DOMAIN ───────────────────────────────────────────────────
+
+/** Beneficio comercial reutilizable (descuento o crédito). */
+export interface DiscountCredit {
+  id: string
+  organizationId: string
+  /** Null = aplica a todos los locales de la organización. */
+  locationId: string | null
+  name: string
+  description: string | null
+  type: DiscountCreditType
+  valueType: DiscountCreditValueType
+  /** PERCENTAGE: 0 < value <= 100. FIXED_AMOUNT: value > 0. */
+  value: number
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date | null
+}
+
+export interface CreateDiscountCreditInput {
+  organizationId: string
+  locationId?: string | null
+  name: string
+  description?: string | null
+  type: DiscountCreditType
+  valueType: DiscountCreditValueType
+  value: number
+  isActive?: boolean
+}
+
+export interface UpdateDiscountCreditInput {
+  name?: string
+  description?: string | null
+  type?: DiscountCreditType
+  valueType?: DiscountCreditValueType
+  locationId?: string | null
+  value?: number
+  isActive?: boolean
+}
+
+export interface DiscountCreditFilters {
+  organizationId: string
+  locationId?: string | null
+  type?: DiscountCreditType
+  isActive?: boolean
+  search?: string
+}
+
+/**
+ * Snapshot del beneficio aplicado a una venta.
+ * Se almacena en Order.metadata para preservar trazabilidad histórica.
+ */
+export interface DiscountCreditSnapshot {
+  discountCreditId: string
+  discountCreditName: string
+  discountCreditType: DiscountCreditType
+  discountCreditValueType: DiscountCreditValueType
+  discountCreditValue: number
+  discountCreditAppliedAmount: number
 }
 
 export * from './checkout'

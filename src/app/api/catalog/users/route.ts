@@ -1,10 +1,16 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { TenantResolver } from '@/server/tenant-resolver'
 import { listUsersService, createUserService } from '@/services'
+import { requireAuth } from '@/lib/auth-server'
+import { requirePermission } from '@/lib/permissions'
+import { handleRouteError } from '@/lib/api'
 import type { ApiResponse, UserRole } from '@/types'
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await requireAuth()
+    requirePermission(session, 'users.view')
+
     const { searchParams } = new URL(req.url)
     const locationId = searchParams.get('locationId') || undefined
     const search = searchParams.get('search') || undefined
@@ -23,14 +29,15 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json<ApiResponse<typeof users>>({ data: users }, { status: 200 })
   } catch (err) {
-    console.error('[API.catalog.users.list] Error:', err)
-    const message = err instanceof Error ? err.message : 'Error al obtener listado de usuarios.'
-    return NextResponse.json<ApiResponse<never>>({ error: message }, { status: 500 })
+    return handleRouteError(err, 'Error al obtener listado de usuarios.', 'GET /api/catalog/users')
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await requireAuth()
+    requirePermission(session, 'users.manage')
+
     const { searchParams } = new URL(req.url)
     const locationId = searchParams.get('locationId') || undefined
 
@@ -77,8 +84,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json<ApiResponse<typeof user>>({ data: user }, { status: 201 })
   } catch (err) {
-    console.error('[API.catalog.users.create] Error:', err)
-    const message = err instanceof Error ? err.message : 'Error al crear el usuario.'
-    return NextResponse.json<ApiResponse<never>>({ error: message }, { status: 500 })
+    return handleRouteError(err, 'Error al crear el usuario.', 'POST /api/catalog/users')
   }
 }

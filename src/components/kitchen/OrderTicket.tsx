@@ -1,7 +1,16 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Clock, Play, Check, CheckCircle2, Printer } from 'lucide-react'
+import {
+  Clock,
+  Play,
+  Check,
+  CheckCircle2,
+  Printer,
+  Utensils,
+  ShoppingBag,
+  Truck,
+} from 'lucide-react'
 import type { OrderWithItems } from '@/types'
 
 interface OrderTicketProps {
@@ -58,14 +67,37 @@ export function OrderTicket({ order, onAction, onPrint }: OrderTicketProps) {
     }
   }
 
+  // Order type badge config
+  const orderTypeBadge =
+    order.type === 'DINE_IN'
+      ? {
+          label: 'Para Servir',
+          Icon: Utensils,
+          className: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+        }
+      : order.type === 'TAKEAWAY'
+        ? {
+            label: 'Para Llevar',
+            Icon: ShoppingBag,
+            className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
+          }
+        : {
+            label: 'Para Llevar',
+            Icon: Truck,
+            className: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
+          }
+
   return (
     <div className="bg-card border-border/40 hover:border-border space-y-4 rounded-2xl border p-4 shadow-xs transition-all">
       {/* Header Info */}
       <div className="border-border/30 flex items-start justify-between border-b pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-[10px] font-extrabold tracking-wider uppercase">
-              Retiro
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-extrabold tracking-wider uppercase ${orderTypeBadge.className}`}
+            >
+              <orderTypeBadge.Icon size={10} className="shrink-0" />
+              {orderTypeBadge.label}
             </span>
             {onPrint && (
               <button

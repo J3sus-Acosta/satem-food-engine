@@ -20,16 +20,20 @@ import {
   Save,
 } from 'lucide-react'
 
+import { SubNavBar } from '@/components/layout/SubNavBar'
+
 interface MenuDashboardClientProps {
   initialMenu: MenuWithCategories | null
   locationId: string
   errorMsg: string | null
+  currentUserRole: string
 }
 
 export default function MenuDashboardClient({
   initialMenu,
   locationId,
   errorMsg: initialError,
+  currentUserRole,
 }: MenuDashboardClientProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -394,50 +398,7 @@ export default function MenuDashboardClient({
   return (
     <div className="min-h-screen bg-slate-50/40 p-4 font-sans text-slate-800 select-none md:p-8">
       {/* Navigation subnavigation bar */}
-      <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-slate-200 pb-3">
-        <a
-          href="/dashboard"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Dashboard
-        </a>
-        <a
-          href="/dashboard/menu"
-          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-        >
-          Cambios Rápidos Menú
-        </a>
-        <a
-          href="/dashboard/catalog"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Catálogo Maestro
-        </a>
-        <a
-          href="/dashboard/kitchen"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Cocina
-        </a>
-        <a
-          href="/dashboard/pos"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          POS
-        </a>
-        <a
-          href="/dashboard/cash"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Caja
-        </a>
-        <a
-          href="/dashboard/users"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Usuarios
-        </a>
-      </div>
+      <SubNavBar activeTab="menu" currentUserRole={currentUserRole} />
 
       {/* Header section */}
       <header className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">

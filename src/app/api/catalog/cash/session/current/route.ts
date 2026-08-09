@@ -2,25 +2,35 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { cashService, reportingService } from '@/services'
 import { TenantResolver } from '@/server/tenant-resolver'
 import { db } from '@/server/db'
+import { requireAuth } from '@/lib/auth-server'
 import type { ApiResponse } from '@/types'
 
 export async function GET(req: NextRequest) {
   try {
+    const authSession = await requireAuth()
     const { searchParams } = new URL(req.url)
     const locationId = searchParams.get('locationId')
-    const userEmail = searchParams.get('userEmail') || 'cajero@satem.cl'
+    const userEmail = searchParams.get('userEmail')
+    const userId = searchParams.get('userId')
 
     const resolved = await TenantResolver.resolve(locationId)
 
-    const user = await db.user.findFirst({ where: { email: userEmail, deletedAt: null } })
-    if (!user) {
-      return NextResponse.json<ApiResponse<never>>(
-        { error: 'Usuario no encontrado.' },
-        { status: 404 }
-      )
+    let targetUserId = authSession.userId
+
+    if (userId) {
+      const user = await db.user.findFirst({ where: { id: userId, deletedAt: null } })
+      if (user) targetUserId = user.id
+    } else if (userEmail) {
+      const user = await db.user.findFirst({
+        where: {
+          OR: [{ email: userEmail }, { username: userEmail }],
+          deletedAt: null,
+        },
+      })
+      if (user) targetUserId = user.id
     }
 
-    const session = await cashService.getCurrentSession(resolved.locationId, user.id)
+    const session = await cashService.getCurrentSession(resolved.locationId, targetUserId)
 
     if (!session) {
       return NextResponse.json<ApiResponse<null>>({ data: null }, { status: 200 })

@@ -72,4 +72,9 @@ export interface IUserRepository {
    * No expuesto en la entidad User pública.
    */
   getPasswordHash(id: string): Promise<string | null>
+
+  /**
+   * Actualiza el campo lastLoginAt de un usuario al iniciar sesión correctamente.
+   */
+  updateLastLogin(id: string, date: Date): Promise<void>
 }

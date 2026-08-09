@@ -643,7 +643,8 @@ export class PrismaOrderRepository implements IOrderRepository {
   async updateDiscountAndTotals(
     id: string,
     discountAmount: number,
-    notes?: string
+    notes?: string,
+    metadata?: Record<string, unknown>
   ): Promise<Order> {
     try {
       const order = await db.order.findUnique({ where: { id } })
@@ -653,12 +654,19 @@ export class PrismaOrderRepository implements IOrderRepository {
       const validDiscount = Math.min(Math.max(0, discountAmount), subtotal)
       const totalAmount = Math.max(0, subtotal - validDiscount)
 
+      const mergedMetadata =
+        metadata !== undefined
+          ? { ...((order.metadata as Record<string, unknown>) || {}), ...metadata }
+          : undefined
+
       const updated = await db.order.update({
         where: { id },
         data: {
           discountAmount: validDiscount,
           totalAmount,
           notes: notes !== undefined ? notes : order.notes,
+          metadata:
+            mergedMetadata !== undefined ? (mergedMetadata as Prisma.InputJsonValue) : undefined,
         },
       })
       return mapPrismaOrderToDomain(updated)
@@ -675,6 +683,9 @@ export class PrismaOrderRepository implements IOrderRepository {
         found.discountAmount = validDiscount
         found.totalAmount = Math.max(0, subtotal - validDiscount)
         if (notes !== undefined) found.notes = notes
+        if (metadata !== undefined) {
+          found.metadata = { ...(found.metadata || {}), ...metadata }
+        }
         found.updatedAt = new Date()
         return found
       }

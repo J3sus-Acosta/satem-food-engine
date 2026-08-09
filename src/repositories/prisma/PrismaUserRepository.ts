@@ -170,4 +170,11 @@ export class PrismaUserRepository implements IUserRepository {
     })
     return found ? found.passwordHash : null
   }
+
+  async updateLastLogin(id: string, date: Date): Promise<void> {
+    await db.user.update({
+      where: { id },
+      data: { lastLoginAt: date },
+    })
+  }
 }

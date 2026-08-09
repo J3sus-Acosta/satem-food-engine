@@ -32,6 +32,7 @@ import {
   DeleteUserService,
   FindUserService,
   ListUsersService,
+  AuthenticateUserService,
 } from './users'
 
 const userRepo = new PrismaUserRepository()
@@ -44,6 +45,7 @@ export const disableUserService = new DisableUserService(userRepo)
 export const deleteUserService = new DeleteUserService(userRepo)
 export const findUserService = new FindUserService(userRepo)
 export const listUsersService = new ListUsersService(userRepo)
+export const authenticateUserService = new AuthenticateUserService(userRepo)
 
 export {
   CreateUserService,
@@ -54,4 +56,43 @@ export {
   DeleteUserService,
   FindUserService,
   ListUsersService,
+  AuthenticateUserService,
 } from './users'
+
+// Discount & Credit Services
+import { PrismaDiscountCreditRepository } from '@/repositories/prisma/PrismaDiscountCreditRepository'
+import {
+  CreateDiscountCreditService,
+  UpdateDiscountCreditService,
+  EnableDiscountCreditService,
+  DisableDiscountCreditService,
+  FindDiscountCreditService,
+  ListDiscountCreditsService,
+  CalculateDiscountCreditService,
+  DuplicateDiscountCreditService,
+  DeleteDiscountCreditService,
+} from './discounts'
+
+const discountCreditRepo = new PrismaDiscountCreditRepository()
+
+export const createDiscountCreditService = new CreateDiscountCreditService(discountCreditRepo)
+export const updateDiscountCreditService = new UpdateDiscountCreditService(discountCreditRepo)
+export const enableDiscountCreditService = new EnableDiscountCreditService(discountCreditRepo)
+export const disableDiscountCreditService = new DisableDiscountCreditService(discountCreditRepo)
+export const findDiscountCreditService = new FindDiscountCreditService(discountCreditRepo)
+export const listDiscountCreditsService = new ListDiscountCreditsService(discountCreditRepo)
+export const calculateDiscountCreditService = new CalculateDiscountCreditService(discountCreditRepo)
+export const duplicateDiscountCreditService = new DuplicateDiscountCreditService(discountCreditRepo)
+export const deleteDiscountCreditService = new DeleteDiscountCreditService(discountCreditRepo)
+
+export {
+  CreateDiscountCreditService,
+  UpdateDiscountCreditService,
+  EnableDiscountCreditService,
+  DisableDiscountCreditService,
+  FindDiscountCreditService,
+  ListDiscountCreditsService,
+  CalculateDiscountCreditService,
+  DuplicateDiscountCreditService,
+  DeleteDiscountCreditService,
+} from './discounts'

@@ -13,6 +13,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<O
       customerPhone,
       notes,
       discountAmount = 0,
+      discountCreditSnapshot,
       items,
     } = body
 
@@ -32,21 +33,18 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<O
     const order = await orderService.createCustomerOrder(locationId, {
       customerName,
       customerPhone,
+      type: type as OrderType,
       items,
     })
 
-    // 3. Update order type if specified
-    if (type && type !== 'TAKEAWAY') {
-      // Create customer order defaults to TAKEAWAY; if POS specified DINE_IN/DELIVERY, order is created cleanly
-    }
-
     // 4. Apply discount and cashier notes if provided
     let finalOrder = order
-    if (discountAmount > 0 || notes) {
+    if (discountAmount > 0 || notes || discountCreditSnapshot) {
       finalOrder = await orderService.applyDiscount(
         order.id,
         Number(discountAmount) || 0,
-        notes || undefined
+        notes || undefined,
+        discountCreditSnapshot ? { discountCreditSnapshot } : undefined
       )
     }
 

@@ -1,9 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { enableUserService, disableUserService, findUserService } from '@/services'
+import { requireAuth } from '@/lib/auth-server'
+import { requirePermission } from '@/lib/permissions'
+import { handleRouteError } from '@/lib/api'
 import type { ApiResponse } from '@/types'
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
+    const session = await requireAuth()
+    requirePermission(session, 'users.manage')
+
     const params = await props.params
     const user = await findUserService.execute(params.id)
     if (!user) {
@@ -22,8 +28,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       { status: 200 }
     )
   } catch (err) {
-    console.error('[API.catalog.users.toggle] Error:', err)
-    const message = err instanceof Error ? err.message : 'Error al alternar estado del usuario.'
-    return NextResponse.json<ApiResponse<never>>({ error: message }, { status: 500 })
+    return handleRouteError(
+      err,
+      'Error al alternar estado del usuario.',
+      'POST /api/catalog/users/[id]/toggle'
+    )
   }
 }

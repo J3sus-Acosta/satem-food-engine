@@ -1,9 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { findUserService, updateUserService, deleteUserService } from '@/services'
+import { requireAuth } from '@/lib/auth-server'
+import { requirePermission } from '@/lib/permissions'
+import { handleRouteError } from '@/lib/api'
 import type { ApiResponse, UserRole } from '@/types'
 
 export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
+    const session = await requireAuth()
+    requirePermission(session, 'users.view')
+
     const params = await props.params
     const user = await findUserService.execute(params.id)
     if (!user) {
@@ -14,14 +20,19 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
     }
     return NextResponse.json<ApiResponse<typeof user>>({ data: user }, { status: 200 })
   } catch (err) {
-    console.error('[API.catalog.users.detail] Error:', err)
-    const message = err instanceof Error ? err.message : 'Error al obtener detalles del usuario.'
-    return NextResponse.json<ApiResponse<never>>({ error: message }, { status: 500 })
+    return handleRouteError(
+      err,
+      'Error al obtener detalles del usuario.',
+      'GET /api/catalog/users/[id]'
+    )
   }
 }
 
 export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
+    const session = await requireAuth()
+    requirePermission(session, 'users.manage')
+
     const params = await props.params
     const body = await req.json()
     const { name, email, role, isActive, assignedLocationId } = body
@@ -36,14 +47,15 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 
     return NextResponse.json<ApiResponse<typeof user>>({ data: user }, { status: 200 })
   } catch (err) {
-    console.error('[API.catalog.users.update] Error:', err)
-    const message = err instanceof Error ? err.message : 'Error al actualizar el usuario.'
-    return NextResponse.json<ApiResponse<never>>({ error: message }, { status: 500 })
+    return handleRouteError(err, 'Error al actualizar el usuario.', 'PUT /api/catalog/users/[id]')
   }
 }
 
 export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
+    const session = await requireAuth()
+    requirePermission(session, 'users.manage')
+
     const params = await props.params
     await deleteUserService.execute(params.id)
     return NextResponse.json<ApiResponse<void>>(
@@ -51,8 +63,6 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
       { status: 200 }
     )
   } catch (err) {
-    console.error('[API.catalog.users.delete] Error:', err)
-    const message = err instanceof Error ? err.message : 'Error al eliminar el usuario.'
-    return NextResponse.json<ApiResponse<never>>({ error: message }, { status: 500 })
+    return handleRouteError(err, 'Error al eliminar el usuario.', 'DELETE /api/catalog/users/[id]')
   }
 }

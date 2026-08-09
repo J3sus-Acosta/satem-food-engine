@@ -2,12 +2,14 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { cashService } from '@/services'
 import { TenantResolver } from '@/server/tenant-resolver'
 import { db } from '@/server/db'
+import { requireAuth } from '@/lib/auth-server'
 import type { ApiResponse } from '@/types'
 
 export async function POST(req: NextRequest) {
   try {
+    const authSession = await requireAuth()
     const body = await req.json()
-    const { openingBalance, registerName, locationId, operatorEmail } = body
+    const { openingBalance, registerName, locationId, operatorEmail, operatorUserId } = body
 
     if (openingBalance === undefined || openingBalance === null) {
       return NextResponse.json<ApiResponse<never>>(
@@ -18,20 +20,26 @@ export async function POST(req: NextRequest) {
 
     const resolved = await TenantResolver.resolve(locationId)
 
-    // Resolve operator User
-    const email = operatorEmail || 'cajero@satem.cl'
-    const user = await db.user.findFirst({ where: { email, deletedAt: null } })
-    if (!user) {
-      return NextResponse.json<ApiResponse<never>>(
-        { error: `No se encontró el operador con email "${email}".` },
-        { status: 404 }
-      )
+    // Default to currently logged-in user ID
+    let targetUserId = authSession.userId
+
+    if (operatorUserId) {
+      const user = await db.user.findFirst({ where: { id: operatorUserId, deletedAt: null } })
+      if (user) targetUserId = user.id
+    } else if (operatorEmail) {
+      const user = await db.user.findFirst({
+        where: {
+          OR: [{ email: operatorEmail }, { username: operatorEmail }],
+          deletedAt: null,
+        },
+      })
+      if (user) targetUserId = user.id
     }
 
     const session = await cashService.openSession(
       resolved.organizationId,
       resolved.locationId,
-      user.id,
+      targetUserId,
       Number(openingBalance),
       registerName,
       req.headers.get('x-forwarded-for') || '127.0.0.1'

@@ -6,16 +6,24 @@ import {
   ClipboardList,
   Calculator,
   LayoutDashboard,
-  TrendingUp,
   Users,
+  Tag,
 } from 'lucide-react'
+import { getSession } from '@/lib/auth-server'
+import { hasPermission, type Permission } from '@/lib/permissions'
+import type { UserRole } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'Panel de Administración',
   description: 'SATEM Food Engine - Hub de Control Administrativo y Operativo',
 }
 
-export default function DashboardHubPage() {
+export default async function DashboardHubPage() {
+  const session = await getSession()
+  const role = (session?.role || 'CASHIER') as UserRole
+
   const modules = [
     {
       title: 'Cambios Rápidos Menú',
@@ -24,6 +32,7 @@ export default function DashboardHubPage() {
       icon: BookOpen,
       color: 'from-emerald-500 to-teal-400',
       badge: 'Operacional',
+      requiredPermission: 'catalog.manage' as Permission,
     },
     {
       title: 'Catálogo Maestro',
@@ -33,6 +42,7 @@ export default function DashboardHubPage() {
       icon: ClipboardList,
       color: 'from-blue-500 to-indigo-400',
       badge: 'Estructural',
+      requiredPermission: 'catalog.manage' as Permission,
     },
     {
       title: 'Pantalla de Cocina',
@@ -42,6 +52,7 @@ export default function DashboardHubPage() {
       icon: ChefHat,
       color: 'from-amber-500 to-orange-400',
       badge: 'Cocina',
+      requiredPermission: 'kitchen.view' as Permission,
     },
     {
       title: 'Caja / Cierre de Caja',
@@ -51,6 +62,7 @@ export default function DashboardHubPage() {
       icon: Calculator,
       color: 'from-rose-500 to-pink-400',
       badge: 'Financiero',
+      requiredPermission: 'cash.view' as Permission,
     },
     {
       title: 'Punto de Venta (POS)',
@@ -59,6 +71,7 @@ export default function DashboardHubPage() {
       icon: MonitorPlay,
       color: 'from-violet-500 to-purple-400',
       badge: 'Ventas',
+      requiredPermission: 'pos.sell' as Permission,
     },
     {
       title: 'Gestión de Usuarios',
@@ -67,8 +80,20 @@ export default function DashboardHubPage() {
       icon: Users,
       color: 'from-cyan-500 to-sky-400',
       badge: 'Seguridad',
+      requiredPermission: 'users.view' as Permission,
+    },
+    {
+      title: 'Descuentos y Créditos',
+      description: 'Administra descuentos y créditos disponibles para las ventas.',
+      href: '/dashboard/discounts',
+      icon: Tag,
+      color: 'from-fuchsia-500 to-pink-450',
+      badge: 'Comercial',
+      requiredPermission: 'discounts.view' as Permission,
     },
   ]
+
+  const visibleModules = modules.filter((mod) => hasPermission(role, mod.requiredPermission))
 
   return (
     <div className="min-h-screen bg-slate-50/50 px-6 py-12 font-sans text-slate-800 md:px-12">
@@ -103,7 +128,7 @@ export default function DashboardHubPage() {
 
         {/* Modules Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {modules.map((mod, idx) => {
+          {visibleModules.map((mod, idx) => {
             const Icon = mod.icon
             return (
               <a

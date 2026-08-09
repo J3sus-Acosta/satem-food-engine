@@ -245,7 +245,8 @@ export class OrderService {
   async applyDiscount(
     orderId: string,
     discountAmount: number,
-    notes?: string
+    notes?: string,
+    metadata?: Record<string, unknown>
   ): Promise<OrderWithItems> {
     const order = await this.orderRepo.findByIdWithItems(orderId)
     if (!order) {
@@ -258,7 +259,11 @@ export class OrderService {
       )
     }
 
-    await this.orderRepo.updateDiscountAndTotals(orderId, discountAmount, notes)
+    if (metadata !== undefined) {
+      await this.orderRepo.updateDiscountAndTotals(orderId, discountAmount, notes, metadata)
+    } else {
+      await this.orderRepo.updateDiscountAndTotals(orderId, discountAmount, notes)
+    }
 
     const updatedOrder = await this.orderRepo.findByIdWithItems(orderId)
     if (!updatedOrder) throw new NotFoundError('Order', orderId)
@@ -437,7 +442,7 @@ export class OrderService {
       locationId,
       channelId,
       undefined,
-      'TAKEAWAY',
+      input.type || 'TAKEAWAY',
       undefined,
       undefined,
       {

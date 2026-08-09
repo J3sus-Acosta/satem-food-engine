@@ -4,6 +4,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { SubNavBar } from '@/components/layout/SubNavBar'
 import {
   Plus,
   History,
@@ -35,6 +36,13 @@ interface CashDashboardClientProps {
   locations: { id: string; name: string }[]
   users: { id: string; name: string; email: string | null; role: string }[]
   channels: { id: string; name: string }[]
+  currentUserSession: {
+    userId: string
+    name: string
+    username: string
+    email: string
+    role: string
+  }
 }
 
 export default function CashDashboardClient({
@@ -43,10 +51,11 @@ export default function CashDashboardClient({
   locations,
   users,
   channels,
+  currentUserSession,
 }: CashDashboardClientProps) {
-  // Authentication & Simulation States
-  const [currentUserEmail, setCurrentUserEmail] = useState('cajero@satem.cl')
-  const [currentUserRole, setCurrentUserRole] = useState('CASHIER')
+  // Authentication & Session States
+  const currentUserEmail = currentUserSession.email
+  const currentUserRole = currentUserSession.role
   const [currentLocationId, setCurrentLocationId] = useState(initialLocationId)
 
   // Current session data
@@ -315,94 +324,8 @@ export default function CashDashboardClient({
 
   return (
     <div className="min-h-screen bg-slate-50/40 p-4 font-sans text-slate-800 select-none md:p-8">
-      {/* Simulation Header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-blue-800">
-          <Key className="h-4 w-4" />
-          <span>SIMULACIÓN DE SEGURIDAD Y PERMISOS:</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-blue-700">Simular Rol:</span>
-            <select
-              value={currentUserEmail}
-              onChange={(e) => {
-                const mail = e.target.value
-                setCurrentUserEmail(mail)
-                const u = users.find((usr) => usr.email === mail)
-                if (u) setCurrentUserRole(u.role)
-              }}
-              className="rounded-lg border border-blue-200 bg-white p-1.5 text-xs font-semibold text-slate-700 outline-none"
-            >
-              {users.map((u) => (
-                <option key={u.id} value={u.email || ''}>
-                  {u.name} ({u.role === 'ADMIN' ? 'Administrador' : 'Cajero'})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-blue-700">Sucursal:</span>
-            <select
-              value={currentLocationId}
-              onChange={(e) => setCurrentLocationId(e.target.value)}
-              className="rounded-lg border border-blue-200 bg-white p-1.5 text-xs font-semibold text-slate-700 outline-none"
-            >
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* Navigation Bar */}
-      <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-slate-200 pb-3">
-        <a
-          href="/dashboard"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Dashboard
-        </a>
-        <a
-          href="/dashboard/menu"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Cambios Rápidos Menú
-        </a>
-        <a
-          href="/dashboard/catalog"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Catálogo Maestro
-        </a>
-        <a
-          href="/dashboard/kitchen"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Cocina
-        </a>
-        <a
-          href="/dashboard/pos"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          POS
-        </a>
-        <a
-          href="/dashboard/cash"
-          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-        >
-          Caja
-        </a>
-        <a
-          href="/dashboard/users"
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-        >
-          Usuarios
-        </a>
-      </div>
+      <SubNavBar activeTab="cash" currentUserRole={currentUserRole} />
 
       {/* Main Header */}
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -413,6 +336,22 @@ export default function CashDashboardClient({
           <p className="mt-1 text-sm text-slate-500">
             Gestiona aperturas, arqueos de efectivo, retiros y conciliaciones por métodos de pago.
           </p>
+          {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Sucursal activa:</span>
+              <select
+                value={currentLocationId}
+                onChange={(e) => setCurrentLocationId(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-slate-400"
+              >
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {activeSession && (
@@ -1208,27 +1147,92 @@ export default function CashDashboardClient({
               </button>
             </div>
             <form onSubmit={handleCloseSession} className="mt-4 space-y-4">
-              <div className="border-slate-250/60 rounded-lg border bg-slate-50 p-3.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-450">Sencillo Inicial:</span>
-                  <span className="font-mono">
+              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
+                <div className="mb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                  Resumen del Turno
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Ventas en Efectivo:</span>
+                  <span className="font-semibold">${activePaidCash.toLocaleString('es-CL')}</span>
+                </div>
+                <div className="flex justify-between text-emerald-700">
+                  <span>+ Ingresos Manuales:</span>
+                  <span className="font-semibold">
+                    +${activeMovementsIn.toLocaleString('es-CL')}
+                  </span>
+                </div>
+                <div className="flex justify-between text-rose-700">
+                  <span>- Egresos Manuales:</span>
+                  <span className="font-semibold">
+                    -${activeMovementsOut.toLocaleString('es-CL')}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200/80 pt-2 text-slate-600">
+                  <span>Sencillo Inicial:</span>
+                  <span className="font-semibold">
                     ${Number(activeSession.openingBalance).toLocaleString('es-CL')}
                   </span>
                 </div>
-                <div className="mt-1.5 flex justify-between">
-                  <span className="text-slate-450">Ingresos/Egresos Netos:</span>
-                  <span className="font-mono">
-                    ${(activeMovementsIn - activeMovementsOut).toLocaleString('es-CL')}
+                <div className="flex justify-between border-t border-slate-200 pt-2 text-sm font-extrabold text-slate-900">
+                  <span>Total Esperado en Caja:</span>
+                  <span className="text-emerald-700">
+                    ${expectedCashBalance.toLocaleString('es-CL')}
                   </span>
                 </div>
-                <div className="mt-1.5 flex justify-between">
-                  <span className="text-slate-450">Venta Efectivo en Turno:</span>
-                  <span className="font-mono">${activePaidCash.toLocaleString('es-CL')}</span>
-                </div>
-                <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 font-bold text-slate-800">
-                  <span>Efectivo Esperado en Caja:</span>
-                  <span>${expectedCashBalance.toLocaleString('es-CL')}</span>
-                </div>
+              </div>
+
+              {/* Movimientos Manuales Detail Table */}
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold text-slate-400 uppercase">
+                  Movimientos Manuales del Turno ({activeMovements.length})
+                </label>
+                {activeMovements.length === 0 ? (
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-center text-xs text-slate-400">
+                    No hay ingresos ni egresos manuales registrados en este turno.
+                  </div>
+                ) : (
+                  <div className="max-h-36 overflow-y-auto rounded-xl border border-slate-200 bg-white">
+                    <table className="w-full text-left text-[11px] text-slate-600">
+                      <thead className="sticky top-0 border-b border-slate-100 bg-slate-50 text-[10px] text-slate-400 uppercase">
+                        <tr>
+                          <th className="px-2.5 py-1.5">Tipo</th>
+                          <th className="px-2.5 py-1.5">Motivo / Descripción</th>
+                          <th className="px-2.5 py-1.5 text-right">Monto</th>
+                          <th className="px-2.5 py-1.5 text-right">Hora</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {activeMovements.map((m) => (
+                          <tr key={m.id}>
+                            <td className="px-2.5 py-1.5">
+                              <span
+                                className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                                  m.type === 'IN'
+                                    ? 'border border-emerald-100 bg-emerald-50 text-emerald-700'
+                                    : 'border border-rose-100 bg-rose-50 text-rose-700'
+                                }`}
+                              >
+                                {m.type === 'IN' ? 'Ingreso' : 'Egreso'}
+                              </span>
+                            </td>
+                            <td className="max-w-[130px] truncate px-2.5 py-1.5 font-medium text-slate-700">
+                              {m.reason}
+                            </td>
+                            <td className="px-2.5 py-1.5 text-right font-semibold">
+                              ${Number(m.amount).toLocaleString('es-CL')}
+                            </td>
+                            <td className="px-2.5 py-1.5 text-right text-[10px] text-slate-400">
+                              {new Date(m.createdAt).toLocaleTimeString('es-CL', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1277,7 +1281,7 @@ export default function CashDashboardClient({
                 <Button
                   type="submit"
                   disabled={isActionLoading}
-                  className="bg-rose-650 rounded-lg px-4 py-2 text-xs font-bold text-white hover:bg-rose-700"
+                  className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700"
                 >
                   {isActionLoading ? 'Procesando...' : 'Cerrar Turno'}
                 </Button>

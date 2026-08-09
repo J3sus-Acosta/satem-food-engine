@@ -54,3 +54,6 @@ next-env.d.ts
 .vscode/settings.json
 *.swp
 *.swo
+
+# ─── Scratch ──────────────────────────────────────────────────────────────────
+scratch/

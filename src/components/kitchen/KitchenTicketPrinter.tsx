@@ -42,12 +42,7 @@ export function KitchenTicketPrinter({
     second: '2-digit',
   })
 
-  const orderTypeLabel =
-    order.type === 'DINE_IN'
-      ? 'COMER EN LOCAL'
-      : order.type === 'TAKEAWAY'
-        ? 'PARA LLEVAR'
-        : 'DELIVERY / DESPACHO'
+  const orderTypeLabel = order.type === 'DINE_IN' ? 'PARA SERVIR' : 'PARA LLEVAR'
 
   const metadata = (order.metadata as Record<string, unknown> | null) || {}
   const customerName = (metadata.customerName as string) || ''
