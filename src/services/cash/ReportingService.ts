@@ -16,6 +16,13 @@ export interface ReportFilters {
   orderStatus?: string
 }
 
+export interface CashMovementReport {
+  type: 'IN' | 'OUT'
+  amount: number
+  reason: string
+  createdAt: Date
+}
+
 export interface ReportResult {
   metadata: {
     startDate: Date
@@ -55,6 +62,12 @@ export interface ReportResult {
     name: string
     amount: number
   }[]
+  /** Movimientos manuales de caja (ingresos y egresos registrados durante el turno) */
+  movements: CashMovementReport[]
+  /** Total de ingresos manuales del turno */
+  movementsTotalIn: number
+  /** Total de egresos manuales del turno */
+  movementsTotalOut: number
 }
 
 export class ReportingService {
@@ -216,6 +229,33 @@ export class ReportingService {
       }))
       .sort((a, b) => b.amount - a.amount)
 
+    // 8. Fetch manual cash movements for the session (real-time from DB)
+    let movements: CashMovementReport[] = []
+    let movementsTotalIn = 0
+    let movementsTotalOut = 0
+
+    if (filters.sessionId) {
+      const rawMovements = await db.cashMovement.findMany({
+        where: { sessionId: filters.sessionId },
+        orderBy: { createdAt: 'asc' },
+      })
+
+      movements = rawMovements.map((m) => ({
+        type: m.type as 'IN' | 'OUT',
+        amount: Number(m.amount),
+        reason: m.reason,
+        createdAt: m.createdAt,
+      }))
+
+      movementsTotalIn = movements
+        .filter((m) => m.type === 'IN')
+        .reduce((sum, m) => sum + m.amount, 0)
+
+      movementsTotalOut = movements
+        .filter((m) => m.type === 'OUT')
+        .reduce((sum, m) => sum + m.amount, 0)
+    }
+
     // Calculate duration
     let durationMinutes = null
     if (startDate && endDate) {
@@ -244,6 +284,9 @@ export class ReportingService {
       payments: paymentsList,
       products: productsList,
       categories: categoriesList,
+      movements,
+      movementsTotalIn,
+      movementsTotalOut,
     }
   }
 }

@@ -17,8 +17,8 @@ export async function POST(
   try {
     const { id: orderId } = await params
 
-    // Process payment intent creation via PaymentService
-    const result = await paymentService.createPaymentIntent(orderId)
+    // Process payment intent creation via PaymentService explicitly using SUMUP for web menu checkout
+    const result = await paymentService.createPaymentIntent(orderId, 'SUMUP')
 
     return NextResponse.json<ApiResponse<PaymentIntentResult>>({ data: result }, { status: 201 })
   } catch (error: unknown) {

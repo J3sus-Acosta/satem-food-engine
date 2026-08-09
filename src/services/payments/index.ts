@@ -42,7 +42,10 @@ export class PaymentService {
    * Resolves multi-tenant provider configuration dynamically, initiates the external capture session,
    * records transaction details, and returns the redirect checkout URL.
    */
-  async createPaymentIntent(orderId: string): Promise<PaymentIntentResult> {
+  async createPaymentIntent(
+    orderId: string,
+    requestedProvider?: PaymentProvider
+  ): Promise<PaymentIntentResult> {
     // 1. Retrieve the order
     const order = await this.orderRepo.findById(orderId)
     if (!order) {
@@ -59,10 +62,17 @@ export class PaymentService {
     // 3. Resolve active payment config (Location -> Organization -> .env -> SUMUP)
     const tenantConfig = await this.tenantConfigRepo.resolvePaymentConfig(order.locationId)
 
-    // 4. Instantiate provider via factory using configuration JSON
-    const providerInstance = PaymentProviderFactory.build(tenantConfig)
+    // 4. Determine effective provider (requestedProvider overrides tenantConfig default, e.g. SUMUP for web menu)
+    const effectiveProvider = requestedProvider || tenantConfig.provider || 'SUMUP'
+    const effectiveConfig = {
+      provider: effectiveProvider,
+      configuration: tenantConfig.configuration || {},
+    }
 
-    // 5. Manage active payment record (reuse pending or create new one)
+    // 5. Instantiate provider via factory using configuration JSON
+    const providerInstance = PaymentProviderFactory.build(effectiveConfig)
+
+    // 6. Manage active payment record (reuse pending or create new one)
     let payment = await this.paymentRepo.findByOrderId(orderId)
     if (payment) {
       if (payment.status === 'PAID') {
@@ -70,14 +80,14 @@ export class PaymentService {
       }
       // Reset to PENDING for retry and align provider
       payment = await this.paymentRepo.updateStatus(payment.id, 'PENDING')
-      if (payment.provider !== tenantConfig.provider) {
-        // Update provider key if changed in config
+      if (payment.provider !== effectiveProvider) {
+        // Update provider key if requested provider differs
         payment = await this.paymentRepo.updateStatus(payment.id, 'PENDING')
       }
     } else {
       payment = await this.paymentRepo.create({
         orderId,
-        provider: tenantConfig.provider,
+        provider: effectiveProvider,
         amount: Number(order.totalAmount),
         currency: 'CLP',
       })

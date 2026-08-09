@@ -281,8 +281,8 @@ export function PosBoard({
     setDiscountPercent(0)
     setCustomDiscountAmount(0)
     setSelectedDiscountCredit(null)
-    if (!isStaffMeal && !staffNote) {
-      setStaffNote('Colación Empleado (Cortesía $0)')
+    if (!isStaffMeal && !customerName) {
+      setCustomerName('Empleado / Colación')
     }
   }
 
@@ -816,16 +816,26 @@ export function PosBoard({
                   </>
                 )}
 
-                {/* Note / Staff Name Input */}
+                {/* Customer Name — shown in kitchen display */}
                 <input
                   type="text"
-                  value={staffNote}
-                  onChange={(e) => setStaffNote(e.target.value)}
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
                   placeholder={
-                    isStaffMeal ? 'Nombre empleado (ej: Juan - Cocina)' : 'Nota / Nombre cliente...'
+                    isStaffMeal ? 'Nombre empleado (ej: Juan - Cocina)' : 'Nombre del cliente...'
                   }
                   className="bg-card border-border/60 focus:ring-primary/20 w-full rounded-xl border px-3 py-2 text-xs focus:ring-2 focus:outline-none"
                 />
+                {/* Kitchen Note — internal note for the kitchen team, not shown on ticket header */}
+                {!isStaffMeal && (
+                  <input
+                    type="text"
+                    value={staffNote}
+                    onChange={(e) => setStaffNote(e.target.value)}
+                    placeholder="Nota para cocina (ej: sin cebolla, alérgico...)"
+                    className="bg-card border-border/60 focus:ring-primary/20 w-full rounded-xl border px-3 py-2 text-xs focus:ring-2 focus:outline-none"
+                  />
+                )}
               </div>
 
               {/* Totals Summary */}
@@ -847,10 +857,15 @@ export function PosBoard({
               </div>
 
               {/* Primary Checkout Button */}
+              {cart.length > 0 && !customerName.trim() && (
+                <p className="text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                  Ingresa el nombre del cliente para continuar
+                </p>
+              )}
               <button
                 onClick={() => setIsPaymentModalOpen(true)}
-                disabled={cart.length === 0}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-extrabold shadow-lg transition-all active:scale-[0.99] disabled:opacity-50"
+                disabled={cart.length === 0 || !customerName.trim()}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-extrabold shadow-lg transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <DollarSign size={18} />
                 {isStaffMeal

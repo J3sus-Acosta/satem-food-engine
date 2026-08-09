@@ -16,7 +16,7 @@ import {
   CustomerOrderProvider,
   useCustomerOrder,
 } from '@/components/customer/order/CustomerOrderProvider'
-import type { ApiResponse, OrderWithItems, PaymentProvider } from '@/types'
+import type { ApiResponse, OrderWithItems } from '@/types'
 
 function OrderTrackerContent() {
   const searchParams = useSearchParams()
@@ -35,8 +35,7 @@ function OrderTrackerContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // Payment states
-  const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('SUMUP')
+  // Payment state
   const [isInitiatingPayment, setIsInitiatingPayment] = useState(false)
 
   // 1. Sync URL parameter and local storage
@@ -142,7 +141,7 @@ function OrderTrackerContent() {
 
   const handlePaySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!order) return
+    if (!order || isInitiatingPayment) return
 
     setIsInitiatingPayment(true)
     setErrorMsg('')
@@ -152,7 +151,7 @@ function OrderTrackerContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: selectedProvider,
+          provider: 'SUMUP',
           amount: Number(order.totalAmount),
           currency: 'CLP',
         }),
@@ -161,19 +160,27 @@ function OrderTrackerContent() {
       const result = await response.json()
 
       if (!response.ok || result.error) {
-        throw new Error(result.error || 'No se pudo iniciar la pasarela de pagos.')
+        throw new Error(
+          result.error ||
+            'No fue posible preparar el pago en este momento. Tu pedido no ha sido cobrado. Por favor, inténtalo nuevamente.'
+        )
       }
 
       if (result.data && result.data.checkoutUrl) {
-        // Redirect client to SumUp/Webpay checkout URL
+        // Redirect client directly to SumUp checkout URL
         window.location.href = result.data.checkoutUrl
       } else {
-        throw new Error('No se recibió la URL de redirección de pago.')
+        throw new Error(
+          'No fue posible preparar el pago en este momento. Tu pedido no ha sido cobrado. Por favor, inténtalo nuevamente.'
+        )
       }
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err))
       console.error('[OrderTracker.handlePaySubmit] Payment init error:', error)
-      setErrorMsg(error.message || 'Error al iniciar el pago.')
+      setErrorMsg(
+        error.message ||
+          'No fue posible preparar el pago en este momento. Tu pedido no ha sido cobrado. Por favor, inténtalo nuevamente.'
+      )
     } finally {
       setIsInitiatingPayment(false)
     }
@@ -448,46 +455,26 @@ function OrderTrackerContent() {
                   <div className="space-y-0.5">
                     <h3 className="text-sm font-extrabold md:text-base">Confirmar y Pagar</h3>
                     <p className="text-muted-foreground text-xs leading-normal">
-                      Tu pedido se encuentra registrado temporalmente. Elige tu medio de pago
-                      preferido para enviarlo directamente a cocina.
+                      Tu pedido está listo para ser procesado.
                     </p>
                   </div>
                 </div>
 
                 <form onSubmit={handlePaySubmit} className="space-y-4">
-                  {/* Selectors */}
-                  <div className="grid grid-cols-2 gap-3 select-none">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProvider('SUMUP')}
-                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all ${
-                        selectedProvider === 'SUMUP'
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-border/60 hover:bg-muted/30'
-                      }`}
-                      disabled={isInitiatingPayment}
-                    >
-                      <span className="text-sm font-extrabold tracking-wide uppercase">
-                        SumUp Checkout
+                  {/* SumUp Payment Info Box */}
+                  <div className="bg-muted/40 border-border/60 space-y-1.5 rounded-2xl border p-4 select-none">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-primary/10 text-primary rounded-md px-2 py-0.5 text-[10px] font-black tracking-wider uppercase">
+                        SumUp
                       </span>
-                      <span className="text-muted-foreground text-[10px]">Débito y Crédito</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProvider('WEBPAY')}
-                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-2xl border p-4 text-center transition-all ${
-                        selectedProvider === 'WEBPAY'
-                          ? 'border-primary bg-primary/5 text-primary'
-                          : 'border-border/60 hover:bg-muted/30'
-                      }`}
-                      disabled={isInitiatingPayment}
-                    >
-                      <span className="text-sm font-extrabold tracking-wide uppercase">
-                        Transbank Webpay
+                      <span className="text-foreground text-xs font-bold">
+                        Pago seguro con SumUp
                       </span>
-                      <span className="text-muted-foreground text-[10px]">Redcompra nacional</span>
-                    </button>
+                    </div>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      El pago será realizado de forma segura a través de SumUp. Al continuar serás
+                      dirigido a la plataforma de pago de SumUp para completar la transacción.
+                    </p>
                   </div>
 
                   <button
@@ -498,12 +485,12 @@ function OrderTrackerContent() {
                     {isInitiatingPayment ? (
                       <>
                         <Loader2 className="animate-spin" size={15} />
-                        <span>Abriendo pasarela de pagos...</span>
+                        <span>Preparando pago...</span>
                       </>
                     ) : (
                       <>
                         <span>
-                          Pagar Pedido (${Number(order.totalAmount).toLocaleString('es-CL')})
+                          Continuar al Pago (${Number(order.totalAmount).toLocaleString('es-CL')})
                         </span>
                         <ExternalLink size={14} />
                       </>

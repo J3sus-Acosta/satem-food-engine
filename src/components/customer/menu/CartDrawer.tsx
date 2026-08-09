@@ -69,9 +69,11 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
     setIsLoading(true)
     try {
       // Map frontend items payload to CreateCustomerOrderInput structure
+      const formattedName = name.endsWith('PEDIDO WEB') ? name : `${name} PEDIDO WEB`
+
       const checkoutPayload = {
         locationId,
-        customerName: name,
+        customerName: formattedName,
         customerPhone: phone,
         items: items.map((item) => ({
           menuItemId: item.menuItemId,

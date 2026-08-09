@@ -21,8 +21,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<O
     }
 
     // 2. Invoke OrderService domain orchestrator
+    const rawName = (customerName || '').trim()
+    const formattedCustomerName = rawName
+      ? rawName.endsWith('PEDIDO WEB')
+        ? rawName
+        : `${rawName} PEDIDO WEB`
+      : 'Cliente WEB PEDIDO WEB'
+
     const order = await orderService.createCustomerOrder(locationId, {
-      customerName,
+      customerName: formattedCustomerName,
       customerPhone,
       items,
     })

@@ -12,7 +12,7 @@ export { CustomerService } from './customers'
 export { ChatService } from './chat'
 export { ProductCatalogService, productCatalogService } from './catalog'
 export { CashService, cashService, ReportingService, reportingService } from './cash'
-export type { ReportFilters, ReportResult } from './cash'
+export type { ReportFilters, ReportResult, CashMovementReport } from './cash'
 export {
   validateSheetRows,
   adaptSheetRowsToDomain,

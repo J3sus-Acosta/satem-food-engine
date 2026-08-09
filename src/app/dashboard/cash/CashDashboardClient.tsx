@@ -28,7 +28,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { ReportResult } from '@/services'
+import type { ReportResult, CashMovementReport } from '@/services'
 
 interface CashDashboardClientProps {
   organizationId: string
@@ -1576,6 +1576,79 @@ export default function CashDashboardClient({
                         </tbody>
                       </table>
                     </div>
+                  </div>
+
+                  {/* Manual Cash Movements */}
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <h4 className="text-xs font-bold tracking-wider text-slate-800 uppercase">
+                        Movimientos Manuales de Caja
+                      </h4>
+                      <div className="flex items-center gap-3 text-[10px] font-semibold">
+                        <span className="text-emerald-700">
+                          +$
+                          {(selectedSessionReport as ReportResult).movementsTotalIn?.toLocaleString(
+                            'es-CL'
+                          ) ?? 0}
+                        </span>
+                        <span className="text-rose-700">
+                          −$
+                          {(
+                            selectedSessionReport as ReportResult
+                          ).movementsTotalOut?.toLocaleString('es-CL') ?? 0}
+                        </span>
+                      </div>
+                    </div>
+                    {((selectedSessionReport as ReportResult).movements?.length ?? 0) === 0 ? (
+                      <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-center text-[11px] text-slate-400 italic">
+                        No hay movimientos manuales en este turno.
+                      </div>
+                    ) : (
+                      <div className="overflow-hidden rounded-lg border border-slate-200">
+                        <table className="w-full text-left">
+                          <thead className="bg-slate-50 text-[9px] font-bold text-slate-400 uppercase">
+                            <tr>
+                              <th className="p-2">Tipo</th>
+                              <th className="p-2">Motivo</th>
+                              <th className="p-2 text-right">Monto</th>
+                              <th className="p-2 text-right">Hora</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {(
+                              (selectedSessionReport as ReportResult)
+                                .movements as CashMovementReport[]
+                            ).map((m, i) => (
+                              <tr key={i}>
+                                <td className="p-2">
+                                  <span
+                                    className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                                      m.type === 'IN'
+                                        ? 'border border-emerald-100 bg-emerald-50 text-emerald-700'
+                                        : 'border border-rose-100 bg-rose-50 text-rose-700'
+                                    }`}
+                                  >
+                                    {m.type === 'IN' ? 'Ingreso' : 'Egreso'}
+                                  </span>
+                                </td>
+                                <td className="max-w-[140px] truncate p-2 text-[11px] font-medium text-slate-700">
+                                  {m.reason}
+                                </td>
+                                <td className="p-2 text-right font-mono text-[11px] font-bold">
+                                  ${m.amount.toLocaleString('es-CL')}
+                                </td>
+                                <td className="p-2 text-right text-[10px] text-slate-400">
+                                  {new Date(m.createdAt).toLocaleTimeString('es-CL', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

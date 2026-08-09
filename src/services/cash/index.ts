@@ -13,4 +13,4 @@ export const reportingService = new ReportingService(orderRepo)
 
 export { CashService } from './CashService'
 export { ReportingService } from './ReportingService'
-export type { ReportFilters, ReportResult } from './ReportingService'
+export type { ReportFilters, ReportResult, CashMovementReport } from './ReportingService'

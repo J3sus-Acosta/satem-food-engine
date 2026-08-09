@@ -102,6 +102,23 @@ export async function GET(req: NextRequest) {
     for (const cat of report.categories) {
       csv += `${cat.name};$${cat.amount}\n`
     }
+    csv += '\n'
+
+    // Movimientos manuales de caja (solo si hay sesión)
+    csv += 'MOVIMIENTOS MANUALES DE CAJA\n'
+    csv += `Total Ingresos Manuales;$${report.movementsTotalIn}\n`
+    csv += `Total Egresos Manuales;$${report.movementsTotalOut}\n`
+    csv += `Balance Movimientos;$${report.movementsTotalIn - report.movementsTotalOut}\n\n`
+    if (report.movements.length > 0) {
+      csv += 'Tipo;Motivo;Monto;Hora\n'
+      for (const m of report.movements) {
+        const tipo = m.type === 'IN' ? 'Ingreso' : 'Egreso'
+        const hora = new Date(m.createdAt).toLocaleString('es-CL')
+        csv += `${tipo};${m.reason};$${m.amount};${hora}\n`
+      }
+    } else {
+      csv += 'Sin movimientos manuales registrados en este turno.\n'
+    }
 
     return new NextResponse(csv, {
       status: 200,
