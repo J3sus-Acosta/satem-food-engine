@@ -146,9 +146,24 @@ function mapPrismaOrderWithItemsToDomain(
 export class PrismaOrderRepository implements IOrderRepository {
   async findById(id: string): Promise<Order | null> {
     try {
-      const order = await db.order.findFirst({
+      let order = await db.order.findFirst({
         where: { id, deletedAt: null },
       })
+
+      if (!order) {
+        // Fallback: check if id is a payment ID or provider transaction ID
+        const payment = await db.payment.findFirst({
+          where: {
+            OR: [{ id }, { externalId: id }],
+          },
+        })
+        if (payment) {
+          order = await db.order.findFirst({
+            where: { id: payment.orderId, deletedAt: null },
+          })
+        }
+      }
+
       return order ? mapPrismaOrderToDomain(order) : null
     } catch (error) {
       if (isConnectionError(error)) {
@@ -164,7 +179,7 @@ export class PrismaOrderRepository implements IOrderRepository {
 
   async findByIdWithItems(id: string): Promise<OrderWithItems | null> {
     try {
-      const order = await db.order.findFirst({
+      let order = await db.order.findFirst({
         where: { id, deletedAt: null },
         include: {
           items: {
@@ -175,6 +190,29 @@ export class PrismaOrderRepository implements IOrderRepository {
           },
         },
       })
+
+      if (!order) {
+        // Fallback: check if id is a payment ID or provider transaction ID
+        const payment = await db.payment.findFirst({
+          where: {
+            OR: [{ id }, { externalId: id }],
+          },
+        })
+        if (payment) {
+          order = await db.order.findFirst({
+            where: { id: payment.orderId, deletedAt: null },
+            include: {
+              items: {
+                where: { deletedAt: null },
+                include: {
+                  modifiers: true,
+                },
+              },
+            },
+          })
+        }
+      }
+
       return order ? mapPrismaOrderWithItemsToDomain(order) : null
     } catch (error) {
       if (isConnectionError(error)) {

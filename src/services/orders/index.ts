@@ -501,3 +501,5 @@ import { PrismaCatalogRepository } from '@/repositories/prisma/PrismaCatalogRepo
 const orderRepo = new PrismaOrderRepository()
 const catalogRepo = new PrismaCatalogRepository()
 export const orderService = new OrderService(orderRepo, catalogRepo)
+
+export { OrderVoidService, orderVoidService } from './OrderVoidService'

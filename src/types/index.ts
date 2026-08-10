@@ -807,3 +807,55 @@ export interface DiscountCreditSnapshot {
 
 export * from './checkout'
 export * from './payment'
+
+// ─── SALE VOID & RETURN TYPES ───────────────────────────────────────────────
+
+export interface VoidItemInput {
+  orderItemId: string
+  quantityToReturn: number
+}
+
+export interface VoidOrderInput {
+  orderId: string
+  locationId: string
+  cashierUserId: string
+  adminUsernameOrEmail: string
+  adminPasswordInput: string
+  reason: string
+  itemsToReturn: VoidItemInput[]
+  isFullVoid?: boolean
+}
+
+export interface OrderVoidItemRecord {
+  orderItemId: string
+  name: string
+  quantityReturned: number
+  unitPrice: number
+  refundAmount: number
+}
+
+export interface OrderVoidRecord {
+  id: string
+  orderId: string
+  orderNumber: string
+  voidType: 'FULL' | 'PARTIAL'
+  totalRefundAmount: number
+  reason: string
+  cashierUserId: string
+  cashierUserName: string
+  authorizerUserId: string
+  authorizerUserName: string
+  items: OrderVoidItemRecord[]
+  createdAt: string
+}
+
+export interface VoidOrderResult {
+  success: boolean
+  voidRecord: OrderVoidRecord
+  orderStatus: OrderStatus
+  remainingItems: {
+    orderItemId: string
+    name: string
+    quantityRemaining: number
+  }[]
+}

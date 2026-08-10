@@ -26,8 +26,10 @@ import {
   Download,
   Key,
   RefreshCw,
+  RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { VoidOrderModal } from '@/components/orders/VoidOrderModal'
 import type { ReportResult, CashMovementReport } from '@/services'
 
 interface CashDashboardClientProps {
@@ -94,6 +96,7 @@ export default function CashDashboardClient({
   // UX Alerts
   const [globalError, setGlobalError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isVoidModalOpen, setIsVoidModalOpen] = useState(false)
   const [isActionLoading, setIsActionLoading] = useState(false)
 
   // Tab configurations
@@ -452,7 +455,15 @@ export default function CashDashboardClient({
                 </div>
               </div>
             </div>
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              <Button
+                onClick={() => setIsVoidModalOpen(true)}
+                variant="outline"
+                className="w-full rounded-xl border border-rose-200 text-xs font-bold text-rose-600 hover:bg-rose-50"
+              >
+                <RotateCcw className="mr-1 h-3.5 w-3.5 text-rose-500" />
+                Anular Venta
+              </Button>
               <Button
                 onClick={() => setIsMovementModalOpen(true)}
                 variant="outline"
@@ -1684,6 +1695,19 @@ export default function CashDashboardClient({
           </div>
         </div>
       )}
+      {/* Void / Refund Sale Modal */}
+      <VoidOrderModal
+        organizationId={organizationId}
+        locationId={currentLocationId}
+        cashierUserId={activeUserObj?.id || currentUserSession.userId}
+        cashierUserName={activeUserObj?.name || currentUserSession.name}
+        isOpen={isVoidModalOpen}
+        onClose={() => setIsVoidModalOpen(false)}
+        onSuccess={() => {
+          fetchCurrentSession()
+          fetchHistory()
+        }}
+      />
     </div>
   )
 }

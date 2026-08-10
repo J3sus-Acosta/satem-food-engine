@@ -26,6 +26,7 @@ export type Permission =
   | 'inventory.view'
   | 'inventory.manage'
   | 'reports.view'
+  | 'sales.void'
 
 // ─── Role → Permissions Mapping ───────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ const ALL_PERMISSIONS: Permission[] = [
   'inventory.view',
   'inventory.manage',
   'reports.view',
+  'sales.void',
 ]
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {

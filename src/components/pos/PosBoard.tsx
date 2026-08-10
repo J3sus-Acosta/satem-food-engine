@@ -31,11 +31,15 @@ import type {
   DiscountCreditSnapshot,
 } from '@/types'
 import { KitchenTicketPrinter } from '../kitchen/KitchenTicketPrinter'
+import { VoidOrderModal } from '../orders/VoidOrderModal'
 import { getStockCardBgClass } from '@/lib/stock-status'
 
 interface PosBoardProps {
   menu: MenuWithCategories
   locationId?: string
+  organizationId?: string
+  cashierUserId?: string
+  cashierUserName?: string
   initialDiscounts?: DiscountCredit[]
   hasOpenCashSession?: boolean
   canManageCash?: boolean
@@ -61,6 +65,9 @@ interface CartItem {
 export function PosBoard({
   menu,
   locationId,
+  organizationId,
+  cashierUserId,
+  cashierUserName,
   initialDiscounts = [],
   hasOpenCashSession = true,
   canManageCash = true,
@@ -106,6 +113,7 @@ export function PosBoard({
   }, [locationId, initialDiscounts])
 
   // Modals & UI States
+  const [isVoidModalOpen, setIsVoidModalOpen] = useState<boolean>(false)
   const [activeItemForModifiers, setActiveItemForModifiers] = useState<MenuItemWithProduct | null>(
     null
   )
@@ -417,6 +425,13 @@ export function PosBoard({
 
         {/* Quick Nav Links */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsVoidModalOpen(true)}
+            className="flex cursor-pointer items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-500/20 dark:text-rose-400"
+          >
+            <RotateCcw size={16} />
+            Anular Venta
+          </button>
           <a
             href="/dashboard/cash"
             className="bg-muted hover:bg-muted/80 text-foreground border-border/60 flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors"
@@ -1225,6 +1240,16 @@ export function PosBoard({
           </div>
         </div>
       )}
+
+      {/* Void / Refund Sale Modal */}
+      <VoidOrderModal
+        organizationId={organizationId || 'demo-org'}
+        locationId={locationId || menu.locationId}
+        cashierUserId={cashierUserId || 'demo-user'}
+        cashierUserName={cashierUserName || 'Cajero'}
+        isOpen={isVoidModalOpen}
+        onClose={() => setIsVoidModalOpen(false)}
+      />
     </div>
   )
 }

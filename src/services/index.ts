@@ -4,7 +4,7 @@
  */
 
 export { ProductService, productService } from './products'
-export { OrderService, orderService } from './orders'
+export { OrderService, orderService, OrderVoidService, orderVoidService } from './orders'
 export { PaymentService, paymentService } from './payments'
 export { KitchenService, kitchenService } from './kitchen'
 export { InventoryService } from './inventory'

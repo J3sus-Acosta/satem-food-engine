@@ -50,6 +50,9 @@ export default async function PosDashboardPage(props: PageProps) {
     <PosBoard
       menu={menu}
       locationId={locationId}
+      organizationId={session.organizationId}
+      cashierUserId={session.userId}
+      cashierUserName={session.name || session.username || 'Cajero'}
       initialDiscounts={activeDiscounts}
       hasOpenCashSession={hasOpenCashSession}
       canManageCash={canManageCash}

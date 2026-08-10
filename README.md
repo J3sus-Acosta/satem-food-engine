@@ -35,6 +35,10 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 | **FASE 11**  | **Caja / Cierre de Caja**                  | Control de turnos de caja, arqueo físico, flujos de ingresos/egresos, reportes consolidados y reaperturas administrativas.                       | ✅ Completada |
 | **FASE 12A** | **Gestión de Usuarios (Admin)**            | Módulo completo `/dashboard/users` para administrar accesos, roles (ADMIN, MANAGER, CAJERO, etc.), estados y contraseñas de personal interno.    | ✅ Completada |
 | **FASE 12B** | **Cambios Rápidos Menú (Rediseño UX/UI)**  | Módulo `/dashboard/menu` rediseñado a tema claro, optimizado para tablet 10" con controles directos en tabla y agrupado por categorías.          | ✅ Completada |
+| **FASE 13**  | **Descuentos y Beneficios Comerciales**    | Módulo `/dashboard/discounts` para administrar beneficios porcentuales, montos fijos o créditos con snapshots en `Order.metadata`.               | ✅ Completada |
+| **FASE 14**  | **Autenticación Real & RBAC Multi-Tenant** | Autenticación PBKDF2 crypto, cookies HMAC-SHA256, control de acceso RBAC (`src/lib/permissions.ts`), Next.js Proxy y páginas 403.                | ✅ Completada |
+| **FASE 15**  | **Anulación/Devolución de Ventas (Admin)** | Modal de 5 pasos en POS y Caja con verificación de credenciales Admin en tiempo real, devolución de stock, ajuste de turno y auditoría.          | ✅ Completada |
+| **FASE 16**  | **Checkout Web SumUp + Suffix Pedido Web** | Uso exclusivo de SumUp en autopedido público `/menu`, eliminación de Webpay, validación en POS y sufijo `" PEDIDO WEB"` para cocina (KDS).       | ✅ Completada |
 
 ---
 
@@ -113,10 +117,16 @@ src/
 
 El proyecto ha sido promovido a **Release Candidate 1 (RC1)**. En esta etapa se declara estable el núcleo operativo de:
 
-- Carta digital de autopedido mobile-first (`/menu`).
-- Sistema de cola y preparación KDS Kanban (`/dashboard/kitchen`).
-- Sincronización diaria del catálogo mediante Google Sheets y n8n.
-- Pasarelas de cobro inyectables (SumUp y Webpay Plus) con webhooks criptográficos idempotentes.
+- Carta digital de autopedido mobile-first (`/menu`) con pago exclusivo online vía SumUp Cloud API.
+- Sistema de cola y preparación KDS Kanban (`/dashboard/kitchen`) con etiquetado diferenciado `"PEDIDO WEB"`.
+- Módulo POS de caja registradora (`/dashboard/pos`) con campo obligatorio de nombre de cliente y cobro rápido.
+- Anulación y devolución de ventas (total o parcial) autorizada por Administrador en tiempo real sin cerrar turno.
+- Control de caja y cierres de turno (`/dashboard/cash`) con auditoría de movimientos manuales e historia imprimible/exportable.
+- Gestión de usuarios y roles RBAC (`/dashboard/users`) con hashing seguro PBKDF2 y aislamiento multi-tenant.
+- Administración de descuentos y beneficios comerciales (`/dashboard/discounts`) con snapshots de orden.
+- Catálogo maestro (`/dashboard/catalog`) con control de versiones, audit log y recetas de insumos por producto.
+- Sincronización diaria del catálogo operacional mediante Google Sheets y n8n.
+- Pasarelas de cobro inyectables (SumUp Terminal & Cloud API) con webhooks criptográficos idempotentes.
 
 ---
 
