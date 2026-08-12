@@ -5,7 +5,16 @@ import { hasPermission, type Permission } from '@/lib/permissions'
 import type { UserRole } from '@/types'
 
 interface SubNavBarProps {
-  activeTab: 'dashboard' | 'menu' | 'catalog' | 'kitchen' | 'pos' | 'cash' | 'users' | 'discounts'
+  activeTab:
+    | 'dashboard'
+    | 'menu'
+    | 'catalog'
+    | 'kitchen'
+    | 'pos'
+    | 'cash'
+    | 'users'
+    | 'discounts'
+    | 'reports'
   currentUserRole: string
 }
 
@@ -18,6 +27,12 @@ export function SubNavBar({ activeTab, currentUserRole }: SubNavBarProps) {
       label: 'Dashboard',
       href: '/dashboard',
       requiredPermission: null,
+    },
+    {
+      id: 'reports',
+      label: 'Reportes',
+      href: '/dashboard/reports',
+      requiredPermission: 'reports.view' as Permission,
     },
     {
       id: 'menu',

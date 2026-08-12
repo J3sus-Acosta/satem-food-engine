@@ -973,4 +973,363 @@ export class PrismaOrderRepository implements IOrderRepository {
       throw error
     }
   }
+
+  async findActivePublicOrders(
+    locationId: string,
+    options: { orderNumber?: string; phone?: string }
+  ): Promise<OrderWithItems[]> {
+    const activeStatuses: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY']
+    const cleanNum = options.orderNumber ? options.orderNumber.trim().replace(/^#/, '') : ''
+    const phoneDigits = options.phone ? options.phone.replace(/\D/g, '') : ''
+
+    try {
+      const orders = await db.order.findMany({
+        where: {
+          locationId,
+          deletedAt: null,
+          status: { in: activeStatuses },
+        },
+        include: {
+          items: {
+            where: { deletedAt: null },
+            include: {
+              modifiers: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      const mapped = orders.map(mapPrismaOrderWithItemsToDomain)
+
+      return mapped.filter((order) => {
+        let matchesNum = false
+        let matchesPhone = false
+
+        if (cleanNum) {
+          const orderCleanNum = order.orderNumber.replace(/^#/, '')
+          matchesNum =
+            orderCleanNum.toLowerCase() === cleanNum.toLowerCase() || order.id === cleanNum
+        }
+
+        if (phoneDigits) {
+          const meta = (order.metadata as Record<string, unknown> | null) || {}
+          const storedPhone = String(meta.customerPhone || '').replace(/\D/g, '')
+          if (storedPhone) {
+            const minLen = Math.min(storedPhone.length, phoneDigits.length, 8)
+            const storedSuffix = storedPhone.slice(-minLen)
+            const searchSuffix = phoneDigits.slice(-minLen)
+            matchesPhone =
+              storedPhone === phoneDigits ||
+              storedPhone.endsWith(phoneDigits) ||
+              phoneDigits.endsWith(storedPhone) ||
+              (minLen >= 7 && storedSuffix === searchSuffix)
+          }
+        }
+
+        if (cleanNum && phoneDigits) {
+          return matchesNum || matchesPhone
+        }
+        if (cleanNum) return matchesNum
+        if (phoneDigits) return matchesPhone
+        return false
+      })
+    } catch (error) {
+      if (isConnectionError(error)) {
+        console.warn(
+          '[PrismaOrderRepository.findActivePublicOrders] DB connection failed, using in-memory store.'
+        )
+        const inMemoryActive = IN_MEMORY_ORDERS.filter(
+          (o) =>
+            o.locationId === locationId && o.deletedAt === null && activeStatuses.includes(o.status)
+        )
+        return inMemoryActive.filter((order) => {
+          let matchesNum = false
+          let matchesPhone = false
+
+          if (cleanNum) {
+            const orderCleanNum = order.orderNumber.replace(/^#/, '')
+            matchesNum =
+              orderCleanNum.toLowerCase() === cleanNum.toLowerCase() || order.id === cleanNum
+          }
+
+          if (phoneDigits) {
+            const meta = (order.metadata as Record<string, unknown> | null) || {}
+            const storedPhone = String(meta.customerPhone || '').replace(/\D/g, '')
+            if (storedPhone) {
+              matchesPhone = storedPhone.endsWith(phoneDigits) || phoneDigits.endsWith(storedPhone)
+            }
+          }
+
+          if (cleanNum && phoneDigits) return matchesNum || matchesPhone
+          if (cleanNum) return matchesNum
+          if (phoneDigits) return matchesPhone
+          return false
+        })
+      }
+      throw error
+    }
+  }
+
+  async findSalesDetailReport(
+    organizationId: string,
+    locationId: string | undefined,
+    filters: import('@/types').SalesReportQueryFilters
+  ): Promise<import('@/types').SalesReportQueryResult> {
+    const {
+      startDate,
+      endDate,
+      orderNumber,
+      customerSearch,
+      cashierId,
+      status,
+      paymentMethod,
+      discountSearch,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      page = 1,
+      pageSize = 50,
+    } = filters
+
+    const whereClause: Prisma.OrderWhereInput = {
+      deletedAt: null,
+    }
+
+    if (locationId) {
+      whereClause.locationId = locationId
+    } else if (organizationId) {
+      whereClause.location = { organizationId }
+    }
+
+    if (startDate || endDate) {
+      whereClause.createdAt = {}
+      if (startDate) whereClause.createdAt.gte = new Date(startDate)
+      if (endDate) whereClause.createdAt.lte = new Date(endDate)
+    }
+
+    if (orderNumber) {
+      const cleanNum = orderNumber.trim().replace(/^#/, '')
+      whereClause.orderNumber = { contains: cleanNum, mode: 'insensitive' }
+    }
+
+    if (status) {
+      if (Array.isArray(status)) {
+        whereClause.status = { in: status as OrderStatus[] }
+      } else {
+        whereClause.status = status as OrderStatus
+      }
+    }
+
+    if (paymentMethod) {
+      whereClause.payment = {
+        provider: paymentMethod as PaymentProvider,
+      }
+    }
+
+    try {
+      const orders = await db.order.findMany({
+        where: whereClause,
+        include: {
+          location: {
+            include: {
+              organization: true,
+            },
+          },
+          customer: true,
+          payment: true,
+          items: {
+            where: { deletedAt: null },
+            include: {
+              modifiers: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      const allRows: import('@/types').SalesDetailReportRow[] = []
+      let totalGrossSales = 0
+      let totalDiscounts = 0
+      let totalRefunds = 0
+      let totalItemsSold = 0
+      const orderIdsSet = new Set<string>()
+
+      for (const order of orders) {
+        orderIdsSet.add(order.id)
+        const meta = (order.metadata as Record<string, unknown> | null) || {}
+
+        const custName = (order.customer?.name || meta.customerName || 'Cliente General') as string
+        const custPhone = (order.customer?.phone || meta.customerPhone || '-') as string
+        const custEmail = (order.customer?.email || meta.customerEmail || '-') as string
+
+        const cashierName = (meta.cashierUserName ||
+          meta.cashierName ||
+          meta.operatorName ||
+          'Cajero') as string
+        const cashierUserId = (meta.cashierUserId || meta.userId) as string | undefined
+
+        if (cashierId && cashierUserId && cashierUserId !== cashierId) {
+          continue
+        }
+
+        if (customerSearch) {
+          const searchLower = customerSearch.toLowerCase()
+          const matchesName = custName.toLowerCase().includes(searchLower)
+          const matchesPhone = custPhone.toLowerCase().includes(searchLower)
+          const matchesEmail = custEmail.toLowerCase().includes(searchLower)
+          if (!matchesName && !matchesPhone && !matchesEmail) {
+            continue
+          }
+        }
+
+        const discMeta = (meta.discount || meta.discounts || {}) as Record<string, unknown>
+        const discountName = (discMeta.name || meta.discountName || '-') as string
+        const discountType = (discMeta.type || meta.discountType || '-') as string
+        const discountValueType = (discMeta.valueType || meta.discountValueType || '-') as string
+        const discountPercent = Number(discMeta.percent || meta.discountPercent || 0)
+        const creditUsed = Number(meta.creditUsed || 0)
+
+        if (discountSearch) {
+          const discLower = discountSearch.toLowerCase()
+          if (!discountName.toLowerCase().includes(discLower)) {
+            continue
+          }
+        }
+
+        const voidRecord = (meta.voidRecord || meta.voids) as Record<string, unknown> | null
+        const isCancelled = order.status === 'CANCELLED'
+        const voidStatus: import('@/types').SalesDetailReportRow['voidStatus'] = isCancelled
+          ? 'Venta Anulada'
+          : voidRecord
+            ? voidRecord.voidType === 'FULL'
+              ? 'Devolución Total'
+              : 'Devolución Parcial'
+            : 'Venta Original'
+
+        const voidReason = (voidRecord?.reason || order.cancellationReason || '-') as string
+        const voidUser = (voidRecord?.cashierUserName || '-') as string
+        const voidAuthorizer = (voidRecord?.authorizerUserName || '-') as string
+        const voidAmount = Number(
+          voidRecord?.totalRefundAmount || (isCancelled ? order.totalAmount : 0)
+        )
+
+        totalGrossSales += Number(order.subtotal)
+        totalDiscounts += Number(order.discountAmount)
+        totalRefunds += voidAmount
+
+        for (const item of order.items) {
+          totalItemsSold += item.quantity
+
+          let itemVoidQty = 0
+          if (voidRecord && Array.isArray(voidRecord.items)) {
+            const voidItems = voidRecord.items as Record<string, unknown>[]
+            const voidItem = voidItems.find((vi) => vi.orderItemId === item.id)
+            if (voidItem && typeof voidItem.quantityVoided === 'number') {
+              itemVoidQty = voidItem.quantityVoided
+            }
+          } else if (isCancelled) {
+            itemVoidQty = item.quantity
+          }
+
+          const itemRecord = item as Record<string, unknown>
+          const itemSku = typeof itemRecord.sku === 'string' ? itemRecord.sku : '-'
+          const itemCat =
+            typeof itemRecord.categoryName === 'string' ? itemRecord.categoryName : 'General'
+
+          allRows.push({
+            id: item.id,
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            createdAt: order.createdAt,
+            orderStatus: order.status as OrderStatus,
+            locationName: order.location?.name || 'Sucursal',
+            organizationName: order.location?.organization?.name || 'Organización',
+            customerName: custName,
+            customerPhone: custPhone,
+            customerEmail: custEmail,
+            cashierName,
+            productName: item.name,
+            sku: itemSku,
+            categoryName: itemCat,
+            quantity: item.quantity,
+            unitPrice: Number(item.unitPrice),
+            subtotal: Number(item.subtotal),
+            discountName,
+            discountType,
+            discountValueType,
+            discountPercent,
+            discountAmount: Number(order.discountAmount),
+            creditUsed,
+            paymentMethod: order.payment?.provider || 'EFECTIVO',
+            paymentStatus: order.payment?.status || 'PAID',
+            grossAmount: Number(order.subtotal),
+            orderDiscount: Number(order.discountAmount),
+            totalPaid: Number(order.totalAmount),
+            voidStatus,
+            voidQuantity: itemVoidQty,
+            voidAmount,
+            voidReason,
+            voidUser,
+            voidAuthorizer,
+          })
+        }
+      }
+
+      allRows.sort((a, b) => {
+        const key = sortBy as keyof import('@/types').SalesDetailReportRow
+        const valA = a[key]
+        const valB = b[key]
+        let cmp = 0
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          cmp = valA - valB
+        } else if (valA instanceof Date && valB instanceof Date) {
+          cmp = valA.getTime() - valB.getTime()
+        } else {
+          cmp = String(valA || '').localeCompare(String(valB || ''))
+        }
+        return sortOrder === 'desc' ? -cmp : cmp
+      })
+
+      const totalRows = allRows.length
+      const totalPages = Math.ceil(totalRows / pageSize) || 1
+      const startIndex = (page - 1) * pageSize
+      const paginatedRows = allRows.slice(startIndex, startIndex + pageSize)
+
+      const totalNetSales = Math.max(0, totalGrossSales - totalDiscounts - totalRefunds)
+
+      return {
+        summary: {
+          totalOrders: orderIdsSet.size,
+          totalItemsSold,
+          totalGrossSales,
+          totalDiscounts,
+          totalRefunds,
+          totalNetSales,
+        },
+        rows: paginatedRows,
+        pagination: {
+          totalRows,
+          page,
+          pageSize,
+          totalPages,
+        },
+      }
+    } catch (error) {
+      if (isConnectionError(error)) {
+        return {
+          summary: {
+            totalOrders: 0,
+            totalItemsSold: 0,
+            totalGrossSales: 0,
+            totalDiscounts: 0,
+            totalRefunds: 0,
+            totalNetSales: 0,
+          },
+          rows: [],
+          pagination: { totalRows: 0, page: 1, pageSize, totalPages: 1 },
+        }
+      }
+      throw error
+    }
+  }
 }

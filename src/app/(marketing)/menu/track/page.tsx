@@ -38,6 +38,31 @@ function OrderTrackerContent() {
   // Payment state
   const [isInitiatingPayment, setIsInitiatingPayment] = useState(false)
 
+  // Leave Confirmation Modal State
+  const [showLeaveModal, setShowLeaveModal] = useState(false)
+
+  const isPaidOrder = Boolean(
+    order &&
+    (order.status === 'CONFIRMED' ||
+      order.status === 'PREPARING' ||
+      order.status === 'READY' ||
+      order.status === 'DELIVERED' ||
+      order.payment?.status === 'PAID')
+  )
+
+  const handleBackToMenuClick = () => {
+    if (order) {
+      setShowLeaveModal(true)
+    } else {
+      router.push('/menu')
+    }
+  }
+
+  const handleConfirmLeaveToMenu = () => {
+    setShowLeaveModal(false)
+    router.push('/menu')
+  }
+
   // 1. Sync URL parameter and local storage
   useEffect(() => {
     const paramId = searchParams.get('id')
@@ -214,7 +239,8 @@ function OrderTrackerContent() {
       <header className="border-border/40 bg-card/60 sticky top-0 z-20 border-b py-4 backdrop-blur-md select-none">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4">
           <button
-            onClick={() => router.push('/menu')}
+            type="button"
+            onClick={handleBackToMenuClick}
             className="hover:bg-muted text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
           >
             <ChevronLeft size={14} />
@@ -555,6 +581,78 @@ function OrderTrackerContent() {
           </>
         )}
       </div>
+
+      {/* Leave Order Status Confirmation Modal */}
+      {showLeaveModal && order && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="animate-fade-in fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+            onClick={() => setShowLeaveModal(false)}
+          />
+
+          {/* Modal Container */}
+          <div className="bg-card text-foreground border-border/60 animate-scale-in relative z-10 w-full max-w-md space-y-4 overflow-hidden rounded-3xl border p-6 text-center shadow-2xl select-none">
+            <div className="bg-primary/10 text-primary mx-auto flex h-14 w-14 items-center justify-center rounded-2xl">
+              <AlertCircle className="h-7 w-7 stroke-[1.5]" />
+            </div>
+
+            {isPaidOrder ? (
+              /* Scenario 2: Paid Order Confirmation */
+              <div className="space-y-3">
+                <h3 className="text-foreground text-lg font-extrabold tracking-tight">
+                  ¿Estás seguro de volver a la carta?
+                </h3>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Si vuelves a la carta dejarás de ver el estado de este pedido.
+                </p>
+                <div className="space-y-1.5 pt-1">
+                  <p className="text-foreground text-xs font-bold">
+                    Podrás consultar nuevamente el estado utilizando tu número de pedido:
+                  </p>
+                  <div className="bg-muted/50 border-border/50 inline-block rounded-2xl border px-5 py-2">
+                    <span className="text-foreground text-2xl font-black tracking-tight">
+                      #{order.orderNumber.replace(/^#/, '')}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-muted-foreground pt-1 text-[11px] leading-relaxed">
+                  También podrás consultar el estado utilizando el número de teléfono ingresado para
+                  este pedido.
+                </p>
+              </div>
+            ) : (
+              /* Scenario 1: Unpaid / Active Order Confirmation */
+              <div className="space-y-2">
+                <h3 className="text-foreground text-lg font-extrabold tracking-tight">
+                  ¿Estás seguro de volver?
+                </h3>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Si vuelves a la carta dejarás de visualizar el estado actual de tu pedido.
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowLeaveModal(false)}
+                className="border-border/60 text-foreground hover:bg-muted w-full cursor-pointer rounded-xl border py-3 text-xs font-bold tracking-wider uppercase transition-colors"
+              >
+                CANCELAR
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLeaveToMenu}
+                className="bg-foreground text-background hover:bg-foreground/90 w-full cursor-pointer rounded-xl py-3 text-xs font-bold tracking-wider uppercase shadow-md transition-all"
+              >
+                VOLVER A LA CARTA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

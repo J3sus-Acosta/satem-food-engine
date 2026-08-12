@@ -18,3 +18,8 @@ export type { IProductCatalogRepository } from './IProductCatalogRepository'
 export type { ICashRepository } from './ICashRepository'
 export type { IUserRepository } from './IUserRepository'
 export type { IDiscountCreditRepository } from './IDiscountCreditRepository'
+export type {
+  IReportTemplateRepository,
+  CreateReportTemplateInput,
+  UpdateReportTemplateInput,
+} from './IReportTemplateRepository'

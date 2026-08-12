@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Search, Compass } from 'lucide-react'
+import { Search, Compass, PackageSearch } from 'lucide-react'
 import { ProductCard } from './ProductCard'
 import { ProductCustomizer } from './ProductCustomizer'
 import { CartDrawer } from './CartDrawer'
+import { OrderStatusModal } from './OrderStatusModal'
 import { useCustomerCart } from './CustomerCartProvider'
 import type { MenuWithCategories, MenuItemWithProduct } from '@/types'
 
@@ -19,6 +20,7 @@ export function MenuCustomerView({ menu }: MenuCustomerViewProps) {
   const [selectedItem, setSelectedItem] = useState<MenuItemWithProduct | null>(null)
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -143,18 +145,29 @@ export function MenuCustomerView({ menu }: MenuCustomerViewProps) {
               })}
             </nav>
 
-            {/* Search Input */}
-            <div className="relative w-full md:w-72">
-              <span className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <Search size={15} />
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar productos en la carta..."
-                className="bg-muted border-border/50 focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-full border py-2.5 pr-4 pl-9 text-xs transition-all focus:ring-0 focus:outline-none md:text-sm"
-              />
+            {/* Search Input and Order Status lookup button */}
+            <div className="flex w-full flex-col items-center gap-2.5 sm:flex-row md:w-auto">
+              <div className="relative w-full md:w-64">
+                <span className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <Search size={15} />
+                </span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar productos en la carta..."
+                  className="bg-muted border-border/50 focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-full border py-2.5 pr-4 pl-9 text-xs transition-all focus:ring-0 focus:outline-none md:text-sm"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsStatusModalOpen(true)}
+                className="bg-card hover:bg-muted text-foreground border-border/60 flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-4 py-2.5 text-xs font-bold shadow-xs transition-all select-none hover:shadow-sm"
+              >
+                <PackageSearch size={15} className="text-primary shrink-0" />
+                <span>Consultar estado del pedido</span>
+              </button>
             </div>
           </div>
         </div>
@@ -253,6 +266,13 @@ export function MenuCustomerView({ menu }: MenuCustomerViewProps) {
         locationId={menu.locationId}
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
+      />
+
+      {/* Public Order Status Lookup Modal */}
+      <OrderStatusModal
+        locationId={menu.locationId}
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
       />
     </div>
   )

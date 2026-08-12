@@ -3,6 +3,7 @@ import React from 'react'
 import { cashService, reportingService } from '@/services'
 import { TenantResolver } from '@/server/tenant-resolver'
 import type { ReportResult } from '@/services'
+import { PrintCashButton } from './PrintCashButton'
 
 interface PrintPageProps {
   searchParams: Promise<{ sessionId?: string; operatorEmail?: string }>
@@ -186,9 +187,7 @@ export default async function PrintCashPage(props: PrintPageProps) {
         }
       `}</style>
 
-      <button onClick={() => window.print()} className="print-btn">
-        🖨️ Imprimir Reporte
-      </button>
+      <PrintCashButton />
 
       <div className="header">
         <h1>SATEM Food Engine</h1>
@@ -409,10 +408,6 @@ export default async function PrintCashPage(props: PrintPageProps) {
           <div>Firma Supervisor / Administrador</div>
         </div>
       </div>
-
-      <script
-        dangerouslySetInnerHTML={{ __html: 'window.onload = function() { window.print(); };' }}
-      />
     </div>
   )
 }

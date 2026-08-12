@@ -216,6 +216,7 @@ model Organization {
   cashSessions     CashSession[]
   cashAudits       CashAudit[]
   discountCredits  DiscountCredit[]
+  reportTemplates  ReportTemplate[]
 
   @@index([isActive])
   @@map("organizations")
@@ -264,6 +265,7 @@ model Location {
   cashAudits     CashAudit[]
   users          User[]          @relation("LocationUsers")
   discountCredits DiscountCredit[]
+  reportTemplates ReportTemplate[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -979,6 +981,7 @@ model User {
   cashSessions     CashSession[]     @relation("SessionOperator")
   reopenedSessions CashSession[]     @relation("SessionReopener")
   cashAudits       CashAudit[]
+  reportTemplates  ReportTemplate[]
 
   @@index([organizationId])
   @@index([locationId])
@@ -1146,4 +1149,34 @@ model DiscountCredit {
   @@index([organizationId, isActive])
   @@index([locationId])
   @@map("discount_credits")
+}
+
+// ─── REPORT TEMPLATES (Fase 17) ────────────────────────────────────────────────
+
+/// Plantilla de reporte personalizado guardada por un usuario u organización.
+model ReportTemplate {
+  id             String       @id @default(cuid())
+  organizationId String       @map("organization_id")
+  locationId     String?      @map("location_id")
+  userId         String       @map("user_id")
+  name           String
+  description    String?
+  reportType     String       @default("SALES_DETAIL") @map("report_type")
+  isShared       Boolean      @default(false) @map("is_shared")
+  
+  /// Configuración JSON estructurada (visibleColumns, columnOrder, filters, sortBy, sortOrder)
+  configuration  Json         @map("configuration")
+
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  deletedAt      DateTime?    @map("deleted_at")
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  location     Location?    @relation(fields: [locationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([userId])
+  @@map("report_templates")
 }

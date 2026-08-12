@@ -31,6 +31,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
   // Staged states
   const [isEnteringDetails, setIsEnteringDetails] = useState(false)
   const [orderConfirmed, setOrderConfirmed] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   // Checkout Form states
   const [customerName, setCustomerName] = useState('')
@@ -40,6 +41,28 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
   const [createdOrderNumber, setCreatedOrderNumber] = useState('')
 
   if (!isOpen) return null
+
+  const handleRequestClose = () => {
+    if (items.length > 0 && !orderConfirmed) {
+      setShowConfirmModal(true)
+    } else {
+      onClose()
+    }
+  }
+
+  const handleConfirmLeave = () => {
+    setShowConfirmModal(false)
+    clearCart()
+    setIsEnteringDetails(false)
+    setCustomerName('')
+    setCustomerPhone('')
+    setErrorMsg('')
+    onClose()
+  }
+
+  const handleCancelLeave = () => {
+    setShowConfirmModal(false)
+  }
 
   const handleConfirmOrder = () => {
     setIsEnteringDetails(true)
@@ -130,7 +153,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
       {/* Backdrop */}
       <div
         className="animate-fade-in fixed inset-0 bg-black/65 backdrop-blur-xs transition-opacity duration-300"
-        onClick={orderConfirmed ? handleSuccessClose : onClose}
+        onClick={orderConfirmed ? handleSuccessClose : handleRequestClose}
       />
 
       {/* Drawer Panel */}
@@ -181,7 +204,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
                 <h3 className="text-sm font-extrabold tracking-wide uppercase">Mis Datos</h3>
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleRequestClose}
                   className="hover:bg-muted text-muted-foreground cursor-pointer rounded-lg p-2 transition-colors"
                   aria-label="Cerrar"
                 >
@@ -278,12 +301,20 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
           <>
             {/* Header */}
             <div className="border-border/60 flex items-center justify-between border-b p-5 select-none md:p-6">
+              <button
+                type="button"
+                onClick={handleRequestClose}
+                className="hover:bg-muted text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+              >
+                <ArrowLeft size={14} />
+                <span>Volver</span>
+              </button>
               <div className="flex items-center gap-2">
                 <ShoppingCart className="text-primary h-5 w-5" />
                 <h3 className="text-base font-extrabold md:text-lg">Mi Pedido</h3>
               </div>
               <button
-                onClick={onClose}
+                onClick={handleRequestClose}
                 className="hover:bg-muted text-muted-foreground cursor-pointer rounded-lg p-2 transition-colors"
                 aria-label="Cerrar carrito"
               >
@@ -409,6 +440,43 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
           </>
         )}
       </div>
+
+      {/* Leave Cart Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="animate-fade-in fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity"
+            onClick={handleCancelLeave}
+          />
+          <div className="bg-card text-foreground border-border/60 animate-scale-in relative z-10 w-full max-w-sm space-y-4 overflow-hidden rounded-2xl border p-6 text-center shadow-2xl">
+            <div className="bg-destructive/10 text-destructive mx-auto flex h-12 w-12 items-center justify-center rounded-full">
+              <AlertCircle className="h-6 w-6 stroke-[1.5]" />
+            </div>
+            <div className="space-y-1.5 select-none">
+              <h3 className="text-base font-extrabold tracking-tight">¿Estás seguro de volver?</h3>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Se perderán los artículos del carrito de compras.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelLeave}
+                className="border-border/60 text-foreground hover:bg-muted w-full cursor-pointer rounded-xl border py-3 text-xs font-bold tracking-wider uppercase transition-colors"
+              >
+                CANCELAR
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLeave}
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground w-full cursor-pointer rounded-xl py-3 text-xs font-bold tracking-wider uppercase shadow-sm transition-colors"
+              >
+                VOLVER
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

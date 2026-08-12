@@ -11,6 +11,7 @@ import type {
   MenuItemWithProduct,
   Modifier,
   CreateCustomerOrderInput,
+  PublicOrderStatusResult,
 } from '@/types'
 
 /**
@@ -491,6 +492,61 @@ export class OrderService {
 
     // 5. Retrieve final fully loaded order with its items
     return this.getOrder(order.id)
+  }
+
+  /**
+   * Consultas públicas de estado de pedidos activos en cocina por número de pedido o teléfono.
+   * Filtra estrictamente en backend pedidos activos (PENDING, CONFIRMED, PREPARING, READY),
+   * omitiendo borradores, pedidos entregados o cancelados y sanitizando datos sensibles.
+   */
+  async lookupPublicOrderStatus(
+    locationId: string,
+    query: { orderNumber?: string; phone?: string }
+  ): Promise<PublicOrderStatusResult[]> {
+    if (!query.orderNumber && !query.phone) {
+      throw new ValidationError('Debe ingresar un número de pedido o número de teléfono.')
+    }
+
+    const activeOrders = await this.orderRepo.findActivePublicOrders(locationId, query)
+
+    const statusLabels: Record<string, { label: string; description: string }> = {
+      PENDING: {
+        label: 'PEDIDO RECIBIDO',
+        description: 'Hemos recibido tu pedido y está en cola para ser procesado.',
+      },
+      CONFIRMED: {
+        label: 'CONFIRMADO',
+        description: 'Tu pedido fue verificado y está esperando turno en cocina.',
+      },
+      PREPARING: {
+        label: 'EN PREPARACIÓN',
+        description: 'Tu pedido está siendo preparado por nuestra cocina.',
+      },
+      READY: {
+        label: 'LISTO PARA RETIRAR',
+        description: '¡Tu pedido está listo! Puedes acercarte al mostrador a retirarlo.',
+      },
+    }
+
+    return activeOrders.map((o) => {
+      const statusMeta = statusLabels[o.status] || {
+        label: o.status,
+        description: 'Tu pedido está activo en cocina.',
+      }
+
+      return {
+        orderNumber: o.orderNumber,
+        status: o.status,
+        statusLabel: statusMeta.label,
+        statusDescription: statusMeta.description,
+        createdAt: o.createdAt,
+        items: o.items.map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          modifiers: i.modifiers.map((m) => m.name),
+        })),
+      }
+    })
   }
 }
 

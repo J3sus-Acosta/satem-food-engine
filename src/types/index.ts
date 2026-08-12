@@ -859,3 +859,154 @@ export interface VoidOrderResult {
     quantityRemaining: number
   }[]
 }
+
+// ─── PUBLIC ORDER STATUS LOOKUP DOMAIN ───────────────────────────────────────
+
+export interface PublicOrderStatusItem {
+  name: string
+  quantity: number
+  modifiers: string[]
+}
+
+export interface PublicOrderStatusResult {
+  orderNumber: string
+  status: OrderStatus
+  statusLabel: string
+  statusDescription: string
+  createdAt: Date
+  items: PublicOrderStatusItem[]
+}
+
+// ─── CUSTOM REPORTING DOMAIN (Fase 17) ────────────────────────────────────────
+
+export type SalesDetailReportColumnKey =
+  | 'orderNumber'
+  | 'orderId'
+  | 'createdAt'
+  | 'orderStatus'
+  | 'locationName'
+  | 'organizationName'
+  | 'customerName'
+  | 'customerPhone'
+  | 'customerEmail'
+  | 'cashierName'
+  | 'productName'
+  | 'sku'
+  | 'categoryName'
+  | 'quantity'
+  | 'unitPrice'
+  | 'subtotal'
+  | 'discountName'
+  | 'discountType'
+  | 'discountValueType'
+  | 'discountPercent'
+  | 'discountAmount'
+  | 'creditUsed'
+  | 'paymentMethod'
+  | 'paymentStatus'
+  | 'grossAmount'
+  | 'orderDiscount'
+  | 'totalPaid'
+  | 'voidStatus'
+  | 'voidQuantity'
+  | 'voidAmount'
+  | 'voidReason'
+  | 'voidUser'
+  | 'voidAuthorizer'
+
+export interface SalesDetailReportRow {
+  id: string
+  orderId: string
+  orderNumber: string
+  createdAt: Date
+  orderStatus: OrderStatus
+  locationName: string
+  organizationName: string
+  customerName: string
+  customerPhone: string
+  customerEmail: string
+  cashierName: string
+  productName: string
+  sku: string
+  categoryName: string
+  quantity: number
+  unitPrice: number
+  subtotal: number
+  discountName: string
+  discountType: string
+  discountValueType: string
+  discountPercent: number
+  discountAmount: number
+  creditUsed: number
+  paymentMethod: string
+  paymentStatus: string
+  grossAmount: number
+  orderDiscount: number
+  totalPaid: number
+  voidStatus: 'Venta Original' | 'Devolución Parcial' | 'Devolución Total' | 'Venta Anulada'
+  voidQuantity: number
+  voidAmount: number
+  voidReason: string
+  voidUser: string
+  voidAuthorizer: string
+}
+
+export interface SalesReportSummary {
+  totalOrders: number
+  totalItemsSold: number
+  totalGrossSales: number
+  totalDiscounts: number
+  totalRefunds: number
+  totalNetSales: number
+}
+
+export interface SalesReportQueryFilters {
+  startDate?: string
+  endDate?: string
+  orderNumber?: string
+  customerSearch?: string
+  cashierId?: string
+  status?: string
+  paymentMethod?: string
+  discountSearch?: string
+  locationId?: string
+  organizationId?: string
+  sortBy?: SalesDetailReportColumnKey
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
+export interface SalesReportQueryResult {
+  summary: SalesReportSummary
+  rows: SalesDetailReportRow[]
+  pagination: {
+    totalRows: number
+    page: number
+    pageSize: number
+    totalPages: number
+  }
+}
+
+export interface ReportTemplateConfiguration {
+  visibleColumns: SalesDetailReportColumnKey[]
+  columnOrder: SalesDetailReportColumnKey[]
+  filters: SalesReportQueryFilters
+  sortBy?: SalesDetailReportColumnKey
+  sortOrder?: 'asc' | 'desc'
+  reportType: string
+}
+
+export interface ReportTemplateDTO {
+  id: string
+  organizationId: string
+  locationId?: string | null
+  userId: string
+  name: string
+  description?: string | null
+  reportType: string
+  isShared: boolean
+  configuration: ReportTemplateConfiguration
+  createdAt: Date
+  updatedAt: Date
+}

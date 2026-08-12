@@ -80,6 +80,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'kitchen.view',
     'catalog.view',
     'inventory.view',
+    'reports.view',
   ],
   KITCHEN: ['kitchen.view'],
 }

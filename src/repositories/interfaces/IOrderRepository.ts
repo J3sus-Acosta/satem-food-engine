@@ -134,4 +134,22 @@ export interface IOrderRepository {
    * List orders with full items, modifiers, and payment details.
    */
   findDetailedOrders(locationId: string, filters?: OrderFilters): Promise<OrderDetailed[]>
+
+  /**
+   * Retrieves active orders (PENDING, CONFIRMED, PREPARING, READY) for public status lookup
+   * matching orderNumber or phone.
+   */
+  findActivePublicOrders(
+    locationId: string,
+    options: { orderNumber?: string; phone?: string }
+  ): Promise<OrderWithItems[]>
+
+  /**
+   * Queries sales detail line-items with filters, summaries, and pagination for Custom Reports.
+   */
+  findSalesDetailReport(
+    organizationId: string,
+    locationId: string | undefined,
+    filters: import('@/types').SalesReportQueryFilters
+  ): Promise<import('@/types').SalesReportQueryResult>
 }

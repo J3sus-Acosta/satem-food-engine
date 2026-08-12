@@ -16,3 +16,4 @@ export { PrismaProductCatalogRepository } from './PrismaProductCatalogRepository
 export { PrismaCashRepository } from './PrismaCashRepository'
 export { PrismaUserRepository } from './PrismaUserRepository'
 export { PrismaDiscountCreditRepository } from './PrismaDiscountCreditRepository'
+export { PrismaReportTemplateRepository } from './PrismaReportTemplateRepository'

@@ -397,6 +397,7 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 14. El flujo de compra pública en `/menu` debe utilizar exclusivamente `PaymentProvider.SUMUP` para los cobros online. Queda prohibido mostrar selectores de métodos de pago en el checkout público o derivar transacciones a pasarelas secundarias deshabilitadas.
 15. Todo pedido generado desde el menú digital público en `/menu` debe concatenar automáticamente el sufijo `" PEDIDO WEB"` al nombre ingresado por el cliente (`customerName`) tanto en la creación del pedido como en el carrito, garantizando la correcta diferenciación visual en la Pantalla de Cocina (KDS).
 16. El cobro de pedidos en el módulo POS (`/dashboard/pos`) requiere obligatoriamente ingresar el nombre del cliente (`customerName`) en el panel lateral antes de habilitar el botón de cobro.
+17. El módulo de Reportes Personalizados (`/dashboard/reports`) debe permitir la consulta desglosada a nivel de ítems de venta, el filtrado dinámico, la ordenación por columnas, la personalización de visibilidad de columnas, la gestión de plantillas guardadas (`ReportTemplate`) y la generación de archivos Excel binarios (`.xlsx`) nativos mediante `ExcelJS` con hojas 'Detalle de Ventas' y 'Resumen Ejecutivo' respetando los filtros y columnas configuradas.
 
 ---
 

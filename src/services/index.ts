@@ -96,3 +96,22 @@ export {
   DuplicateDiscountCreditService,
   DeleteDiscountCreditService,
 } from './discounts'
+
+// Custom Reporting Services (Fase 17)
+import { PrismaOrderRepository } from '@/repositories/prisma/PrismaOrderRepository'
+import { PrismaReportTemplateRepository } from '@/repositories/prisma/PrismaReportTemplateRepository'
+import { CustomReportService } from './reports/CustomReportService'
+
+const customReportOrderRepo = new PrismaOrderRepository()
+const customReportTemplateRepo = new PrismaReportTemplateRepository()
+
+export const customReportService = new CustomReportService(
+  customReportOrderRepo,
+  customReportTemplateRepo
+)
+
+export {
+  CustomReportService,
+  COLUMN_LABELS,
+  DEFAULT_VISIBLE_COLUMNS,
+} from './reports/CustomReportService'
