@@ -110,8 +110,13 @@ export const customReportService = new CustomReportService(
   customReportTemplateRepo
 )
 
-export {
-  CustomReportService,
-  COLUMN_LABELS,
-  DEFAULT_VISIBLE_COLUMNS,
-} from './reports/CustomReportService'
+export { CustomReportService } from './reports/CustomReportService'
+export { COLUMN_LABELS, DEFAULT_VISIBLE_COLUMNS } from '@/config/reports'
+
+// Location Management Services (Fase Sucursales)
+import { PrismaLocationRepository } from '@/repositories/prisma/PrismaLocationRepository'
+import { LocationService } from './locations/LocationService'
+
+const locationRepo = new PrismaLocationRepository()
+export const locationService = new LocationService(locationRepo)
+export { LocationService }

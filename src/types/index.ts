@@ -59,7 +59,7 @@ export type IngredientUnit = 'KG' | 'G' | 'L' | 'ML' | 'UNITS'
 
 export type StockMovementType = 'PURCHASE' | 'SALE' | 'WASTE' | 'ADJUSTMENT' | 'RETURN'
 
-export type UserRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'CASHIER' | 'KITCHEN'
+export type UserRole = 'SUPERADMIN' | 'OWNER' | 'ADMIN' | 'MANAGER' | 'CASHIER' | 'KITCHEN'
 
 export type LoyaltyTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM'
 
@@ -1009,4 +1009,46 @@ export interface ReportTemplateDTO {
   configuration: ReportTemplateConfiguration
   createdAt: Date
   updatedAt: Date
+}
+
+// ─── LOCATION DOMAIN (Sucursales) ─────────────────────────────────────────────
+
+export interface LocationDTO {
+  id: string
+  organizationId: string
+  name: string
+  type: LocationType
+  slug: string
+  address: string | null
+  city: string | null
+  country: string
+  timezone: string
+  phone: string | null
+  currency: string
+  taxRate: number
+  isActive: boolean
+  operatingHours: Record<string, unknown>
+  settings: Record<string, unknown>
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date | null
+}
+
+export interface CreateLocationInput {
+  organizationId: string
+  name: string
+  type?: LocationType
+  address?: string | null
+  city?: string | null
+  phone?: string | null
+  isActive?: boolean
+}
+
+export interface UpdateLocationInput {
+  name?: string
+  type?: LocationType
+  address?: string | null
+  city?: string | null
+  phone?: string | null
+  isActive?: boolean
 }

@@ -1,4 +1,3 @@
-import React from 'react'
 import {
   BookOpen,
   ChefHat,
@@ -8,6 +7,8 @@ import {
   LayoutDashboard,
   Users,
   Tag,
+  FileSpreadsheet,
+  Building2,
 } from 'lucide-react'
 import { getSession } from '@/lib/auth-server'
 import { hasPermission, type Permission } from '@/lib/permissions'
@@ -25,6 +26,26 @@ export default async function DashboardHubPage() {
   const role = (session?.role || 'CASHIER') as UserRole
 
   const modules = [
+    {
+      title: 'Administración de Sucursales',
+      description:
+        'Gestión de locales, creación, actualización y activación/desactivación de sucursales.',
+      href: '/dashboard/locations',
+      icon: Building2,
+      color: 'from-indigo-600 to-blue-500',
+      badge: 'Sucursales',
+      requiredPermission: 'locations.view' as Permission,
+    },
+    {
+      title: 'Reportes Personalizados',
+      description:
+        'Análisis de ventas desglosado, filtros dinámicos, plantillas y exportación a Excel (.xlsx).',
+      href: '/dashboard/reports',
+      icon: FileSpreadsheet,
+      color: 'from-emerald-600 to-teal-500',
+      badge: 'Analítica',
+      requiredPermission: 'reports.view' as Permission,
+    },
     {
       title: 'Cambios Rápidos Menú',
       description: 'Control de disponibilidad diaria, precios del día y stock operacional rápido.',

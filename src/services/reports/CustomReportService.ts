@@ -1,6 +1,7 @@
 import 'server-only'
 
 import ExcelJS from 'exceljs'
+import { COLUMN_LABELS, DEFAULT_VISIBLE_COLUMNS } from '@/config/reports'
 import type { IOrderRepository, IReportTemplateRepository } from '@/repositories'
 import type {
   SalesReportQueryFilters,
@@ -10,53 +11,7 @@ import type {
   ReportTemplateConfiguration,
 } from '@/types'
 
-export const COLUMN_LABELS: Record<SalesDetailReportColumnKey, string> = {
-  orderNumber: 'Número de Pedido',
-  orderId: 'ID Pedido',
-  createdAt: 'Fecha / Hora',
-  orderStatus: 'Estado Pedido',
-  locationName: 'Local',
-  organizationName: 'Organización',
-  customerName: 'Cliente',
-  customerPhone: 'Teléfono',
-  customerEmail: 'Email',
-  cashierName: 'Cajero / Usuario',
-  productName: 'Producto',
-  sku: 'SKU',
-  categoryName: 'Categoría',
-  quantity: 'Cantidad',
-  unitPrice: 'Precio Unitario',
-  subtotal: 'Subtotal Producto',
-  discountName: 'Nombre Descuento',
-  discountType: 'Tipo Descuento',
-  discountValueType: 'Modalidad Descuento',
-  discountPercent: 'Porcentaje %',
-  discountAmount: 'Monto Descontado',
-  creditUsed: 'Crédito Usado',
-  paymentMethod: 'Método de Pago',
-  paymentStatus: 'Estado Pago',
-  grossAmount: 'Monto Bruto Pedido',
-  orderDiscount: 'Descuento Pedido',
-  totalPaid: 'Total Pagado Pedido',
-  voidStatus: 'Estado Devolución / Anulación',
-  voidQuantity: 'Cant. Devuelta',
-  voidAmount: 'Monto Devuelto',
-  voidReason: 'Motivo Devolución',
-  voidUser: 'Usuario Operación',
-  voidAuthorizer: 'Autorizador Administrador',
-}
-
-export const DEFAULT_VISIBLE_COLUMNS: SalesDetailReportColumnKey[] = [
-  'createdAt',
-  'orderNumber',
-  'customerName',
-  'cashierName',
-  'productName',
-  'quantity',
-  'discountAmount',
-  'paymentMethod',
-  'totalPaid',
-]
+export { COLUMN_LABELS, DEFAULT_VISIBLE_COLUMNS }
 
 export class CustomReportService {
   constructor(

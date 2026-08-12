@@ -15,6 +15,7 @@ interface SubNavBarProps {
     | 'users'
     | 'discounts'
     | 'reports'
+    | 'locations'
   currentUserRole: string
 }
 
@@ -27,6 +28,12 @@ export function SubNavBar({ activeTab, currentUserRole }: SubNavBarProps) {
       label: 'Dashboard',
       href: '/dashboard',
       requiredPermission: null,
+    },
+    {
+      id: 'locations',
+      label: 'Sucursales',
+      href: '/dashboard/locations',
+      requiredPermission: 'locations.view' as Permission,
     },
     {
       id: 'reports',

@@ -401,6 +401,7 @@ export default function UserDashboardClient({
               className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 outline-none"
             >
               <option value="all">Rol: Todos los roles</option>
+              <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
               <option value="OWNER">Propietario (OWNER)</option>
               <option value="ADMIN">Administrador (ADMIN)</option>
               <option value="MANAGER">Gerente (MANAGER)</option>
@@ -458,7 +459,9 @@ export default function UserDashboardClient({
                   <th className="px-6 py-4">Estado</th>
                   <th className="px-6 py-4">Último Acceso</th>
                   <th className="px-6 py-4">Fecha Creación</th>
-                  {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
+                  {(currentUserRole === 'ADMIN' ||
+                    currentUserRole === 'OWNER' ||
+                    currentUserRole === 'SUPERADMIN') && (
                     <th className="px-6 py-4 text-right">Acciones</th>
                   )}
                 </tr>
@@ -471,29 +474,33 @@ export default function UserDashboardClient({
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          user.role === 'OWNER'
-                            ? 'border border-purple-200 bg-purple-100 text-purple-700'
-                            : user.role === 'ADMIN'
-                              ? 'bg-slate-900 text-white'
-                              : user.role === 'MANAGER'
-                                ? 'border border-blue-200 bg-blue-100 text-blue-700'
-                                : user.role === 'KITCHEN'
-                                  ? 'border border-orange-200 bg-orange-100 text-orange-700'
-                                  : 'border border-emerald-200 bg-emerald-100 text-emerald-700'
+                          user.role === 'SUPERADMIN'
+                            ? 'border border-indigo-200 bg-indigo-100 text-indigo-700'
+                            : user.role === 'OWNER'
+                              ? 'border border-purple-200 bg-purple-100 text-purple-700'
+                              : user.role === 'ADMIN'
+                                ? 'bg-slate-900 text-white'
+                                : user.role === 'MANAGER'
+                                  ? 'border border-blue-200 bg-blue-100 text-blue-700'
+                                  : user.role === 'KITCHEN'
+                                    ? 'border border-orange-200 bg-orange-100 text-orange-700'
+                                    : 'border border-emerald-200 bg-emerald-100 text-emerald-700'
                         }`}
                       >
                         <Shield className="h-3 w-3" />
-                        {user.role === 'OWNER'
-                          ? 'Propietario'
-                          : user.role === 'ADMIN'
-                            ? 'Administrador'
-                            : user.role === 'MANAGER'
-                              ? 'Gerente'
-                              : user.role === 'CASHIER'
-                                ? 'Cajero'
-                                : user.role === 'KITCHEN'
-                                  ? 'Cocina'
-                                  : user.role}
+                        {user.role === 'SUPERADMIN'
+                          ? 'Super Administrador'
+                          : user.role === 'OWNER'
+                            ? 'Propietario'
+                            : user.role === 'ADMIN'
+                              ? 'Administrador'
+                              : user.role === 'MANAGER'
+                                ? 'Gerente'
+                                : user.role === 'CASHIER'
+                                  ? 'Cajero'
+                                  : user.role === 'KITCHEN'
+                                    ? 'Cocina'
+                                    : user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-600">
@@ -678,6 +685,7 @@ export default function UserDashboardClient({
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 focus:outline-none"
                   >
+                    <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
                     <option value="OWNER">Propietario (OWNER)</option>
                     <option value="ADMIN">Administrador (ADMIN)</option>
                     <option value="MANAGER">Gerente (MANAGER)</option>
@@ -803,6 +811,7 @@ export default function UserDashboardClient({
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 focus:outline-none"
                   >
+                    <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
                     <option value="OWNER">Propietario (OWNER)</option>
                     <option value="ADMIN">Administrador (ADMIN)</option>
                     <option value="MANAGER">Gerente (MANAGER)</option>

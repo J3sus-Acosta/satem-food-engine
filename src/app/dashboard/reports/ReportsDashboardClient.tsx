@@ -25,7 +25,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { SubNavBar } from '@/components/layout/SubNavBar'
-import { COLUMN_LABELS, DEFAULT_VISIBLE_COLUMNS } from '@/services/reports/CustomReportService'
+import { COLUMN_LABELS, DEFAULT_VISIBLE_COLUMNS } from '@/config/reports'
 import type {
   SalesDetailReportColumnKey,
   SalesDetailReportRow,

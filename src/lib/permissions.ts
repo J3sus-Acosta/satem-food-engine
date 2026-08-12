@@ -27,6 +27,8 @@ export type Permission =
   | 'inventory.manage'
   | 'reports.view'
   | 'sales.void'
+  | 'locations.view'
+  | 'locations.manage'
 
 // ─── Role → Permissions Mapping ───────────────────────────────────────────────
 
@@ -54,11 +56,18 @@ const ALL_PERMISSIONS: Permission[] = [
   'inventory.manage',
   'reports.view',
   'sales.void',
+  'locations.view',
+  'locations.manage',
 ]
 
+const OWNER_ADMIN_PERMISSIONS = ALL_PERMISSIONS.filter(
+  (p) => p !== 'locations.view' && p !== 'locations.manage'
+)
+
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  OWNER: ALL_PERMISSIONS,
-  ADMIN: ALL_PERMISSIONS,
+  SUPERADMIN: ALL_PERMISSIONS,
+  OWNER: OWNER_ADMIN_PERMISSIONS,
+  ADMIN: OWNER_ADMIN_PERMISSIONS,
   MANAGER: [
     'users.view',
     'discounts.view',
@@ -70,7 +79,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'catalog.manage',
     'inventory.view',
     'inventory.manage',
-    'reports.view',
   ],
   CASHIER: [
     'discounts.view',
@@ -80,7 +88,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'kitchen.view',
     'catalog.view',
     'inventory.view',
-    'reports.view',
   ],
   KITCHEN: ['kitchen.view'],
 }
@@ -89,11 +96,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
 /**
  * Returns true if the given role has the specified permission.
+ * SUPERADMIN has global bypass/access to all permissions.
  *
  * @param role - The user's role
  * @param permission - The permission key to check
  */
 export function hasPermission(role: UserRole, permission: Permission): boolean {
+  if (role === 'SUPERADMIN') return true
   const permissions = ROLE_PERMISSIONS[role]
   if (!permissions) return false
   return permissions.includes(permission)
@@ -101,11 +110,13 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
 
 /**
  * Returns true if the given role is in the list of allowed roles.
+ * SUPERADMIN is allowed globally.
  *
  * @param role - The user's role
  * @param allowedRoles - List of roles that are permitted
  */
 export function isAllowedRole(role: UserRole, allowedRoles: UserRole[]): boolean {
+  if (role === 'SUPERADMIN') return true
   return allowedRoles.includes(role)
 }
 
@@ -147,6 +158,7 @@ export function requireRole(session: SessionPayload, allowedRoles: UserRole[]): 
  * Human-readable label for each role (Spanish, for display in the UI).
  */
 export const ROLE_LABELS: Record<UserRole, string> = {
+  SUPERADMIN: 'Super Administrador',
   OWNER: 'Propietario',
   ADMIN: 'Administrador',
   MANAGER: 'Gerente',
@@ -158,6 +170,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
  * Description for each role (Spanish, for display in role selectors).
  */
 export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  SUPERADMIN: 'Administrador global con acceso a toda la plataforma SaaS y sucursales',
   OWNER: 'Acceso total a toda la organización y configuración del sistema',
   ADMIN: 'Acceso completo: usuarios, catálogo, caja, POS, descuentos e inventario',
   MANAGER: 'Acceso a catálogo, inventario, POS y reportes. Sin gestión de usuarios',

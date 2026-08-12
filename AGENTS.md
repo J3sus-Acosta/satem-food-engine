@@ -398,6 +398,7 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 15. Todo pedido generado desde el menú digital público en `/menu` debe concatenar automáticamente el sufijo `" PEDIDO WEB"` al nombre ingresado por el cliente (`customerName`) tanto en la creación del pedido como en el carrito, garantizando la correcta diferenciación visual en la Pantalla de Cocina (KDS).
 16. El cobro de pedidos en el módulo POS (`/dashboard/pos`) requiere obligatoriamente ingresar el nombre del cliente (`customerName`) en el panel lateral antes de habilitar el botón de cobro.
 17. El módulo de Reportes Personalizados (`/dashboard/reports`) debe permitir la consulta desglosada a nivel de ítems de venta, el filtrado dinámico, la ordenación por columnas, la personalización de visibilidad de columnas, la gestión de plantillas guardadas (`ReportTemplate`) y la generación de archivos Excel binarios (`.xlsx`) nativos mediante `ExcelJS` con hojas 'Detalle de Ventas' y 'Resumen Ejecutivo' respetando los filtros y columnas configuradas.
+18. El módulo de Administración de Sucursales (`/dashboard/locations`) debe reutilizar la entidad `Location` existente en Prisma sin crear tablas paralelas ni realizar eliminaciones físicas. La desactivación cambia `isActive = false` conservando todo el historial operativo. El acceso está estrictamente reservado de forma exclusiva al rol `SUPERADMIN` mediante los permisos `locations.view` y `locations.manage` tanto en UI como en la capa API, otorgando alcance global sobre cualquier organización.
 
 ---
 

@@ -23,3 +23,4 @@ export type {
   CreateReportTemplateInput,
   UpdateReportTemplateInput,
 } from './IReportTemplateRepository'
+export type { ILocationRepository } from './ILocationRepository'

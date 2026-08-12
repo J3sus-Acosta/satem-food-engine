@@ -71,6 +71,28 @@ async function main() {
   // 3. USUARIOS (Personal Interno)
   console.info('3. Creando Usuarios y Asignaciones...')
   const demoPasswordHash = hashPassword('Admin@123')
+  const superAdminPasswordHash = hashPassword('ADMIN@2050')
+
+  const userSuperAdmin = await db.user.upsert({
+    where: { email: 'superadmin@satem.cl' },
+    update: {
+      name: 'Admin Satem',
+      role: 'SUPERADMIN',
+      isActive: true,
+      username: 'superadmin',
+      passwordHash: superAdminPasswordHash,
+    },
+    create: {
+      organizationId: org.id,
+      email: 'superadmin@satem.cl',
+      name: 'Admin Satem',
+      role: 'SUPERADMIN',
+      isActive: true,
+      username: 'superadmin',
+      passwordHash: superAdminPasswordHash,
+    },
+  })
+  console.info(`✓ Super Admin: ${userSuperAdmin.name} (@${userSuperAdmin.username})`)
 
   await db.user.upsert({
     where: { email: 'admin@satem.cl' },

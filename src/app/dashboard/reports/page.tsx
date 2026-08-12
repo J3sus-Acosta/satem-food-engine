@@ -4,6 +4,8 @@ import { requirePermission } from '@/lib/permissions'
 import { db } from '@/server/db'
 import { ReportsDashboardClient } from './ReportsDashboardClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ReportsPage() {
   const session = await requireAuth()
   requirePermission(session, 'reports.view')

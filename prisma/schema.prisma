@@ -153,11 +153,12 @@ enum StockMovementType {
 
 /// Rol del usuario (personal interno)
 enum UserRole {
-  OWNER   // Dueño: acceso total a toda la organización
-  ADMIN   // Administrador: acceso a todos los locales
-  MANAGER // Gerente: acceso a locales asignados, sin gestión de usuarios
-  CASHIER // Cajero: pedidos, pagos y caja
-  KITCHEN // Cocina: solo vista de tickets
+  SUPERADMIN // Administrador global de la plataforma SaaS
+  OWNER      // Dueño: acceso total a toda la organización
+  ADMIN      // Administrador: acceso a todos los locales
+  MANAGER    // Gerente: acceso a locales asignados, sin gestión de usuarios
+  CASHIER    // Cajero: pedidos, pagos y caja
+  KITCHEN    // Cocina: solo vista de tickets
 }
 
 /// Nivel de fidelización del cliente
