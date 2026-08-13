@@ -251,5 +251,13 @@ describe('User Management Service Domain Flow', () => {
       expect(result).toEqual([demoUser])
       expect(mockUserRepo.list).toHaveBeenCalledWith('org123', { role: 'ADMIN' })
     })
+
+    it('debe pasar excludeSuperAdmin al repositorio cuando sea requerido', async () => {
+      mockUserRepo.list.mockResolvedValue([demoUser])
+
+      const result = await listUsersService.execute('org123', { excludeSuperAdmin: true })
+      expect(result).toEqual([demoUser])
+      expect(mockUserRepo.list).toHaveBeenCalledWith('org123', { excludeSuperAdmin: true })
+    })
   })
 })

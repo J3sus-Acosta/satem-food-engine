@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { SubNavBar } from '@/components/layout/SubNavBar'
+import { isAdminOrOwner } from '@/lib/permissions'
 import {
   Plus,
   History,
@@ -58,6 +59,7 @@ export default function CashDashboardClient({
   // Authentication & Session States
   const currentUserEmail = currentUserSession.email
   const currentUserRole = currentUserSession.role
+  const canManageAdminCash = isAdminOrOwner(currentUserRole)
   const [currentLocationId, setCurrentLocationId] = useState(initialLocationId)
 
   // Current session data
@@ -339,7 +341,7 @@ export default function CashDashboardClient({
           <p className="mt-1 text-sm text-slate-500">
             Gestiona aperturas, arqueos de efectivo, retiros y conciliaciones por métodos de pago.
           </p>
-          {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
+          {canManageAdminCash && (
             <div className="mt-3 flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-500">Sucursal activa:</span>
               <select
@@ -945,14 +947,14 @@ export default function CashDashboardClient({
                                 setReopenReason('')
                                 setIsReopenModalOpen(true)
                               }}
-                              disabled={currentUserRole !== 'ADMIN'}
+                              disabled={!canManageAdminCash}
                               title={
-                                currentUserRole !== 'ADMIN'
+                                !canManageAdminCash
                                   ? 'Solo administradores pueden reabrir'
                                   : 'Reabrir Caja'
                               }
                               className={`h-7 rounded-lg px-2.5 text-[11px] font-semibold text-white ${
-                                currentUserRole === 'ADMIN'
+                                canManageAdminCash
                                   ? 'bg-amber-600 hover:bg-amber-700'
                                   : 'cursor-not-allowed bg-slate-300 opacity-55'
                               }`}

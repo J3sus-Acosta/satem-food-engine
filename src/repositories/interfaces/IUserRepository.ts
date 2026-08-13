@@ -50,15 +50,16 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>
 
   /**
-   * Lista los usuarios de una organización aplicando filtros de búsqueda y estado.
+   * Lista los usuarios de una organización (o de todas si se omite organizationId) aplicando filtros.
    */
   list(
-    organizationId: string,
+    organizationId?: string,
     filters?: {
       search?: string
       role?: UserRole
       isActive?: boolean
       locationId?: string
+      excludeSuperAdmin?: boolean
     }
   ): Promise<User[]>
 

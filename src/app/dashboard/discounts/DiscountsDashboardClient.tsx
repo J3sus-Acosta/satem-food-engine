@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { SubNavBar } from '@/components/layout/SubNavBar'
+import { isAdminOrOwner } from '@/lib/permissions'
 import {
   Search,
   Plus,
@@ -32,6 +33,7 @@ export default function DiscountsDashboardClient({
   locations,
   currentUserRole,
 }: DiscountsDashboardClientProps) {
+  const isDiscountAdmin = isAdminOrOwner(currentUserRole)
   // State lists
   const [discounts, setDiscounts] = useState<DiscountCredit[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -244,7 +246,7 @@ export default function DiscountsDashboardClient({
 
   // Duplicate Discount
   const handleDuplicateDiscount = async (dc: DiscountCredit) => {
-    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'OWNER') return
+    if (!isDiscountAdmin) return
     setIsActionLoading(true)
     try {
       const res = await fetch(`/api/discounts/${dc.id}/duplicate`, {
@@ -294,7 +296,7 @@ export default function DiscountsDashboardClient({
 
   // Toggle Active State
   const handleToggleActive = async (dc: DiscountCredit) => {
-    if (currentUserRole !== 'ADMIN' && currentUserRole !== 'OWNER') return
+    if (!isDiscountAdmin) return
     setIsActionLoading(true)
     const endpoint = dc.isActive ? 'disable' : 'enable'
     try {
@@ -350,7 +352,7 @@ export default function DiscountsDashboardClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
+          {isDiscountAdmin && (
             <Button
               onClick={() => {
                 setModalError(null)
@@ -474,9 +476,7 @@ export default function DiscountsDashboardClient({
                   <th className="px-6 py-4">Alcance</th>
                   <th className="px-6 py-4">Estado</th>
                   <th className="px-6 py-4">Última Modificación</th>
-                  {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
-                    <th className="px-6 py-4 text-right">Acciones</th>
-                  )}
+                  {isDiscountAdmin && <th className="px-6 py-4 text-right">Acciones</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -525,10 +525,7 @@ export default function DiscountsDashboardClient({
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        disabled={
-                          (currentUserRole !== 'ADMIN' && currentUserRole !== 'OWNER') ||
-                          isActionLoading
-                        }
+                        disabled={!isDiscountAdmin || isActionLoading}
                         onClick={() => handleToggleActive(dc)}
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all ${
                           dc.isActive
@@ -550,7 +547,7 @@ export default function DiscountsDashboardClient({
                     <td className="px-6 py-4 font-medium text-slate-400">
                       {formatDateTime(dc.updatedAt)}
                     </td>
-                    {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
+                    {isDiscountAdmin && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1.5">
                           <Button

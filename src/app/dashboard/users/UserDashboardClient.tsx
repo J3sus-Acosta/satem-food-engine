@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { SubNavBar } from '@/components/layout/SubNavBar'
+import { isAdminOrOwner } from '@/lib/permissions'
 import {
   Search,
   Plus,
@@ -33,6 +34,9 @@ export default function UserDashboardClient({
   locations,
   currentUserRole,
 }: UserDashboardClientProps) {
+  const isUserAdmin = isAdminOrOwner(currentUserRole)
+  const isSuperAdminCaller = currentUserRole === 'SUPERADMIN'
+
   // State lists
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -86,7 +90,11 @@ export default function UserDashboardClient({
       )
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Error al cargar usuarios')
-      setUsers(json.data || [])
+      const rawUsers: User[] = json.data || []
+      const safeUsers = isSuperAdminCaller
+        ? rawUsers
+        : rawUsers.filter((u) => u.role !== 'SUPERADMIN')
+      setUsers(safeUsers)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Error al cargar usuarios'
       setErrorMessage(message)
@@ -340,7 +348,7 @@ export default function UserDashboardClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
+          {isUserAdmin && (
             <Button
               onClick={() => {
                 setModalError(null)
@@ -401,7 +409,9 @@ export default function UserDashboardClient({
               className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 outline-none"
             >
               <option value="all">Rol: Todos los roles</option>
-              <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
+              {isSuperAdminCaller && (
+                <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
+              )}
               <option value="OWNER">Propietario (OWNER)</option>
               <option value="ADMIN">Administrador (ADMIN)</option>
               <option value="MANAGER">Gerente (MANAGER)</option>
@@ -458,12 +468,8 @@ export default function UserDashboardClient({
                   <th className="px-6 py-4">Sucursal</th>
                   <th className="px-6 py-4">Estado</th>
                   <th className="px-6 py-4">Último Acceso</th>
-                  <th className="px-6 py-4">Fecha Creación</th>
-                  {(currentUserRole === 'ADMIN' ||
-                    currentUserRole === 'OWNER' ||
-                    currentUserRole === 'SUPERADMIN') && (
-                    <th className="px-6 py-4 text-right">Acciones</th>
-                  )}
+                  <th className="px-6 py-4 font-medium text-slate-400">Fecha Creación</th>
+                  {isUserAdmin && <th className="px-6 py-4 text-right">Acciones</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -505,7 +511,7 @@ export default function UserDashboardClient({
                     </td>
                     <td className="px-6 py-4 text-slate-600">
                       {user.locationId ? (
-                        <span className="inline-flex items-center gap-1">
+                        <span className="font-semibold text-slate-800">
                           <MapPin className="h-3 w-3 text-slate-400" />
                           {locations.find((l) => l.id === user.locationId)?.name ||
                             'Sucursal asignada'}
@@ -516,10 +522,7 @@ export default function UserDashboardClient({
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        disabled={
-                          (currentUserRole !== 'ADMIN' && currentUserRole !== 'OWNER') ||
-                          isActionLoading
-                        }
+                        disabled={!isUserAdmin || isActionLoading}
                         onClick={() => handleToggleActive(user)}
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all ${
                           user.isActive
@@ -544,7 +547,7 @@ export default function UserDashboardClient({
                     <td className="px-6 py-4 font-medium text-slate-400">
                       {formatDateTime(user.createdAt)}
                     </td>
-                    {(currentUserRole === 'ADMIN' || currentUserRole === 'OWNER') && (
+                    {isUserAdmin && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1.5">
                           <Button
@@ -685,7 +688,9 @@ export default function UserDashboardClient({
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 focus:outline-none"
                   >
-                    <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
+                    {isSuperAdminCaller && (
+                      <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
+                    )}
                     <option value="OWNER">Propietario (OWNER)</option>
                     <option value="ADMIN">Administrador (ADMIN)</option>
                     <option value="MANAGER">Gerente (MANAGER)</option>
@@ -811,7 +816,9 @@ export default function UserDashboardClient({
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-700 focus:outline-none"
                   >
-                    <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
+                    {isSuperAdminCaller && (
+                      <option value="SUPERADMIN">Super Administrador (SUPERADMIN)</option>
+                    )}
                     <option value="OWNER">Propietario (OWNER)</option>
                     <option value="ADMIN">Administrador (ADMIN)</option>
                     <option value="MANAGER">Gerente (MANAGER)</option>

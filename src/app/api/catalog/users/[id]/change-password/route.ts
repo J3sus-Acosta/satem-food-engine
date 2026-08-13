@@ -1,10 +1,31 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { changePasswordService } from '@/services'
+import { changePasswordService, findUserService } from '@/services'
+import { requireAuth } from '@/lib/auth-server'
+import { requirePermission } from '@/lib/permissions'
+import { handleRouteError } from '@/lib/api'
 import type { ApiResponse } from '@/types'
 
 export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   try {
+    const session = await requireAuth()
+    requirePermission(session, 'users.manage')
+
     const params = await props.params
+    const targetUser = await findUserService.execute(params.id)
+    if (!targetUser) {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    if (targetUser.role === 'SUPERADMIN' && session.role !== 'SUPERADMIN') {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'No tienes autorización para modificar a un usuario Superadmin.' },
+        { status: 403 }
+      )
+    }
+
     const body = await req.json()
     const { password } = body
 
@@ -21,9 +42,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       { status: 200 }
     )
   } catch (err) {
-    console.error('[API.catalog.users.change-password] Error:', err)
-    const message =
-      err instanceof Error ? err.message : 'Error al cambiar la contraseña del usuario.'
-    return NextResponse.json<ApiResponse<never>>({ error: message }, { status: 500 })
+    return handleRouteError(
+      err,
+      'Error al cambiar la contraseña del usuario.',
+      'POST /api/catalog/users/[id]/change-password'
+    )
   }
 }

@@ -20,7 +20,6 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(true)
 
   const [availableLocations, setAvailableLocations] = useState<LocationOption[]>([])
   const [selectedLocationId, setSelectedLocationId] = useState<string>('')
@@ -38,7 +37,7 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
     setIsLoading(true)
 
     try {
-      const payload: Record<string, unknown> = { username, password, rememberMe }
+      const payload: Record<string, unknown> = { username, password }
       if (step === 'select-location' && selectedLocationId) {
         payload.locationId = selectedLocationId
       }
@@ -145,21 +144,6 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
                     className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
                   />
                 </div>
-              </div>
-
-              {/* Remember me option */}
-              <div className="flex items-center gap-2 pt-1.5">
-                <input
-                  type="checkbox"
-                  id="rememberMe"
-                  disabled={isLoading}
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
-                />
-                <label htmlFor="rememberMe" className="text-[11px] font-semibold text-slate-500">
-                  Mantener sesión abierta (30 días)
-                </label>
               </div>
 
               {/* Submit Button */}

@@ -166,5 +166,16 @@ describe('Módulo de Administración de Sucursales (FASE 19 - SUPERADMIN)', () =
 
       expect(() => requirePermission(session, 'locations.manage')).toThrow(/no tiene el permiso/)
     })
+
+    it('SUPERADMIN hereda de forma automática todos los permisos de OWNER y ADMIN', () => {
+      expect(hasPermission('SUPERADMIN', 'users.view')).toBe(true)
+      expect(hasPermission('SUPERADMIN', 'users.manage')).toBe(true)
+      expect(hasPermission('SUPERADMIN', 'cash.view')).toBe(true)
+      expect(hasPermission('SUPERADMIN', 'cash.manage')).toBe(true)
+      expect(hasPermission('SUPERADMIN', 'catalog.manage')).toBe(true)
+      expect(hasPermission('SUPERADMIN', 'reports.view')).toBe(true)
+      expect(hasPermission('SUPERADMIN', 'discounts.manage')).toBe(true)
+      expect(hasPermission('SUPERADMIN', 'sales.void')).toBe(true)
+    })
   })
 })

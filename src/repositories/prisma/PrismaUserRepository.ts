@@ -115,25 +115,34 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async list(
-    organizationId: string,
+    organizationId?: string,
     filters?: {
       search?: string
       role?: UserRole
       isActive?: boolean
       locationId?: string
+      excludeSuperAdmin?: boolean
     }
   ): Promise<User[]> {
     const whereClause: Prisma.UserWhereInput = {
-      organizationId,
       deletedAt: null,
+    }
+    if (organizationId) {
+      whereClause.organizationId = organizationId
     }
 
     if (filters) {
+      if (filters.excludeSuperAdmin) {
+        if (filters.role === 'SUPERADMIN') {
+          return []
+        }
+        whereClause.role = { not: 'SUPERADMIN' as unknown as PrismaUserRole }
+      }
       if (filters.isActive !== undefined) {
         whereClause.isActive = filters.isActive
       }
       if (filters.role !== undefined) {
-        whereClause.role = filters.role
+        whereClause.role = filters.role as unknown as PrismaUserRole
       }
       if (filters.locationId !== undefined) {
         whereClause.locationId = filters.locationId

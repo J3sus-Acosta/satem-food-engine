@@ -28,17 +28,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Update active session cookie with new locationId
-    await setSessionCookie(
-      {
-        userId: session.userId,
-        organizationId: session.organizationId,
-        locationId: validLocation.id,
-        role: session.role,
-        username: session.username,
-        name: session.name,
-      },
-      true
-    )
+    await setSessionCookie({
+      userId: session.userId,
+      organizationId: session.organizationId,
+      locationId: validLocation.id,
+      role: session.role,
+      username: session.username,
+      name: session.name,
+    })
 
     return NextResponse.json<ApiResponse<{ locationId: string; locationName: string }>>({
       data: {

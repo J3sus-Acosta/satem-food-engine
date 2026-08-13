@@ -36,7 +36,12 @@ export default async function DashboardCashPage(props: PageProps) {
   const activeLocationId = locationId || locations[0]?.id || ''
 
   const users = await db.user.findMany({
-    where: { organizationId, deletedAt: null, isActive: true },
+    where: {
+      organizationId,
+      deletedAt: null,
+      isActive: true,
+      ...(session.role === 'SUPERADMIN' ? {} : { role: { not: 'SUPERADMIN' } }),
+    },
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: 'asc' },
   })

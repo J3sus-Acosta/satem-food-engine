@@ -119,6 +119,16 @@ export class TenantResolver {
       return []
     }
 
+    // 0. SUPERADMIN has global access to all locations
+    if (user.role === 'SUPERADMIN') {
+      const allLocations = await db.location.findMany({
+        where: { isActive: true, deletedAt: null },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, slug: true },
+      })
+      return allLocations
+    }
+
     // 1. Check explicit UserLocation table mappings
     const grantedLocations = user.userLocations
       .map((ul) => ul.location)

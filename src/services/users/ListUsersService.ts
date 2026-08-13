@@ -7,12 +7,13 @@ export class ListUsersService {
   constructor(private readonly userRepo: IUserRepository) {}
 
   async execute(
-    organizationId: string,
+    organizationId?: string,
     filters?: {
       search?: string
       role?: UserRole
       isActive?: boolean
       locationId?: string
+      excludeSuperAdmin?: boolean
     }
   ): Promise<User[]> {
     return this.userRepo.list(organizationId, filters)

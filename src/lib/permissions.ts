@@ -109,6 +109,16 @@ export function hasPermission(role: UserRole, permission: Permission): boolean {
 }
 
 /**
+ * Returns true if the given role is an administrative role (SUPERADMIN, OWNER, or ADMIN).
+ * Use this helper instead of hardcoding `role === 'ADMIN' || role === 'OWNER'`.
+ *
+ * @param role - The user's role
+ */
+export function isAdminOrOwner(role: UserRole | string): boolean {
+  return role === 'SUPERADMIN' || role === 'OWNER' || role === 'ADMIN'
+}
+
+/**
  * Returns true if the given role is in the list of allowed roles.
  * SUPERADMIN is allowed globally.
  *

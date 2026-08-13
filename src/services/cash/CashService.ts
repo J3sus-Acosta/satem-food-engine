@@ -3,6 +3,7 @@ import 'server-only'
 import type { ICashRepository, IOrderRepository } from '@/repositories'
 import type { CashSession, CashMovement, CashAudit } from '@/generated/prisma'
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '@/lib/errors'
+import { isAdminOrOwner } from '@/lib/permissions'
 import { ReportingService } from './ReportingService'
 
 export class CashService {
@@ -194,7 +195,7 @@ export class CashService {
       throw new NotFoundError('User', reopenedById)
     }
 
-    if (user.role !== 'ADMIN') {
+    if (!isAdminOrOwner(user.role)) {
       throw new ForbiddenError(
         'Solo los administradores tienen permiso para reabrir un turno de caja.'
       )

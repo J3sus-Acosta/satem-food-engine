@@ -9,7 +9,7 @@ import type { ApiResponse } from '@/types'
 export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<unknown>>> {
   try {
     const body = await req.json()
-    const { username, password, rememberMe, locationId } = body
+    const { username, password, locationId } = body
 
     if (!username || typeof username !== 'string') {
       return NextResponse.json({ error: 'El nombre de usuario es obligatorio.' }, { status: 400 })
@@ -63,17 +63,14 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<u
     }
 
     // Set HttpOnly secure session cookie
-    await setSessionCookie(
-      {
-        userId: user.id,
-        organizationId: user.organizationId,
-        locationId: selectedLocationId,
-        role: user.role,
-        username: user.username,
-        name: user.name,
-      },
-      rememberMe !== false
-    )
+    await setSessionCookie({
+      userId: user.id,
+      organizationId: user.organizationId,
+      locationId: selectedLocationId,
+      role: user.role,
+      username: user.username,
+      name: user.name,
+    })
 
     // Return public user data
     return NextResponse.json({

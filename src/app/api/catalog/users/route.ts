@@ -19,12 +19,15 @@ export async function GET(req: NextRequest) {
     const isActive = activeStr === 'true' ? true : activeStr === 'false' ? false : undefined
 
     const resolved = await TenantResolver.resolve(locationId)
+    const isSuperAdminCaller = session.role === 'SUPERADMIN'
+    const targetOrgId = isSuperAdminCaller ? undefined : resolved.organizationId
 
-    const users = await listUsersService.execute(resolved.organizationId, {
+    const users = await listUsersService.execute(targetOrgId, {
       search,
       role,
       isActive,
       locationId: searchParams.get('filterLocationId') || undefined,
+      excludeSuperAdmin: !isSuperAdminCaller,
     })
 
     return NextResponse.json<ApiResponse<typeof users>>({ data: users }, { status: 200 })
@@ -43,6 +46,13 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const { name, username, email, password, role, isActive, assignedLocationId } = body
+
+    if (role === 'SUPERADMIN' && session.role !== 'SUPERADMIN') {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'No tienes autorización para asignar o crear usuarios con el rol Superadmin.' },
+        { status: 403 }
+      )
+    }
 
     if (!name || !name.trim()) {
       return NextResponse.json<ApiResponse<never>>(

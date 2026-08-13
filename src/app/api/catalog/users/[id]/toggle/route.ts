@@ -19,6 +19,13 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       )
     }
 
+    if (user.role === 'SUPERADMIN' && session.role !== 'SUPERADMIN') {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'No tienes autorización para modificar a un usuario Superadmin.' },
+        { status: 403 }
+      )
+    }
+
     const updatedUser = user.isActive
       ? await disableUserService.execute(params.id)
       : await enableUserService.execute(params.id)

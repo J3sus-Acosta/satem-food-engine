@@ -18,6 +18,14 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
         { status: 404 }
       )
     }
+
+    if (user.role === 'SUPERADMIN' && session.role !== 'SUPERADMIN') {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'No tienes autorización para acceder a un usuario Superadmin.' },
+        { status: 403 }
+      )
+    }
+
     return NextResponse.json<ApiResponse<typeof user>>({ data: user }, { status: 200 })
   } catch (err) {
     return handleRouteError(
@@ -34,8 +42,30 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
     requirePermission(session, 'users.manage')
 
     const params = await props.params
+    const targetUser = await findUserService.execute(params.id)
+    if (!targetUser) {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    if (targetUser.role === 'SUPERADMIN' && session.role !== 'SUPERADMIN') {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'No tienes autorización para modificar a un usuario Superadmin.' },
+        { status: 403 }
+      )
+    }
+
     const body = await req.json()
     const { name, email, role, isActive, assignedLocationId } = body
+
+    if (role === 'SUPERADMIN' && session.role !== 'SUPERADMIN') {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'Solo un Superadmin puede asignar el rol Superadmin.' },
+        { status: 403 }
+      )
+    }
 
     const user = await updateUserService.execute(params.id, {
       name,
@@ -57,6 +87,21 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
     requirePermission(session, 'users.manage')
 
     const params = await props.params
+    const targetUser = await findUserService.execute(params.id)
+    if (!targetUser) {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    if (targetUser.role === 'SUPERADMIN' && session.role !== 'SUPERADMIN') {
+      return NextResponse.json<ApiResponse<never>>(
+        { error: 'No tienes autorización para eliminar a un usuario Superadmin.' },
+        { status: 403 }
+      )
+    }
+
     await deleteUserService.execute(params.id)
     return NextResponse.json<ApiResponse<void>>(
       { data: undefined, message: 'Usuario eliminado con éxito' },

@@ -34,16 +34,12 @@ export async function requireAuth(): Promise<SessionPayload> {
 }
 
 /**
- * Encrypts and writes the session token to a secure HttpOnly cookie.
+ * Encrypts and writes the session token to a secure HttpOnly cookie (24h duration).
  *
  * @param payload Basic user details to save in token
- * @param rememberMe True to extend session to 30 days, otherwise 24 hours
  */
-export async function setSessionCookie(
-  payload: Omit<SessionPayload, 'expiresAt'>,
-  rememberMe = true
-): Promise<void> {
-  const durationMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000
+export async function setSessionCookie(payload: Omit<SessionPayload, 'expiresAt'>): Promise<void> {
+  const durationMs = 24 * 60 * 60 * 1000
   const token = await encryptSession(payload, durationMs)
 
   const cookieStore = await cookies()
