@@ -7,7 +7,7 @@ import { validateMenuSyncSecret } from '@/services/menu-sync'
  * POST /api/menu/reset-daily
  *
  * Deletes all DailyMenuOverrides for a location's active menu.
- * Called by n8n workflow 04 (Nightly Maintenance) at 02:00 AM to reset
+ * Called by the Nightly Maintenance job at 02:00 AM to reset
  * daily availability, stock, and pricing before the next Google Sheets sync.
  *
  * Security: Validates the `x-menu-sync-secret` header. If MENU_SYNC_SECRET

@@ -17,14 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fase 5.5 — Multi-Provider / Multi-Tenant de Pagos**: Patrón de resolución jerárquica de pasarelas de pago (Local → Organización → `.env` → SumUp) con soporte para inyección de configuraciones mediante `PaymentProviderFactory` y `ITenantConfigurationRepository`.
 - **Fase 6 — Pantalla de Cocina**: Cola del Kitchen Display System en tiempo de ejecución (FIFO) y vistas preliminares del KDS.
 - **Fase 7A — Menú Operacional**: Vistas para modificar el menú diario táctil a nivel administrativo en el dashboard.
-- **Fase 7B — Google Sheets CMS + n8n Sync**: Integración con hojas de cálculo de Google Drive a través de flujos de n8n para importar Overrides de menú diario en lote de forma automatizada.
+- **Fase 7B — Google Sheets CMS Sync**: Integración con hojas de cálculo de Google Drive para importar Overrides de menú diario en lote de forma automatizada.
 - **Fase 7C — Estabilización MVP**: Suite de pruebas con Vitest, auditoría inicial de seguridad y políticas de entorno de ejecución en producción.
 - **Fase 8A — Frontend Cliente Público**: Interfaz de carta digital responsiva y mobile-first `/menu` con carrito local, notas y selección de modificadores.
 - **Fase 8B — Checkout + Creación de Pedido**: Endpoint de API `/api/orders/checkout` y lógica para procesar pedidos DRAFT a partir del carrito público, validando modificadores y límites de stock.
 - **Fase 8C — Order Tracking**: Pantalla de consulta de estado del pedido en tiempo real en `/menu/track` con polling integrado.
 - **Fase 9A — Integración de Pagos Reales**: Webhooks reales para SumUp y Webpay Plus, lógica idempotente mejorada y pruebas unitarias de extremo a extremo.
 - **Fase 9B — Kitchen Display System (KDS)**: Panel Kanban interactivo de KDS con soporte táctil, control de tiempos de preparación y polling inteligente.
-- **Fase 9C — Versionado de Workflows n8n**: Exportación y versionado de los workflows de automatización n8n en el directorio `/n8n`.
+- **Fase 9C — Versionado de Workflows**: Exportación y versionado de los workflows de automatización en el directorio correspondiente.
 - **Fase Auditoría (Críticos)**:
   - Endpoint `POST /api/menu/reset-daily` para purgar anulaciones diarias de menú.
   - Endpoint `GET /api/inventory/low-stock` para reportar alertas de inventario.
@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Fase Auditoría (Críticos)**:
   - Se resolvió la condición de carrera concurrentes en la generación del identificador de pedido (`nextOrderNumber`) mediante el uso de transacciones interactivas secuenciales de Prisma y políticas de reintentos sobre códigos de error `P2002`.
-  - Corrección en los workflows de n8n para apuntar a los endpoints correctos del backend del engine (`/api/webhooks/menu-sync` y `/api/menu/reset-daily`).
+  - Corrección en los endpoints para apuntar a los endpoints correctos del backend del engine (`/api/webhooks/menu-sync` y `/api/menu/reset-daily`).
 - **Fase Auditoría (Altos)**:
   - Los endpoints de cocina obsoletos (`/prepare` y `/ready`) ahora devuelven correctamente HTTP 410 Gone y redirigen al endpoint de estado unificado `/status`.
 - **Fase Auditoría (Medios)**:

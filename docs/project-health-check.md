@@ -11,7 +11,7 @@ El proyecto cuenta con un backend maduro estructurado en base al patrón de **pu
 - **Capa de Entrada (HTTP):** Ubicada en `src/app/api/`. Los Route Handlers son delgados; su función principal es parsear la solicitud, ejecutar validaciones de formato básico de datos y mapear los resultados y excepciones a respuestas HTTP tipadas (`NextResponse<ApiResponse<T>>`).
 - **Capa de Dominio y Lógica (Services):** Ubicada en `src/services/`. Contiene clases autocontenidas de negocio (como `OrderService` o `ProductService`) que se comunican exclusivamente con los repositorios a través de interfaces TypeScript (`src/repositories/interfaces/`), garantizando el desacoplamiento de la tecnología de persistencia.
 - **Capa de Adaptadores de Persistencia (Repositories):** Ubicada en `src/repositories/prisma/`. Implementa el acceso y mutación de datos utilizando Prisma y PostgreSQL.
-- **Capa de Integración Externa:** Ubicada en `src/integrations/`. Contiene adaptadores para proveedores de pagos (`SumUp`, `Webpay`), n8n, mensajería y servicios externos.
+- **Capa de Integración Externa:** Ubicada en `src/integrations/`. Contiene adaptadores para proveedores de pagos (`SumUp`, `Webpay`), mensajería y servicios externos.
 - **Capa de Presentación (UI):** Ubicada en `src/components/` y `src/app/`. Los componentes clientes no contienen llamadas a Prisma ni lógica de persistencia directa; interactúan exclusivamente con la capa backend a través de llamadas API HTTP locales.
 
 ---

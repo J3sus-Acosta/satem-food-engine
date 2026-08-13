@@ -453,7 +453,7 @@ Cuenta de fidelización, cross-location dentro de la misma organización.
 
 #### `Channel`
 
-Canal de venta configurado para un Location. Abstrae el origen del pedido mediante `ChannelType` enum. La integración con n8n se realiza vía webhooks externos — **no está referenciada en este modelo**.
+Canal de venta configurado para un Location. Abstrae el origen del pedido mediante `ChannelType` enum.
 
 | Campo        | Tipo        | Descripción                                                                  |
 | ------------ | ----------- | ---------------------------------------------------------------------------- |
@@ -467,7 +467,7 @@ Canal de venta configurado para un Location. Abstrae el origen del pedido median
 | `updatedAt`  | DateTime    |                                                                              |
 | `deletedAt`  | DateTime?   | Soft-delete                                                                  |
 
-> **Nota:** `webhookUrl` fue **eliminado** del modelo. n8n se conecta externamente. El canal solo define su tipo y configuración.
+> **Nota:** El canal solo define su tipo y configuración.
 
 ---
 
@@ -726,7 +726,7 @@ erDiagram
 
 **Solución:** `Channel` abstrae el origen con `type` enum y `config` JSON para detalles específicos. Agregar un canal nuevo (ej: Uber Eats) no requiere cambios de schema.
 
-**Impacto:** `Order.channelId` habilita analytics por canal. El routing a n8n se configura en `Channel.webhookUrl`.
+**Impacto:** `Order.channelId` habilita analytics por canal.
 
 ---
 
@@ -812,7 +812,7 @@ erDiagram
 **Mitigación:**
 
 - `ChatSession.externalId` + `Message.metadata.externalMessageId` como claves de idempotencia.
-- El Route Handler que recibe webhooks responde `200 OK` inmediatamente y delega el procesamiento a n8n.
+- El Route Handler que recibe webhooks responde `200 OK` inmediatamente.
 
 ---
 
@@ -868,12 +868,6 @@ erDiagram
 **Justificación:** Order, Customer, Channel y Message necesitan almacenar información específica de canal que no puede predefinirse. El campo JSON permite esto sin nuevas migraciones. **Siempre validado con Zod en la capa de servicio.**
 
 **Trade-off:** JSON no se filtra eficientemente sin índices GIN. Solo se usa para almacenamiento, no para filtros frecuentes.
-
----
-
-### Decisión E — n8n como bus de eventos, no parte del schema
-
-**Justificación:** n8n orquesta integraciones externas (WhatsApp, Telegram, alertas). El schema de DB no referencia n8n. La comunicación es vía HTTP webhooks configurados en `Channel.webhookUrl`. Esto desacopla completamente automatización de persistencia. Si n8n se reemplaza por otro sistema, el schema no cambia.
 
 ---
 

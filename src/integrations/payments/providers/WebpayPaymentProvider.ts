@@ -112,7 +112,7 @@ export class WebpayPaymentProvider implements IPaymentProvider {
     //   map response fields to WebhookVerificationResult
     //
     // For now, extract and validate the payment fields from the structured payload
-    // sent by the n8n webhook relay (which relays the Webpay return_url params).
+    // sent by the Webpay webhook relay (which relays the Webpay return_url params).
     try {
       const payload = JSON.parse(rawBody) as Record<string, unknown>
       const paymentId = String(payload.paymentId ?? payload.payment_id ?? '')

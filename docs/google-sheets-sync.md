@@ -1,6 +1,6 @@
 # Sincronización de Menú Operacional — CMS Google Sheets (MCI Santiago)
 
-Este documento detalla el diseño de la sincronización diaria del menú operativo para el piloto **MCI Santiago** (Misión Carismática Internacional Santiago) mediante **Google Sheets** y **n8n**, resguardando la integridad de la base de datos **PostgreSQL** y los principios de **Clean Architecture** de SATEM Food Engine.
+Este documento detalta el diseño de la sincronización diaria del menú operativo para el piloto **MCI Santiago** (Misión Carismática Internacional Santiago) mediante **Google Sheets**, resguardando la integridad de la base de datos **PostgreSQL** y los principios de **Clean Architecture** de SATEM Food Engine.
 
 ---
 
@@ -109,30 +109,24 @@ Sirve como referencia rápida para el operador sobre los productos configurados 
 
 ---
 
-## 6. Flujo de Sincronización (n8n & API)
+## 6. Flujo de Sincronización (API)
 
 Para garantizar consistencia, el flujo no realiza escrituras directas. Implementa un proceso estructurado de **Validación -> Preview -> Apply**:
 
 ```mermaid
 sequenceDiagram
-    participant GS as Google Sheets
-    participant n8n as n8n (Orquestador)
+    participant GS as Google Sheets / Job
     participant API as Next.js API (/api/menu/sync-daily)
     participant DB as PostgreSQL
 
-    GS->>n8n: Ejecución manual o programada (Trigger)
-    n8n->>API: 1. POST /api/menu/sync-daily/preview (Envía filas de la hoja)
+    GS->>API: 1. POST /api/webhooks/menu-sync (Envía filas de la hoja)
     API->>API: 2. Validar sintaxis, tipos y existencia de códigos cortos
     alt Hay errores de validación
-        API-->>n8n: Retorna HTTP 400 + Detalle de errores (filas y columnas)
-        n8n-->>GS: Registra log de errores en celda de estado / Alerta por chat
+        API-->>GS: Retorna HTTP 400 + Detalle de errores (filas y columnas)
     else Validación Exitosa
-        API-->>n8n: Retorna HTTP 200 + Preview de cambios (antes vs después)
-        n8n->>API: 3. POST /api/menu/sync-daily/apply (Confirmación de cambios)
-        API->>DB: 4. Upsert/Update de DailyMenuOverride
+        API->>DB: 3. Upsert/Update de DailyMenuOverride
         DB-->>API: Persistido
-        API-->>n8n: HTTP 200 OK (Sincronizado)
-        n8n-->>GS: Actualiza celda "Última sincronización exitosa: [Timestamp]"
+        API-->>GS: HTTP 200 OK (Sincronizado)
     end
 ```
 
@@ -168,8 +162,8 @@ Una vez confirmado un pedido, los precios y nombres se congelan en la comanda (`
 
 ## 9. Idempotencia y Resiliencia
 
-- **Idempotencia:** Múltiples ejecuciones del webhook de n8n con los mismos datos del Google Sheet producen exactamente el mismo estado en PostgreSQL, evitando duplicar registros o regenerar IDs.
-- **Resiliencia Operativa:** Los errores de red, fallos en la API de Google, o errores temporales de n8n **nunca detienen el funcionamiento de la carta digital de MCI Santiago**, la cual sigue sirviendo los últimos datos operacionales correctamente guardados en la base de datos o cayendo de vuelta a los valores maestros en el peor de los casos.
+- **Idempotencia:** Múltiples ejecuciones del webhook con los mismos datos del Google Sheet producen exactamente el mismo estado en PostgreSQL, evitando duplicar registros o regenerar IDs.
+- **Resiliencia Operativa:** Los errores de red o fallos temporales **nunca detienen el funcionamiento de la carta digital de MCI Santiago**, la cual sigue sirviendo los últimos datos operacionales correctamente guardados en la base de datos o cayendo de vuelta a los valores maestros en el peor de los casos.
 
 ---
 
@@ -260,7 +254,7 @@ Si `MENU_SYNC_SECRET` no está configurado en el servidor, el endpoint acepta to
 El endpoint `/api/webhooks/menu-sync` orquesta internamente cuatro capas:
 
 ```
-n8n HTTP Request
+HTTP Request
         │
         ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -293,84 +287,33 @@ n8n HTTP Request
 
 ---
 
-## 12. Configuración del Workflow n8n
+## 12. Configuración del Cliente de Sincronización HTTP
 
-El workflow recomendado para MCI Santiago consta de los siguientes nodos:
+Cualquier script o cliente de automatización (cron job, curl, etc.) debe enviar una petición HTTP POST al endpoint de la aplicación:
 
-### Nodo 1 — Schedule Trigger (o Manual Trigger)
+### Petición HTTP Request: Webhook Menu Sync
 
-```
-Tipo: Schedule Trigger
-Cron: 0 8 * * *   (ejecutar cada día a las 08:00 AM)
-```
+```http
+POST /api/webhooks/menu-sync HTTP/1.1
+Host: tu-dominio.com
+Content-Type: application/json
+x-menu-sync-secret: <valor_de_MENU_SYNC_SECRET>
 
-También puede dispararse manualmente desde la interfaz de n8n durante la operación.
-
-### Nodo 2 — Google Sheets: Read Rows
-
-```
-Tipo: Google Sheets
-Operation: Read Rows
-Sheet ID: <ID del documento de Google Sheets>
-Sheet Name: Menú Diario
-Range: A2:H100   (omite la fila de encabezado)
-Return All: true
-```
-
-Columns mapping (deben coincidir exactamente con los encabezados de la hoja):
-`Código | Disponible | Visible | Precio | Stock | Destacado | Orden | Nota`
-
-### Nodo 3 — HTTP Request: Webhook Menu Sync
-
-```
-Tipo: HTTP Request
-Method: POST
-URL: https://<tu-dominio>/api/webhooks/menu-sync
-Authentication: None (el secret va en el header)
-Headers:
-  Content-Type:       application/json
-  x-menu-sync-secret: {{ $env.MENU_SYNC_SECRET }}
-Body (JSON):
-  {
-    "locationId": "<locationId de la BD>",
-    "rows": {{ $json.rows }}
-  }
+{
+  "locationId": "<locationId de la BD>",
+  "rows": [
+    {
+      "Código": "BUR001",
+      "Disponible": "SI",
+      "Visible": "SI",
+      "Precio": 5990,
+      "Stock": 50,
+      "Destacado": "SI",
+      "Orden": 1,
+      "Nota": "Promoción del día"
+    }
+  ]
+}
 ```
 
-> **Importante:** El campo `locationId` es el ID interno de PostgreSQL de la Location. Debe obtenerse de la BD y configurarse como variable en n8n. No se expone en Google Sheets.
-
-### Nodo 4 — IF: Evaluar Resultado
-
-```
-Tipo: IF
-Condición: {{ $json.data.appliedCount }} > 0
-True → Nodo 5 (Éxito)
-False → Nodo 6 (Sin cambios)
-```
-
-### Nodo 5 — Google Sheets: Update Status (Éxito)
-
-```
-Tipo: Google Sheets
-Operation: Update Row
-Sheet Name: Configuración
-Row: 2, Column: "Última Sincronización"
-Value: "✅ {{ $now.format('DD/MM/YYYY HH:mm') }} — {{ $json.data.appliedCount }} productos actualizados"
-```
-
-### Nodo 6 — Google Sheets: Update Status (Error)
-
-```
-Cuando el HTTP Request devuelve error (código 400 o 500):
-Operation: Update Row
-Value: "❌ {{ $now.format('DD/MM/YYYY HH:mm') }} — ERROR: {{ $json.error }}"
-```
-
-### Variables de Entorno en n8n
-
-Configurar en n8n → Settings → Variables:
-
-| Variable           | Valor                                                   |
-| ------------------ | ------------------------------------------------------- |
-| `MENU_SYNC_SECRET` | Mismo valor que el env `MENU_SYNC_SECRET` del servidor  |
-| `LOCATION_ID`      | ID interno de PostgreSQL de la Location de MCI Santiago |
+> **Importante:** El campo `locationId` es el ID interno de PostgreSQL de la sucursal. Debe obtenerse de la base de datos.

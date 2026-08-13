@@ -1,6 +1,8 @@
 # SATEM Food Engine
 
-> Plataforma SaaS para restaurantes, cafeterías y food trucks — carta digital, chatbot de pedidos, pagos y gestión de inventario, todo integrado con n8n.
+# SATEM Food Engine
+
+> Plataforma SaaS para restaurantes, cafeterías y food trucks — carta digital, chatbot de pedidos, pagos y gestión de inventario.
 
 ---
 
@@ -24,7 +26,7 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 | **FASE 5.5** | **Multi-Provider / Multi-Tenant de Pagos**  | Arquitectura multi-tenant: proveedor configurable por Organización, Local o `.env`. `ITenantConfigurationRepository` + `PaymentProviderFactory`.   | ✅ Completada |
 | **FASE 6**   | **Pantalla de Cocina**                      | Dashboard de cocina táctil Kanban en `/dashboard/kitchen` para gestión de preparación (FIFO).                                                      | ✅ Completada |
 | **FASE 7A**  | **Menú Operacional**                        | Panel administrativo `/dashboard/menu` para overrides manuales táctiles.                                                                           | ✅ Completada |
-| **FASE 7B**  | **Google Sheets CMS + n8n Sync**            | Sincronización automatizada diaria del menú mediante códigos SKU y webhook de n8n.                                                                 | ✅ Completada |
+| **FASE 7B**  | **Google Sheets CMS Sync**                  | Sincronización automatizada diaria del menú mediante códigos SKU y webhook directo.                                                                | ✅ Completada |
 | **FASE 7C**  | **Estabilización MVP**                      | Suite de testing con Vitest, auditoría arquitectónica, endurecimiento de seguridad en producción y documentación.                                  | ✅ Completada |
 | **FASE 8A**  | **Frontend Cliente Público**                | Carta digital táctil mobile-first en `/menu` con carrito de compras local, notas y personalizador.                                                 | ✅ Completada |
 | **FASE 8B**  | **Checkout + Creación de Pedido**           | Creación real de pedidos en estado DRAFT desde la carta, validando stock diario, modificadores obligatorios y snapshots.                           | ✅ Completada |
@@ -47,15 +49,14 @@ La mayoría de los pequeños negocios de comida opera con procesos manuales frag
 
 ## Stack Tecnológico
 
-| Capa           | Tecnología                         |
-| -------------- | ---------------------------------- |
-| Framework      | Next.js 16 (App Router)            |
-| UI Library     | React 19                           |
-| Lenguaje       | TypeScript 5 (strict mode)         |
-| Estilos        | Tailwind CSS 4                     |
-| Componentes    | shadcn/ui (`@base-ui/react` + CSS) |
-| ORM            | Prisma (PostgreSQL)                |
-| Automatización | n8n (self-hosted)                  |
+| Capa        | Tecnología                         |
+| ----------- | ---------------------------------- |
+| Framework   | Next.js 16 (App Router)            |
+| UI Library  | React 19                           |
+| Lenguaje    | TypeScript 5 (strict mode)         |
+| Estilos     | Tailwind CSS 4                     |
+| Componentes | shadcn/ui (`@base-ui/react` + CSS) |
+| ORM         | Prisma (PostgreSQL)                |
 
 ---
 
@@ -71,9 +72,7 @@ El flujo de sincronización y lectura de datos se define así:
 [ Administrador (MCI Santiago) ]
                ↓ (Modifica stock/disponibilidad/precio diario)
 [       Google Sheets          ]
-               ↓ (Lectura n8n / Flujo Preview & Apply)
-[            n8n               ]
-               ↓ (Llamada API validada)
+               ↓ (Flujo Preview & Apply / Webhook)
 [   Next.js API (Validación)   ]
                ↓ (Escritura via Repository)
 [         PostgreSQL           ]
@@ -109,7 +108,7 @@ src/
 ├── repositories/           ← Capa de acceso a datos (Patrón Repository)
 │   ├── interfaces/         ← Contratos / Puertos de persistencia (puros)
 │   └── prisma/             ← Implementaciones / Adaptadores concretos de Prisma
-├── integrations/           ← Adaptadores tecnológicos externos (n8n, Google, SumUp, Telegram, WhatsApp)
+├── integrations/           ← Adaptadores tecnológicos externos (Google, SumUp, Telegram, WhatsApp)
 ├── server/                 ← Singleton de base de datos (server-only)
 ├── config/                 ← Parámetros de configuración e isomórficos
 ├── lib/                    ← Utilidades compartidas y librerías transversales
@@ -128,7 +127,7 @@ El proyecto ha sido promovido a **Release Candidate 1 (RC1)**. En esta etapa se 
 - Gestión de usuarios y roles RBAC (`/dashboard/users`) con hashing seguro PBKDF2 y aislamiento multi-tenant.
 - Administración de descuentos y beneficios comerciales (`/dashboard/discounts`) con snapshots de orden.
 - Catálogo maestro (`/dashboard/catalog`) con control de versiones, audit log y recetas de insumos por producto.
-- Sincronización diaria del catálogo operacional mediante Google Sheets y n8n.
+- Sincronización diaria del catálogo operacional mediante Google Sheets API.
 - Pasarelas de cobro inyectables (SumUp Terminal & Cloud API) con webhooks criptográficos idempotentes.
 
 ---

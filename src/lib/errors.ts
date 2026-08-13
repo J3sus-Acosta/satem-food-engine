@@ -79,7 +79,7 @@ export class ForbiddenError extends Error {
 }
 
 /**
- * Thrown when an external integration (n8n, SumUp, etc.) returns an error.
+ * Thrown when an external integration (SumUp, etc.) returns an error.
  * Maps to HTTP 502.
  */
 export class IntegrationError extends Error {

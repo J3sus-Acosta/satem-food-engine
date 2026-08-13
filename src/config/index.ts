@@ -36,9 +36,6 @@ export const ROUTES = {
     chat: '/api/chat',
     payments: '/api/payments',
     inventory: '/api/inventory',
-    webhooks: {
-      n8n: '/api/webhooks/n8n',
-    },
   },
 } as const
 

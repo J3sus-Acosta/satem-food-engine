@@ -23,7 +23,7 @@
 
 4. Ninguna API Route puede acceder directamente a Prisma.
 
-5. Ninguna integración externa (n8n, Google, SumUp, Telegram, WhatsApp) puede contener reglas de negocio.
+5. Ninguna integración externa (Google, SumUp, Telegram, WhatsApp) puede contener reglas de negocio.
 
 6. Toda lógica debe vivir exclusivamente dentro de los servicios del dominio.
 
@@ -123,8 +123,7 @@ src/
 │   ├── products/
 │   ├── payments/
 │   ├── inventory/
-│   ├── google/
-│   └── n8n/
+│   └── google/
 ├── server/                 ← Server-only. Nunca importar desde Client Components.
 │   └── db.ts               ← Cliente Prisma (singleton)
 ├── config/                 ← Constantes de la app (isomórficas)

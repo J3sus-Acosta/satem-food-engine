@@ -12,7 +12,7 @@ SATEM Food Engine v1.0.0-rc1 representa el primer candidato de lanzamiento ofici
 2. **Checkout e Inmutabilidad (`/api/orders/checkout`)**: Creación de órdenes en base de datos. Implementa el **Snapshot Pattern** congelando precios y nombres en el momento de la compra para blindar los registros contables contra cambios futuros de catálogo.
 3. **Gestión Operativa de Cocina (KDS Kanban)**: Dashboard táctil interactivo en `/dashboard/kitchen` para coordinar estados de preparación (PENDING → PREPARING → READY → DELIVERED).
 4. **Multi-Tenant / Multi-Sucursal de Pagos**: Inyección dinámica de configuraciones de pasarela según la jerarquía establecida (Sucursal → Organización → Variables de Entorno) delegada en `PaymentProviderFactory`.
-5. **Integración con Hojas de Cálculo (Google Sheets CMS)**: Webhook sincronizado a través de n8n para importar anulaciones del menú diario (precios temporales, stock diario y disponibilidad) basándose en SKUs.
+5. **Integración con Hojas de Cálculo (Google Sheets CMS)**: Webhook directo para importar anulaciones del menú diario (precios temporales, stock diario y disponibilidad) basándose en SKUs.
 6. **Seguridad y Robustez en Concurrencia**:
    - Transacciones interactiva de Prisma con lógica de reintentos automatizados para evitar colisiones concurrentes de números de orden.
    - Idempotencia en webhooks mediante actualización atómica condicional de estado de pagos (`confirmIfPending`).
@@ -26,7 +26,6 @@ SATEM Food Engine v1.0.0-rc1 representa el primer candidato de lanzamiento ofici
 - **Runtime**: Node.js v20+ / React 19.2.4
 - **Persistencia**: PostgreSQL administrado con Prisma ORM 6.9.0
 - **Estilos**: Tailwind CSS 4 con componentes shadcn/ui (`@base-ui/react`)
-- **Automatización**: n8n Workflow Automation (Sincronización y Mantenimiento nocturno)
 - **Arquitectura de Software**: Clean Architecture basada en capas de desacoplamiento estricto:
   - **Types**: Modelos y tipos isomórficos puros independientes de tecnologías.
   - **Repositories**: Contratos puros en `interfaces/` e implementaciones Prisma en `prisma/`.

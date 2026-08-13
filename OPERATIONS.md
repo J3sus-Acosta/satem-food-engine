@@ -39,33 +39,33 @@ npx prisma studio
 
 ---
 
-## 3. Sincronización Automática (Google Sheets Sync + n8n)
+## 3. Sincronización Automática (Google Sheets Sync)
 
-La carta de MCI Santiago se sincroniza diariamente desde el archivo Google Sheets a las **08:00 AM** a través del flujo **n8n Workflow 01** (`01-menu-sync.json`).
+La carta de MCI Santiago se sincroniza diariamente desde el archivo Google Sheets a las **08:00 AM** a través del endpoint `/api/webhooks/menu-sync`.
 
 ### Fallas en Sincronización:
 
-Si el menú no se actualiza, verifique en el panel de n8n:
+Si el menú no se actualiza, verifique:
 
-1. Que el webhook devuelva HTTP 200. Si devuelve HTTP 401, el secreto de sincronización `x-menu-sync-secret` está desalineado entre n8n y `.env`.
-2. Si el webhook devuelve HTTP 400, verifique los logs de `app` para identificar el SKU/Código duplicado o mal configurado en la hoja de cálculo.
-3. Si n8n reporta fallas de conexión, valide que la variable de entorno `NEXT_PUBLIC_APP_URL` esté correctamente configurada en la instancia de n8n.
+1. Que la petición devuelva HTTP 200. Si devuelve HTTP 401, el secreto de sincronización `x-menu-sync-secret` está desalineado o ausente en `.env`.
+2. Si la petición devuelve HTTP 400, verifique los logs de `app` para identificar el SKU/Código duplicado o mal configurado en la hoja de cálculo.
+3. Valide que la variable de entorno `NEXT_PUBLIC_APP_URL` esté correctamente configurada.
 
 ---
 
 ## 4. Reset del Menú Diario (Mantenimiento Nocturno)
 
-Cada noche a las **02:00 AM**, el flujo **n8n Workflow 04** (`04-nightly-maintenance.json`) envía una petición POST a `/api/menu/reset-daily` con el secreto de firma.
+Cada noche a las **02:00 AM**, el job de mantenimiento nocturno envía una petición POST a `/api/menu/reset-daily` con el secreto de firma.
 Esto elimina todos los registros de la tabla `daily_menu_overrides` en la base de datos de PostgreSQL, forzando a que la carta pública consuma los precios y stocks base del catálogo al comenzar la jornada, preparándose para la sincronización de las 08:00 AM.
 
 ---
 
 ## 5. Monitoreo de Alertas de Stock Bajo
 
-El flujo **n8n Workflow 05** (`05-low-stock-alert.json`) consulta cada hora la API `/api/inventory/low-stock`.
+El job de alertas de stock consulta la API `/api/inventory/low-stock`.
 
-- Actualmente, devuelve un arreglo vacío seguro (`alerts: []`) para evitar ruidos de error 404 en el log de n8n.
-- Al implementar el servicio de inventario real en fases futuras, este workflow enviará alertas automáticas a canales de soporte cuando los ingredientes crucen el stock mínimo configurado.
+- Actualmente, devuelve un arreglo vacío seguro (`alerts: []`) para evitar ruidos de error en el monitoreo.
+- Al implementar el servicio de inventario real en fases futuras, este endpoint enviará alertas automáticas cuando los ingredientes crucen el stock mínimo configurado.
 
 ---
 

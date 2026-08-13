@@ -13,11 +13,10 @@ import {
 /**
  * POST /api/webhooks/menu-sync
  *
- * Dedicated webhook endpoint for the n8n + Google Sheets Menú Diario sync flow.
+ * Dedicated webhook endpoint for the Google Sheets Menú Diario sync flow.
  *
  * This endpoint orchestrates the full Validate → Preview → Apply cycle in a
- * single HTTP call — optimised for the n8n automated workflow where a split
- * Preview/Apply flow would require complex state management in n8n.
+ * single HTTP call — optimised for automated sync jobs.
  *
  * Security: Validates the `x-menu-sync-secret` header against MENU_SYNC_SECRET
  * env variable. If the env variable is not set, the endpoint accepts all requests

@@ -27,9 +27,9 @@ NEXT_PUBLIC_APP_URL=https://menu.satem.cl
 # Base de Datos (PostgreSQL)
 DATABASE_URL="postgresql://usuario:contraseña@host:5432/satem_db?schema=public"
 
-# Seguridad y Webhooks de Sincronización (n8n)
+# Seguridad y Webhooks de Sincronización
 # Generar una clave segura aleatoria de 32 caracteres
-MENU_SYNC_SECRET="clave-segura-sincronizacion-sheets-n8n"
+MENU_SYNC_SECRET="clave-segura-sincronizacion-sheets"
 
 # Proveedores de Pago (Tenant Default)
 PAYMENT_PROVIDER=sumup
@@ -211,4 +211,3 @@ Si la nueva versión RC1 presenta errores graves en producción, siga estos paso
 - [ ] Puertos del firewall configurados (80, 443 abiertos; 5432 cerrado a la red externa).
 - [ ] Ejecución de `prisma migrate deploy` exitosa sin pérdida de datos.
 - [ ] Certificado SSL vigente y redirección HTTPS activa.
-- [ ] Ejecución exitosa de workflows de n8n verificada.

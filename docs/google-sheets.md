@@ -2,7 +2,7 @@
 
 Este documento define la estructura y diseño de las hojas de cálculo de Google Sheets que servirán como **CMS inicial** para que el administrador del restaurante gestione el catálogo, disponibilidad, inventario inicial y configuraciones.
 
-Posteriormente, un flujo en **n8n** leerá estas hojas y sincronizará la información directamente con la base de datos **PostgreSQL**.
+Posteriormente, el servicio de sincronización leerá estas hojas y actualizará la información directamente con la base de datos **PostgreSQL**.
 
 ---
 
@@ -23,13 +23,13 @@ El libro de Google Sheets debe contener las siguientes **6 hojas**:
 
 Define las secciones del menú donde se agrupan los productos (ej. Entradas, Platos de Fondo, Bebidas).
 
-| Columna     | Tipo         | Descripción                                        | Ejemplo / Reglas                          |
-| ----------- | ------------ | -------------------------------------------------- | ----------------------------------------- |
-| `id`        | Texto / CUID | Identificador único de la categoría.               | `cat_123` o vacío (n8n autogenerará CUID) |
-| `name`      | Texto        | Nombre de la categoría mostrado al público.        | `Hamburguesas`, `Bebidas`                 |
-| `imageUrl`  | Texto (URL)  | Imagen representativa de la categoría.             | `https://satem.store/images/burgers.jpg`  |
-| `sortOrder` | Entero       | Orden visual en la carta (menor valor va primero). | `10`, `20`, `30`                          |
-| `isActive`  | Booleano     | Si la categoría está visible en el menú.           | `VERDADERO`, `FALSO`                      |
+| Columna     | Tipo         | Descripción                                        | Ejemplo / Reglas                         |
+| ----------- | ------------ | -------------------------------------------------- | ---------------------------------------- |
+| `id`        | Texto / CUID | Identificador único de la categoría.               | `cat_123` o vacío (autogenerará CUID)    |
+| `name`      | Texto        | Nombre de la categoría mostrado al público.        | `Hamburguesas`, `Bebidas`                |
+| `imageUrl`  | Texto (URL)  | Imagen representativa de la categoría.             | `https://satem.store/images/burgers.jpg` |
+| `sortOrder` | Entero       | Orden visual en la carta (menor valor va primero). | `10`, `20`, `30`                         |
+| `isActive`  | Booleano     | Si la categoría está visible en el menú.           | `VERDADERO`, `FALSO`                     |
 
 ---
 
@@ -115,8 +115,8 @@ Valores generales y operacionales del restaurante o local.
 
 ---
 
-## Reglas de Integración con n8n
+## Reglas de Integración de Sincronización
 
-1. **Idempotencia:** n8n utilizará la columna `id` de cada hoja como clave primaria. Si el ID ya existe en PostgreSQL, realizará un _UPDATE_ de los campos. Si no existe, creará un _INSERT_ y subirá el nuevo ID generado al Google Sheet.
-2. **Eliminaciones (Soft Delete):** Cuando una fila sea marcada como `isActive = FALSO` en Google Sheets, n8n actualizará la base de datos marcando el registro como inactivo, o con `deletedAt = timestamp` actual para evitar romper registros históricos de pedidos (`Orders`).
-3. **Validación de Relaciones:** n8n validará que no existan variantes o grupos de modificadores huérfanos. Por ejemplo, si un producto no existe en `Productos`, sus variantes en `Variantes` no serán sincronizadas.
+1. **Idempotencia:** El proceso utilizará la columna `id` de cada hoja como clave primaria. Si el ID ya existe en PostgreSQL, realizará un _UPDATE_ de los campos. Si no existe, creará un _INSERT_.
+2. **Eliminaciones (Soft Delete):** Cuando una fila sea marcada como `isActive = FALSO` en Google Sheets, se actualizará la base de datos marcando el registro como inactivo, o con `deletedAt = timestamp` actual para evitar romper registros históricos de pedidos (`Orders`).
+3. **Validación de Relaciones:** Se validará que no existan variantes o grupos de modificadores huérfanos. Por ejemplo, si un producto no existe en `Productos`, sus variantes en `Variantes` no serán sincronizadas.

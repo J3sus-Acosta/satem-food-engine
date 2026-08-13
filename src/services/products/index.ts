@@ -358,7 +358,7 @@ export class ProductService {
   }
   /**
    * Deletes all DailyMenuOverrides for a location's active menu.
-   * Called by the nightly maintenance job (n8n workflow 04) at 02:00 AM
+   * Called by the nightly maintenance job at 02:00 AM
    * to reset daily availability, stock, and pricing overrides before the
    * next sync from Google Sheets at 08:00 AM.
    *

@@ -3,7 +3,7 @@ import 'server-only'
 import type { DailyMenuRowInput } from '@/types'
 
 /**
- * Represents a single validated row received from Google Sheets via n8n.
+ * Represents a single validated row received from Google Sheets.
  * Uses the short human-readable "Código" rather than internal IDs.
  * Mirrors the column structure of the "Menú Diario" sheet tab.
  */
@@ -47,7 +47,7 @@ export interface SheetValidationResult {
 }
 
 /**
- * Parses and validates an array of raw sheet rows from n8n.
+ * Parses and validates an array of raw sheet rows.
  *
  * Separate from ProductService.previewDailyMenuOverrides to:
  *  1. Provide richer error format ("Fila X - CODE - message").
@@ -57,7 +57,7 @@ export interface SheetValidationResult {
  * Does NOT access the database — only performs structural/type validation.
  * Database existence checks are deferred to ProductService.
  *
- * @param rows — Raw rows from Google Sheets (provided by n8n after column mapping).
+ * @param rows — Raw rows from Google Sheets (provided after column mapping).
  * @returns SheetValidationResult with all detected errors.
  */
 export function validateSheetRows(rows: SheetRow[]): SheetValidationResult {
@@ -168,7 +168,7 @@ export function validateSheetRows(rows: SheetRow[]): SheetValidationResult {
  * Formats a list of SheetRowValidationErrors into the canonical string format:
  * "Fila {row} - {code} - {message}"
  *
- * This format matches the error display expected by the n8n workflow and
+ * This format matches the error display expected by the sync flow and
  * the Google Sheets status cell.
  */
 export function formatSheetErrors(errors: SheetRowValidationError[]): string[] {

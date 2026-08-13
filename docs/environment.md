@@ -42,7 +42,7 @@ Este documento describe todas las variables de entorno utilizadas por **SATEM Fo
 
 ### `MENU_SYNC_SECRET`
 
-- **Propósito:** Token compartido entre el orquestador externo (**n8n**) y la aplicación Next.js para securizar la sincronización del menú diario vía Google Sheets.
+- **Propósito:** Token compartido entre el cliente/script de sincronización y la aplicación Next.js para securizar la sincronización del menú diario vía Google Sheets.
 - **Header esperado:** `x-menu-sync-secret`
 - **Requerido en:** Producción (en desarrollo local se puede dejar vacío para facilitar la depuración).
 - **Ejemplo:** `MENU_SYNC_SECRET="a8f0923cd82390f772ab11b22cc5938d"`

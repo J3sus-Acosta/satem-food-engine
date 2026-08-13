@@ -6,14 +6,13 @@ import { TenantResolver } from '@/server/tenant-resolver'
  * GET /api/inventory/low-stock
  *
  * Returns a list of inventory items currently below their minimum stock threshold.
- * Consumed by n8n workflow 05 (Low Stock Alert) every hour.
+ * Consumed by low stock alert monitoring.
  *
  * Query params:
  *   locationId - The internal location ID to check (optional, defaults to resolved CUID).
  *
  * NOTE: InventoryService.getLowStockAlerts is not yet implemented (returns NotImplementedError).
- * This endpoint returns an empty list safely until the inventory module is completed,
- * preventing the hourly 404 errors in n8n that generate noise in monitoring.
+ * This endpoint returns an empty list safely until the inventory module is completed.
  *
  * When InventoryService is implemented, replace the empty array response with:
  *   const alerts = await inventoryService.getLowStockAlerts(locationId)

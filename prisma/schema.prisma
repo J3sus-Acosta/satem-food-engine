@@ -874,7 +874,6 @@ model LoyaltyAccount {
 /// Canal de venta configurado para un Location.
 /// Abstrae el origen del pedido: web, WhatsApp, Telegram, QR, kiosco, etc.
 /// La lógica específica de cada canal vive en config (JSON) validado por Zod.
-/// n8n se conecta a través de webhooks externos, NO referenciado en este modelo.
 model Channel {
   id         String      @id @default(cuid())
   locationId String

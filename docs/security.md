@@ -19,7 +19,7 @@ Utilizado para recibir confirmaciones de pago asíncronas desde la pasarela de p
 
 ### B. Webhook de Sincronización del Menú Diario (`/api/webhooks/menu-sync`)
 
-Utilizado por **n8n** para aplicar cambios diarios operacionales definidos en la hoja de cálculo de Google Sheets.
+Utilizado para aplicar cambios diarios operacionales definidos en la hoja de cálculo de Google Sheets.
 
 - **Header de Seguridad (`x-menu-sync-secret`):**
   - **Desarrollo/Testing:** Si la variable `MENU_SYNC_SECRET` no está configurada en el `.env`, el endpoint permite sincronizaciones de prueba sin clave.
