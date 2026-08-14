@@ -22,6 +22,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  FolderPlus,
+  Tag,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ProductWithFull, ProductVersion, CatalogAuditLog } from '@/types'
@@ -68,6 +70,13 @@ export default function CatalogDashboardClient({
   >('basic')
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [historyActiveTab, setHistoryActiveTab] = useState<'versions' | 'audit'>('versions')
+
+  // Category Management State
+  const [categoriesList, setCategoriesList] = useState<{ id: string; name: string }[]>(categories)
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null)
+  const [categoryInputName, setCategoryInputName] = useState('')
+  const [isCategorySaving, setIsCategorySaving] = useState(false)
 
   // Selected Data for form/modals
   const [selectedProduct, setSelectedProduct] = useState<ProductWithFull | null>(null)
@@ -192,6 +201,98 @@ export default function CatalogDashboardClient({
       setFormError(err.message || 'Error al subir imagen')
     } finally {
       setIsUploadingImage(false)
+    }
+  }
+
+  const fetchCategoriesList = async () => {
+    try {
+      const res = await fetch('/api/categories')
+      const json = await res.json()
+      if (json.data && Array.isArray(json.data)) {
+        setCategoriesList(json.data.map((c: any) => ({ id: c.id, name: c.name })))
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+    }
+  }
+
+  const handleSaveCategory = async (catIdToEdit?: string) => {
+    if (!categoryInputName.trim()) return
+    setIsCategorySaving(true)
+    try {
+      const targetId = catIdToEdit || editingCategory?.id
+      const method = targetId ? 'PUT' : 'POST'
+      const payload = targetId
+        ? { id: targetId, name: categoryInputName.trim() }
+        : { name: categoryInputName.trim() }
+
+      const res = await fetch('/api/categories', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json()
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Error al guardar la categoría')
+      }
+
+      await fetchCategoriesList()
+
+      if (!targetId && json.data?.id) {
+        setFormDefaultCategoryId(json.data.id)
+      }
+
+      setCategoryInputName('')
+      setEditingCategory(null)
+      setSuccessMessage(targetId ? 'Categoría actualizada con éxito' : 'Categoría creada con éxito')
+      setTimeout(() => setSuccessMessage(null), 3000)
+    } catch (err: any) {
+      setGlobalError(err.message || 'Error al guardar la categoría')
+    } finally {
+      setIsCategorySaving(false)
+    }
+  }
+
+  const handleQuickCreateCategory = () => {
+    const newName = prompt('Ingresa el nombre de la nueva categoría:')
+    if (newName && newName.trim()) {
+      fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim() }),
+      })
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.data?.id) {
+            fetchCategoriesList()
+            setFormDefaultCategoryId(json.data.id)
+            setSuccessMessage(`Categoría "${newName.trim()}" creada y seleccionada`)
+            setTimeout(() => setSuccessMessage(null), 3000)
+          }
+        })
+        .catch((err) => setGlobalError(err.message || 'Error al crear la categoría'))
+    }
+  }
+
+  const handleQuickEditCategory = (catId: string) => {
+    const current = categoriesList.find((c) => c.id === catId)
+    if (!current) return
+    const updatedName = prompt('Modificar nombre de la categoría:', current.name)
+    if (updatedName && updatedName.trim() && updatedName.trim() !== current.name) {
+      fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: catId, name: updatedName.trim() }),
+      })
+        .then((r) => r.json())
+        .then((json) => {
+          if (json.data) {
+            fetchCategoriesList()
+            setSuccessMessage(`Categoría modificada a "${updatedName.trim()}"`)
+            setTimeout(() => setSuccessMessage(null), 3000)
+          }
+        })
+        .catch((err) => setGlobalError(err.message || 'Error al actualizar la categoría'))
     }
   }
 
@@ -508,7 +609,18 @@ export default function CatalogDashboardClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              fetchCategoriesList()
+              setIsCategoryModalOpen(true)
+            }}
+            className="rounded-xl border-slate-200 bg-white px-4 py-2.5 font-medium shadow-sm hover:bg-slate-50"
+          >
+            <FolderPlus className="mr-1.5 h-4 w-4 text-emerald-600" />
+            Gestionar Categorías
+          </Button>
           <Button
             onClick={handleOpenCreate}
             disabled={isActionLoading}
@@ -872,16 +984,36 @@ export default function CatalogDashboardClient({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-400 uppercase">
-                          Categoría del Menú Asociada
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-semibold text-slate-400 uppercase">
+                            Categoría del Menú Asociada
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleQuickCreateCategory}
+                              className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline"
+                            >
+                              ＋ Nueva
+                            </button>
+                            {formDefaultCategoryId && (
+                              <button
+                                type="button"
+                                onClick={() => handleQuickEditCategory(formDefaultCategoryId)}
+                                className="text-[11px] font-bold text-slate-600 hover:text-slate-800 hover:underline"
+                              >
+                                ✏️ Editar
+                              </button>
+                            )}
+                          </div>
+                        </div>
                         <select
                           value={formDefaultCategoryId}
                           onChange={(e) => setFormDefaultCategoryId(e.target.value)}
                           className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-slate-700 focus:outline-none"
                         >
                           <option value="">Sin Categoría (Sólo definición de catálogo)</option>
-                          {categories.map((c) => (
+                          {categoriesList.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
                             </option>
@@ -1684,6 +1816,125 @@ export default function CatalogDashboardClient({
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Management Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg space-y-5 rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                  <FolderPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Gestionar Categorías del Menú
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Crea o renombra categorías de la carta digital.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsCategoryModalOpen(false)
+                  setEditingCategory(null)
+                  setCategoryInputName('')
+                }}
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Input Form for New / Edit */}
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/50 p-3">
+              <input
+                type="text"
+                value={categoryInputName}
+                onChange={(e) => setCategoryInputName(e.target.value)}
+                placeholder={
+                  editingCategory
+                    ? `Modificando "${editingCategory.name}"...`
+                    : 'Nombre de la nueva categoría...'
+                }
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-800 focus:border-emerald-500 focus:outline-none"
+              />
+              <Button
+                onClick={() => handleSaveCategory()}
+                disabled={isCategorySaving || !categoryInputName.trim()}
+                className="rounded-xl px-4 py-2 text-xs font-bold shadow-sm"
+              >
+                {isCategorySaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : editingCategory ? (
+                  'Guardar'
+                ) : (
+                  'Crear'
+                )}
+              </Button>
+              {editingCategory && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCategory(null)
+                    setCategoryInputName('')
+                  }}
+                  className="px-2 text-xs font-semibold text-slate-500 hover:underline"
+                >
+                  Cancelar
+                </button>
+              )}
+            </div>
+
+            {/* List of Existing Categories */}
+            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+              {categoriesList.length === 0 ? (
+                <p className="py-4 text-center text-xs font-medium text-slate-400">
+                  No hay categorías registradas en la carta.
+                </p>
+              ) : (
+                categoriesList.map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-3 shadow-xs hover:border-slate-200"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Tag className="h-4 w-4 text-slate-400" />
+                      <span className="text-sm font-bold text-slate-800">{cat.name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCategory(cat)
+                        setCategoryInputName(cat.name)
+                      }}
+                      className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      Editar
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="flex justify-end border-t border-slate-100 pt-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCategoryModalOpen(false)
+                  setEditingCategory(null)
+                  setCategoryInputName('')
+                }}
+                className="rounded-xl border-slate-200 text-xs font-bold"
+              >
+                Cerrar
+              </Button>
             </div>
           </div>
         </div>

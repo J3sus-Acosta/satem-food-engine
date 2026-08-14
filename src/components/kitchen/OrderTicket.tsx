@@ -123,9 +123,16 @@ export function OrderTicket({ order, onAction, onPrint }: OrderTicketProps) {
         </div>
       </div>
 
-      {/* Customer details */}
-      <div className="space-y-0.5 text-xs select-none">
-        <p className="text-foreground font-extrabold">{customerName}</p>
+      {/* Customer details & Kitchen Notes */}
+      <div className="space-y-1 text-xs select-none">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-foreground font-extrabold">{customerName}</span>
+          {order.notes && (
+            <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-extrabold text-amber-700 shadow-2xs dark:text-amber-300">
+              📝 Nota: {order.notes}
+            </span>
+          )}
+        </div>
         {customerPhone && <p className="text-muted-foreground text-[10px]">{customerPhone}</p>}
       </div>
 

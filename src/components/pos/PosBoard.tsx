@@ -32,6 +32,7 @@ import type {
 import { KitchenTicketPrinter } from '../kitchen/KitchenTicketPrinter'
 import { VoidOrderModal } from '../orders/VoidOrderModal'
 import { getStockCardBgClass } from '@/lib/stock-status'
+import { SatemLogo } from '@/components/ui/SatemLogo'
 
 interface PosBoardProps {
   menu: MenuWithCategories
@@ -401,11 +402,16 @@ export function PosBoard({
       <header className="bg-card border-border/60 flex flex-wrap items-center justify-between border-b px-4 py-2.5 shadow-sm sm:px-6 sm:py-3">
         <div className="flex items-center gap-3">
           <div className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-xl font-black shadow-md">
-            POS
+            <SatemLogo className="text-primary-foreground h-6 w-auto" />
           </div>
           <div>
             <h1 className="text-base font-bold tracking-tight">Caja Registradora</h1>
-            <p className="text-muted-foreground text-xs">{menu.name}</p>
+            <p className="text-muted-foreground text-xs font-semibold">
+              Menú:{' '}
+              {menu.name.includes('Casa Matriz')
+                ? 'Tierra Prometida'
+                : menu.name.replace(/^Menú\s*(Web\s*)?/i, '') || 'Tierra Prometida'}
+            </p>
           </div>
         </div>
 
@@ -576,15 +582,6 @@ export function PosBoard({
                         <span className="text-foreground text-sm font-black">
                           ${Number(item.price).toLocaleString('es-CL')}
                         </span>
-                        <div
-                          className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
-                            isAvailable
-                              ? 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
-                        >
-                          <Plus size={18} />
-                        </div>
                       </div>
                     </button>
                   )

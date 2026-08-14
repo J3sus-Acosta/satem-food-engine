@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth-server'
 import { TenantResolver } from '@/server/tenant-resolver'
 import LogoutButton from './LogoutButton'
 import LocationSwitcher from './LocationSwitcher'
+import { SatemLogo } from '@/components/ui/SatemLogo'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -27,8 +28,9 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-black tracking-tight text-slate-900">
-              SATEM Food Engine
+            <span className="flex items-center gap-1.5 text-sm font-black tracking-tight text-slate-900 select-none">
+              <SatemLogo className="h-5 w-auto text-slate-900" />
+              <span>Food Engine</span>
             </span>
 
             {/* Branch Badge or Switcher */}

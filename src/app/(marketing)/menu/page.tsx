@@ -5,9 +5,10 @@ import { TenantResolver } from '@/server/tenant-resolver'
 import { db } from '@/server/db'
 import { CustomerCartProvider, MenuCustomerView } from '@/components/customer/menu'
 import { CustomerOrderProvider } from '@/components/customer/order/CustomerOrderProvider'
+import { SatemLogo } from '@/components/ui/SatemLogo'
 
 interface PageProps {
-  searchParams: Promise<{ slug?: string; location?: string }>
+  searchParams: Promise<{ slug?: string; location?: string; locationId?: string }>
 }
 
 async function resolveLocationSlug(
@@ -34,18 +35,20 @@ async function resolveLocationSlug(
   return null
 }
 
-export default async function MenuPage({ searchParams }: PageProps) {
+export default async function PublicMenuPage({ searchParams }: PageProps) {
+  const params = await searchParams
   const locationSlug = await resolveLocationSlug(searchParams)
-  const resolved = await TenantResolver.resolve(locationSlug)
+  const locationId = params.locationId || null
 
-  // Fetch location details for location name
-  const location = await db.location.findUnique({
-    where: { id: resolved.locationId },
-    select: { name: true },
-  })
+  const tenant = await TenantResolver.resolve(locationId || locationSlug)
+  const menu = await productService.getMenu(tenant.locationId)
 
-  // Fetch menu directly on the server (zero HTTP overhead)
-  const menu = await productService.getMenu(resolved.locationId)
+  const location = tenant.locationId
+    ? await db.location.findUnique({
+        where: { id: tenant.locationId },
+        select: { name: true },
+      })
+    : null
 
   return (
     <main className="bg-background flex min-h-screen flex-col">
@@ -60,7 +63,11 @@ export default async function MenuPage({ searchParams }: PageProps) {
 
       {/* Premium subtle brand watermark footer */}
       <footer className="bg-muted/20 border-border/45 text-muted-foreground/60 border-t py-8 text-center text-xs">
-        <p>© {new Date().getFullYear()} SATEM Food Engine. Todos los derechos reservados.</p>
+        <p className="inline-flex items-center justify-center gap-1.5">
+          <span>© {new Date().getFullYear()}</span>
+          <SatemLogo className="h-3.5 w-auto" />
+          <span>Food Engine. Todos los derechos reservados.</span>
+        </p>
       </footer>
     </main>
   )

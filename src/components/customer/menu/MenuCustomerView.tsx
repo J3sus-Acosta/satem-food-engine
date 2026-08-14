@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState } from 'react'
 import { Search, PackageSearch, Store, MapPin, Clock, Compass } from 'lucide-react'
 import { ProductCard } from './ProductCard'
 import { ProductCustomizer } from './ProductCustomizer'
@@ -25,9 +25,6 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeCategory, setActiveCategory] = useState<string>('')
-
-  const categoryRefs = useRef<Record<string, HTMLElement | null>>({})
 
   // Menu Title & Description
   const displayLocationName = locationName || 'Tierra Prometida'
@@ -51,46 +48,6 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
       }
     })
   })
-
-  // 2. Setup active category tracking on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY + 180 // offset for sticky category navigation header
-
-      let currentActive = ''
-      for (const cat of menu.categories) {
-        const ref = categoryRefs.current[cat.id]
-        if (ref && ref.offsetTop <= scrollPosition) {
-          currentActive = cat.id
-        }
-      }
-
-      if (currentActive) {
-        setActiveCategory(currentActive)
-      } else if (menu.categories.length > 0) {
-        setActiveCategory(menu.categories[0].id)
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    if (menu.categories.length > 0) {
-      setActiveCategory(menu.categories[0].id)
-    }
-
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [menu.categories])
-
-  const scrollToCategory = (categoryId: string) => {
-    const ref = categoryRefs.current[categoryId]
-    if (ref) {
-      const offset = ref.offsetTop - 150 // offset to scroll below sticky header
-      window.scrollTo({
-        top: offset,
-        behavior: 'smooth',
-      })
-      setActiveCategory(categoryId)
-    }
-  }
 
   const handleCardSelect = (item: MenuItemWithProduct) => {
     setSelectedItem(item)
@@ -172,32 +129,12 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
         </div>
       </header>
 
-      {/* Sticky categories horizontal navigation & search header */}
-      <div className="bg-background/80 border-border/45 sticky top-0 z-30 border-b py-3.5 shadow-sm backdrop-blur-md transition-all duration-300">
-        <div className="mx-auto max-w-6xl space-y-4 px-4">
-          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
-            {/* Category tabs */}
-            <nav className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto scroll-smooth px-4 pb-1 select-none md:mx-0 md:px-0 md:pb-0">
-              {menu.categories.map((cat) => {
-                const isActive = activeCategory === cat.id
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => scrollToCategory(cat.id)}
-                    className={`touch-target-sm flex cursor-pointer items-center justify-center rounded-full px-5 py-2.5 text-xs font-semibold whitespace-nowrap transition-all duration-200 md:text-sm ${
-                      isActive
-                        ? 'bg-foreground text-background scale-103 font-bold shadow-sm'
-                        : 'bg-muted hover:bg-muted-foreground/5 text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {cat.name}
-                  </button>
-                )
-              })}
-            </nav>
-
+      {/* Sticky search header */}
+      <div className="bg-background/80 border-border/45 sticky top-0 z-30 border-b py-3 shadow-sm backdrop-blur-md transition-all duration-300">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mx-auto max-w-xl">
             {/* Search Input */}
-            <div className="relative w-full md:w-72">
+            <div className="relative w-full">
               <span className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
                 <Search size={16} />
               </span>
@@ -207,7 +144,7 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
                 onFocus={(e) => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar productos en la carta..."
-                className="bg-muted border-border/50 focus:border-primary placeholder:text-muted-foreground/60 min-h-[48px] w-full rounded-full border py-2.5 pr-4 pl-10 text-xs transition-all focus:ring-0 focus:outline-none md:text-sm"
+                className="bg-muted border-border/50 focus:border-primary placeholder:text-muted-foreground/60 min-h-[44px] w-full rounded-full border py-2.5 pr-4 pl-10 text-xs transition-all focus:ring-0 focus:outline-none md:text-sm"
               />
             </div>
           </div>
@@ -238,13 +175,7 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
         {/* Categories sections */}
         {filteredCategories.length > 0 ? (
           filteredCategories.map((cat) => (
-            <section
-              key={cat.id}
-              ref={(el) => {
-                categoryRefs.current[cat.id] = el
-              }}
-              className="scroll-mt-24 space-y-4 sm:space-y-6"
-            >
+            <section key={cat.id} className="space-y-4 sm:space-y-6">
               {/* Heading */}
               <div className="flex items-center gap-4 select-none">
                 <h3 className="text-foreground text-base font-extrabold tracking-tight sm:text-lg md:text-xl">

@@ -13,6 +13,7 @@ import {
 import { getSession } from '@/lib/auth-server'
 import { hasPermission, type Permission } from '@/lib/permissions'
 import type { UserRole } from '@/types'
+import { SatemLogo } from '@/components/ui/SatemLogo'
 
 export const dynamic = 'force-dynamic'
 
@@ -120,30 +121,20 @@ export default async function DashboardHubPage() {
     <div className="min-h-screen bg-slate-50/50 px-6 py-12 font-sans text-slate-800 md:px-12">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <div className="mb-12 flex flex-col gap-4 border-b border-slate-200 pb-8 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+        <div className="mb-12 flex flex-col gap-4 border-b border-slate-200 pb-8 text-left">
           <div>
             <div className="text-slate-650 mb-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold">
               <LayoutDashboard className="h-3.5 w-3.5 text-slate-500" />
               <span>HUB DE ADMINISTRACIÓN</span>
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              SATEM Food Engine
+            <h1 className="flex flex-wrap items-center gap-2.5 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <SatemLogo className="h-8 w-auto text-slate-900 sm:h-9" />
+              <span>Food Engine</span>
             </h1>
             <p className="mt-2 text-base text-slate-500">
               Bienvenido al panel central. Selecciona el módulo operativo o administrativo que
               deseas gestionar.
             </p>
-          </div>
-          <div className="flex justify-center sm:justify-end">
-            <div className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm sm:text-left">
-              <div className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-                Estado del Sistema
-              </div>
-              <div className="mt-1 flex items-center justify-center gap-1.5 text-sm font-bold text-slate-800 sm:justify-start">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                <span>En Línea (Producción)</span>
-              </div>
-            </div>
           </div>
         </div>
 

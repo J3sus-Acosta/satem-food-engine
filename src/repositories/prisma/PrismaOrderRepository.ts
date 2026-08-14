@@ -401,68 +401,91 @@ export class PrismaOrderRepository implements IOrderRepository {
   async create(data: CreateOrderInput): Promise<Order> {
     const businessDate = getPureBusinessDate()
 
-    try {
-      return await db.$transaction(async (tx) => {
-        const orderNumber = await this.generateNextOrderNumber(tx, data.locationId, businessDate)
+    let attempts = 0
+    while (attempts < 5) {
+      attempts++
+      try {
+        return await db.$transaction(async (tx) => {
+          const orderNumber = await this.generateNextOrderNumber(tx, data.locationId, businessDate)
 
-        const order = await tx.order.create({
-          data: {
+          const order = await tx.order.create({
+            data: {
+              orderNumber,
+              locationId: data.locationId,
+              channelId: data.channelId,
+              customerId: data.customerId || null,
+              type: data.type || 'DINE_IN',
+              tableIdentifier: data.tableIdentifier || null,
+              notes: data.notes || null,
+              metadata: (data.metadata || {}) as Prisma.InputJsonValue,
+              subtotal: 0,
+              taxAmount: 0,
+              discountAmount: 0,
+              totalAmount: 0,
+            },
+          })
+          return mapPrismaOrderToDomain(order)
+        })
+      } catch (error: unknown) {
+        const err = error as { code?: string; meta?: { target?: string | string[] } }
+        if (
+          err?.code === 'P2002' &&
+          (err?.meta?.target?.includes('orderNumber') ||
+            (Array.isArray(err?.meta?.target) && err?.meta?.target.includes('orderNumber')))
+        ) {
+          console.warn(
+            `[PrismaOrderRepository.create] orderNumber collision detected (attempt ${attempts}), bumping OrderSequence lastNumber...`
+          )
+          await db.orderSequence.updateMany({
+            where: { locationId: data.locationId },
+            data: { lastNumber: { increment: 1 } },
+          })
+          continue
+        }
+
+        if (isConnectionError(error)) {
+          console.warn(
+            '[PrismaOrderRepository.create] DB connection failed, using in-memory store.'
+          )
+          const dateKey = businessDate.toISOString().split('T')[0]
+          const sequenceKey = `${data.locationId}_${dateKey}`
+          const currentLast = IN_MEMORY_SEQUENCES.get(sequenceKey) || 0
+          const nextLast = currentLast + 1
+          IN_MEMORY_SEQUENCES.set(sequenceKey, nextLast)
+
+          const orderNumber = `#${String(nextLast).padStart(3, '0')}`
+          const newOrder: OrderWithItems = {
+            id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             orderNumber,
             locationId: data.locationId,
-            channelId: data.channelId,
             customerId: data.customerId || null,
-            type: data.type || 'DINE_IN',
+            channelId: data.channelId,
+            status: 'DRAFT' as OrderStatus,
+            type: (data.type || 'DINE_IN') as OrderType,
             tableIdentifier: data.tableIdentifier || null,
             notes: data.notes || null,
-            metadata: (data.metadata || {}) as Prisma.InputJsonValue,
             subtotal: 0,
             taxAmount: 0,
             discountAmount: 0,
             totalAmount: 0,
-          },
-        })
-        return mapPrismaOrderToDomain(order)
-      })
-    } catch (error) {
-      if (isConnectionError(error)) {
-        console.warn('[PrismaOrderRepository.create] DB connection failed, using in-memory store.')
-        const dateKey = businessDate.toISOString().split('T')[0]
-        const sequenceKey = `${data.locationId}_${dateKey}`
-        const currentLast = IN_MEMORY_SEQUENCES.get(sequenceKey) || 0
-        const nextLast = currentLast + 1
-        IN_MEMORY_SEQUENCES.set(sequenceKey, nextLast)
-
-        const orderNumber = `#${String(nextLast).padStart(3, '0')}`
-        const newOrder: OrderWithItems = {
-          id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-          orderNumber,
-          locationId: data.locationId,
-          customerId: data.customerId || null,
-          channelId: data.channelId,
-          status: 'DRAFT' as OrderStatus,
-          type: (data.type || 'DINE_IN') as OrderType,
-          tableIdentifier: data.tableIdentifier || null,
-          notes: data.notes || null,
-          subtotal: 0,
-          taxAmount: 0,
-          discountAmount: 0,
-          totalAmount: 0,
-          metadata: data.metadata || null,
-          cancellationReason: null,
-          confirmedAt: null,
-          preparedAt: null,
-          deliveredAt: null,
-          cancelledAt: null,
-          deletedAt: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          items: [],
+            confirmedAt: null,
+            preparedAt: null,
+            deliveredAt: null,
+            cancelledAt: null,
+            cancellationReason: null,
+            metadata: data.metadata || null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null,
+            items: [],
+          }
+          IN_MEMORY_ORDERS.push(newOrder)
+          return newOrder
         }
-        IN_MEMORY_ORDERS.push(newOrder)
-        return newOrder
+        throw error
       }
-      throw error
     }
+    throw new Error('No se pudo generar un número de pedido único tras 5 intentos.')
   }
 
   async addItem(

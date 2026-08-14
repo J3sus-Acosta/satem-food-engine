@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { KeyRound, Lock, AlertCircle, Loader2, Store, ArrowLeft } from 'lucide-react'
+import { SatemLogo } from '@/components/ui/SatemLogo'
 
 interface LocationOption {
   id: string
@@ -97,7 +98,10 @@ export default function LoginClient({ callbackUrl }: LoginClientProps) {
             )}
           </div>
           <h1 className="mt-3 text-lg font-black tracking-tight text-slate-900">
-            SATEM Food Engine
+            <span className="inline-flex items-center justify-center gap-1.5">
+              <SatemLogo className="h-5 w-auto text-slate-900" />
+              <span>Food Engine</span>
+            </span>
           </h1>
           <p className="mt-1 text-xs font-semibold text-slate-400 uppercase">
             {step === 'select-location' ? 'Selección de Sucursal' : 'Acceso al sistema'}

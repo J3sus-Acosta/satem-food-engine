@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { X, Check, AlertCircle, Plus, Minus } from 'lucide-react'
 import { useCustomerCart } from './CustomerCartProvider'
+import { SatemLogo } from '@/components/ui/SatemLogo'
 import type { MenuItemWithProduct } from '@/types'
 
 interface ProductCustomizerProps {
@@ -201,7 +202,10 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
             />
           ) : (
             <div className="bg-primary/5 text-primary/80 flex h-full w-full items-center justify-center">
-              <span className="text-sm font-semibold tracking-wide uppercase">SATEM Food</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase">
+                <SatemLogo className="h-4 w-auto" />
+                <span>Food Engine</span>
+              </span>
             </div>
           )}
           <button
