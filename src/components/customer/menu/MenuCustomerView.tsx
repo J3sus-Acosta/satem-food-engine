@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Search, Compass, PackageSearch } from 'lucide-react'
+import { Search, PackageSearch, Store, MapPin, Clock, Compass } from 'lucide-react'
 import { ProductCard } from './ProductCard'
 import { ProductCustomizer } from './ProductCustomizer'
 import { CartDrawer } from './CartDrawer'
@@ -11,9 +11,10 @@ import type { MenuWithCategories, MenuItemWithProduct } from '@/types'
 
 interface MenuCustomerViewProps {
   menu: MenuWithCategories
+  locationName?: string
 }
 
-export function MenuCustomerView({ menu }: MenuCustomerViewProps) {
+export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) {
   const { totalItems, cartSubtotal } = useCustomerCart()
 
   // Selection states
@@ -27,6 +28,11 @@ export function MenuCustomerView({ menu }: MenuCustomerViewProps) {
   const [activeCategory, setActiveCategory] = useState<string>('')
 
   const categoryRefs = useRef<Record<string, HTMLElement | null>>({})
+
+  // Menu Title & Description
+  const displayLocationName = locationName || 'Tierra Prometida'
+  const menuTitle = `Menú Web ${displayLocationName}`
+  const menuDescription = 'Carta principal: Comidas Bebidas y Postres que Edifican...'
 
   // 1. Catálogo destacado (con overrides aplicados)
   const highlightedItems: MenuItemWithProduct[] = []
@@ -121,6 +127,51 @@ export function MenuCustomerView({ menu }: MenuCustomerViewProps) {
 
   return (
     <div className="space-y-6">
+      {/* Restaurant Cover Header */}
+      <header className="bg-muted border-border/40 relative overflow-hidden border-b py-12 md:py-16">
+        {/* Decorative backdrop gradient */}
+        <div className="from-primary/10 via-background to-secondary/10 pointer-events-none absolute inset-0 bg-gradient-to-r opacity-60" />
+
+        <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 text-center md:flex-row md:items-start md:text-left">
+          {/* Logo Badge */}
+          <div className="bg-foreground text-background border-border/80 flex h-20 w-20 items-center justify-center rounded-2xl border shadow-lg md:h-24 md:w-24">
+            <Store className="h-10 w-10 stroke-[1.5] md:h-12 md:w-12" />
+          </div>
+
+          {/* Restaurant details */}
+          <div className="flex-1 space-y-3">
+            <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">{menuTitle}</h1>
+            <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed md:text-base">
+              {menuDescription}
+            </p>
+
+            {/* Quick meta details */}
+            <div className="text-muted-foreground/90 flex flex-wrap items-center justify-center gap-4 pt-2 text-xs font-medium md:justify-start md:text-sm">
+              <span className="bg-muted border-border/50 flex items-center gap-1.5 rounded-full border px-3 py-1.5">
+                <MapPin size={14} className="text-primary" />
+                Santiago, Chile
+              </span>
+              <span className="bg-muted border-border/50 flex items-center gap-1.5 rounded-full border px-3 py-1.5">
+                <Clock size={14} className="text-primary" />
+                Abierto hoy: 12:00 - 22:00
+              </span>
+            </div>
+
+            {/* Consultar estado del pedido button - 1 line below location & schedule */}
+            <div className="flex justify-center pt-2 md:justify-start">
+              <button
+                type="button"
+                onClick={() => setIsStatusModalOpen(true)}
+                className="bg-card hover:bg-muted text-foreground border-border/60 flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-4 py-2.5 text-xs font-bold shadow-xs transition-all select-none hover:shadow-sm"
+              >
+                <PackageSearch size={15} className="text-primary shrink-0" />
+                <span>Consultar estado del pedido</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
       {/* Sticky categories horizontal navigation & search header */}
       <div className="bg-background/80 border-border/45 sticky top-0 z-30 border-b py-4 shadow-sm backdrop-blur-md transition-all duration-300">
         <div className="mx-auto max-w-6xl space-y-4 px-4">
@@ -145,29 +196,18 @@ export function MenuCustomerView({ menu }: MenuCustomerViewProps) {
               })}
             </nav>
 
-            {/* Search Input and Order Status lookup button */}
-            <div className="flex w-full flex-col items-center gap-2.5 sm:flex-row md:w-auto">
-              <div className="relative w-full md:w-64">
-                <span className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <Search size={15} />
-                </span>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar productos en la carta..."
-                  className="bg-muted border-border/50 focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-full border py-2.5 pr-4 pl-9 text-xs transition-all focus:ring-0 focus:outline-none md:text-sm"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsStatusModalOpen(true)}
-                className="bg-card hover:bg-muted text-foreground border-border/60 flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-4 py-2.5 text-xs font-bold shadow-xs transition-all select-none hover:shadow-sm"
-              >
-                <PackageSearch size={15} className="text-primary shrink-0" />
-                <span>Consultar estado del pedido</span>
-              </button>
+            {/* Search Input */}
+            <div className="relative w-full md:w-64">
+              <span className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <Search size={15} />
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar productos en la carta..."
+                className="bg-muted border-border/50 focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-full border py-2.5 pr-4 pl-9 text-xs transition-all focus:ring-0 focus:outline-none md:text-sm"
+              />
             </div>
           </div>
         </div>

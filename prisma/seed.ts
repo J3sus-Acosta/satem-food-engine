@@ -40,11 +40,11 @@ async function main() {
   console.info('2. Creando Locales...')
   const loc1 = await db.location.upsert({
     where: { organizationId_slug: { organizationId: org.id, slug: 'casa-matriz' } },
-    update: { name: 'Casa Matriz', type: 'CAFETERIA', isActive: true },
+    update: { name: 'Tierra Prometida', type: 'CAFETERIA', isActive: true },
     create: {
       organizationId: org.id,
       slug: 'casa-matriz',
-      name: 'Casa Matriz',
+      name: 'Tierra Prometida',
       type: 'CAFETERIA',
       isActive: true,
       operatingHours: {},
@@ -213,17 +213,24 @@ async function main() {
 
   // 5. MENÚS Y CATEGORÍAS
   console.info('5. Creando Menús y Categorías...')
-  const menu1 =
-    (await db.menu.findFirst({ where: { locationId: loc1.id, isDefault: true } })) ||
-    (await db.menu.create({
-      data: {
-        locationId: loc1.id,
-        name: 'Menú Casa Matriz',
-        description: 'Carta principal de cafetería',
-        isDefault: true,
-        isActive: true,
-      },
-    }))
+  const existingMenu1 = await db.menu.findFirst({ where: { locationId: loc1.id, isDefault: true } })
+  const menu1 = existingMenu1
+    ? await db.menu.update({
+        where: { id: existingMenu1.id },
+        data: {
+          name: 'Menú Web Tierra Prometida',
+          description: 'Carta principal: Comidas Bebidas y Postres que Edifican...',
+        },
+      })
+    : await db.menu.create({
+        data: {
+          locationId: loc1.id,
+          name: 'Menú Web Tierra Prometida',
+          description: 'Carta principal: Comidas Bebidas y Postres que Edifican...',
+          isDefault: true,
+          isActive: true,
+        },
+      })
 
   const menu2 =
     (await db.menu.findFirst({ where: { locationId: loc2.id, isDefault: true } })) ||
