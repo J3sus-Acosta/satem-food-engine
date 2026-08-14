@@ -154,10 +154,13 @@ export function OrderStatusModal({ locationId, isOpen, onClose }: OrderStatusMod
                     id="orderNumber"
                     type="text"
                     value={orderNumber}
+                    onFocus={(e) =>
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
                     onChange={(e) => setOrderNumber(e.target.value)}
                     placeholder="Ej: #1042"
                     disabled={isLoading}
-                    className="border-border/60 bg-card focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-xl border p-3.5 text-xs focus:ring-0 focus:outline-none md:text-sm"
+                    className="border-border/60 bg-card focus:border-primary placeholder:text-muted-foreground/60 min-h-[48px] w-full rounded-xl border p-3.5 text-xs focus:ring-0 focus:outline-none md:text-sm"
                   />
                 </div>
 
@@ -179,10 +182,13 @@ export function OrderStatusModal({ locationId, isOpen, onClose }: OrderStatusMod
                     id="phone"
                     type="tel"
                     value={phone}
+                    onFocus={(e) =>
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Ej: +56912345678"
                     disabled={isLoading}
-                    className="border-border/60 bg-card focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-xl border p-3.5 text-xs focus:ring-0 focus:outline-none md:text-sm"
+                    className="border-border/60 bg-card focus:border-primary placeholder:text-muted-foreground/60 min-h-[48px] w-full rounded-xl border p-3.5 text-xs focus:ring-0 focus:outline-none md:text-sm"
                   />
                 </div>
               </div>
@@ -190,7 +196,7 @@ export function OrderStatusModal({ locationId, isOpen, onClose }: OrderStatusMod
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-foreground text-background hover:bg-foreground/90 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3.5 text-xs font-bold tracking-wider uppercase shadow-md transition-all disabled:opacity-60"
+                className="bg-foreground text-background hover:bg-foreground/90 flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3.5 text-xs font-bold tracking-wider uppercase shadow-md transition-all active:scale-[0.99] disabled:opacity-60"
               >
                 {isLoading ? (
                   <>

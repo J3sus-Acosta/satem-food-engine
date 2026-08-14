@@ -14,7 +14,6 @@ import {
   Truck,
   CheckCircle2,
   X,
-  UserCheck,
   RotateCcw,
   ChefHat,
   Loader2,
@@ -76,6 +75,12 @@ export function PosBoard({
   // Navigation & Filter states
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false)
+
+  // Virtual Keyboard focus helper
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   // Order Details
   const [orderType, setOrderType] = useState<'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'>('DINE_IN')
@@ -85,9 +90,6 @@ export function PosBoard({
 
   // Cart & Discount states
   const [cart, setCart] = useState<CartItem[]>([])
-  const [discountPercent, setDiscountPercent] = useState<number>(0)
-  const [customDiscountAmount, setCustomDiscountAmount] = useState<number>(0)
-  const [isStaffMeal, setIsStaffMeal] = useState<boolean>(false)
   const [activeDiscountCredits, setActiveDiscountCredits] =
     useState<DiscountCredit[]>(initialDiscounts)
   const [selectedDiscountCredit, setSelectedDiscountCredit] = useState<DiscountCredit | null>(null)
@@ -167,7 +169,6 @@ export function PosBoard({
   }, [cart])
 
   const discountAmount = useMemo(() => {
-    if (isStaffMeal) return subtotal // 100% discount for employee staff meal
     if (selectedDiscountCredit) {
       if (selectedDiscountCredit.valueType === 'PERCENTAGE') {
         return Math.min(Math.round((subtotal * selectedDiscountCredit.value) / 100), subtotal)
@@ -175,10 +176,8 @@ export function PosBoard({
         return Math.min(Number(selectedDiscountCredit.value), subtotal)
       }
     }
-    if (customDiscountAmount > 0) return Math.min(customDiscountAmount, subtotal)
-    if (discountPercent > 0) return Math.round((subtotal * discountPercent) / 100)
     return 0
-  }, [subtotal, isStaffMeal, selectedDiscountCredit, customDiscountAmount, discountPercent])
+  }, [subtotal, selectedDiscountCredit])
 
   const totalAmount = useMemo(() => {
     return Math.max(0, subtotal - discountAmount)
@@ -284,22 +283,9 @@ export function PosBoard({
     )
   }
 
-  const handleApplyStaffMeal = () => {
-    setIsStaffMeal((prev) => !prev)
-    setDiscountPercent(0)
-    setCustomDiscountAmount(0)
-    setSelectedDiscountCredit(null)
-    if (!isStaffMeal && !customerName) {
-      setCustomerName('Empleado / Colación')
-    }
-  }
-
   const handleClearCart = () => {
     setCart([])
-    setDiscountPercent(0)
-    setCustomDiscountAmount(0)
     setSelectedDiscountCredit(null)
-    setIsStaffMeal(false)
     setStaffNote('')
     setCustomerName('')
     setCustomerPhone('')
@@ -331,7 +317,7 @@ export function PosBoard({
       const posPayload = {
         locationId: locationId || '',
         type: orderType,
-        customerName: customerName || (isStaffMeal ? 'Empleado / Colación' : 'Cliente Caja'),
+        customerName: customerName || 'Cliente Caja',
         customerPhone: customerPhone || undefined,
         notes: staffNote || undefined,
         discountAmount,
@@ -358,7 +344,6 @@ export function PosBoard({
       const orderData: OrderWithItems = orderResult.data
 
       // 2. Pay POS Order and dispatch to Kitchen
-      const effectiveMethod = isStaffMeal ? 'STAFF_MEAL' : paymentMethod
       const paidNum = paymentMethod === 'CASH' && cashGiven ? Number(cashGiven) : totalAmount
 
       const payRes = await fetch('/api/pos/pay', {
@@ -366,7 +351,7 @@ export function PosBoard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: orderData.id,
-          method: effectiveMethod,
+          method: paymentMethod,
           amountPaid: paidNum,
           notes: staffNote || undefined,
         }),
@@ -408,11 +393,12 @@ export function PosBoard({
   // Cash change calculation
   const numCashGiven = Number(cashGiven || 0)
   const cashChange = Math.max(0, numCashGiven - totalAmount)
+  const totalCartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
     <div className="bg-background flex h-screen flex-col overflow-hidden">
       {/* POS Top Navigation Bar */}
-      <header className="bg-card border-border/60 flex items-center justify-between border-b px-6 py-3 shadow-sm">
+      <header className="bg-card border-border/60 flex flex-wrap items-center justify-between border-b px-4 py-2.5 shadow-sm sm:px-6 sm:py-3">
         <div className="flex items-center gap-3">
           <div className="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-xl font-black shadow-md">
             POS
@@ -424,57 +410,62 @@ export function PosBoard({
         </div>
 
         {/* Quick Nav Links */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={() => setIsVoidModalOpen(true)}
-            className="flex cursor-pointer items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-500/20 dark:text-rose-400"
+            className="touch-target-sm flex cursor-pointer items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-500/20 dark:text-rose-400"
           >
             <RotateCcw size={16} />
-            Anular Venta
+            <span className="hidden sm:inline">Anular Venta</span>
+            <span className="sm:hidden">Anular</span>
           </button>
           <a
             href="/dashboard/cash"
-            className="bg-muted hover:bg-muted/80 text-foreground border-border/60 flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors"
+            className="touch-target-sm bg-muted hover:bg-muted/80 text-foreground border-border/60 flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors"
           >
             <Calculator size={16} className="text-primary" />
-            Cierre de Caja
+            <span className="hidden md:inline">Cierre de Caja</span>
+            <span className="md:hidden">Caja</span>
           </a>
           <a
             href="/dashboard/kitchen"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-muted hover:bg-muted/80 text-foreground border-border/60 flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors"
+            className="touch-target-sm bg-muted hover:bg-muted/80 text-foreground border-border/60 flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors"
           >
             <ChefHat size={16} className="text-primary" />
-            Pantalla de Cocina
+            <span className="hidden md:inline">Pantalla de Cocina</span>
+            <span className="md:hidden">Cocina</span>
           </a>
           <a
             href="/menu"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-muted hover:bg-muted/80 text-foreground border-border/60 flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors"
+            className="touch-target-sm bg-muted hover:bg-muted/80 text-foreground border-border/60 flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-colors"
           >
             <Utensils size={16} className="text-primary" />
-            Menú Digital
+            <span className="hidden md:inline">Menú Digital</span>
+            <span className="md:hidden">Menú</span>
           </a>
         </div>
       </header>
 
-      {/* Main Content Workspace (Split 2-Column: Catalog + Cart Sidebar) */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Main Content Workspace (Responsive: Split 2-Column on LG/Landscape, Stacked on Mobile/Portrait) */}
+      <div className="relative flex flex-1 flex-col overflow-hidden lg:flex-row">
         {/* Left Column: Menu Catalog */}
         <div className="border-border/60 bg-muted/20 flex flex-1 flex-col overflow-hidden border-r">
           {/* Search & Category Filter Header */}
-          <div className="bg-card border-border/40 space-y-3 border-b p-4">
+          <div className="bg-card border-border/40 space-y-3 border-b p-3.5 sm:p-4">
             {/* Search Bar */}
             <div className="relative">
-              <Search className="text-muted-foreground absolute top-3 left-3.5 h-4 w-4" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-3.5 left-3.5 h-4 w-4" />
               <input
                 type="text"
                 value={searchQuery}
+                onFocus={handleInputFocus}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar producto por nombre..."
-                className="bg-muted/50 border-border/60 placeholder:text-muted-foreground focus:ring-primary/20 w-full rounded-2xl border py-2.5 pr-4 pl-10 text-sm focus:ring-2 focus:outline-none"
+                className="bg-muted/50 border-border/60 placeholder:text-muted-foreground focus:ring-primary/20 min-h-[48px] w-full rounded-2xl border py-2.5 pr-4 pl-10 text-sm focus:ring-2 focus:outline-none"
               />
             </div>
 
@@ -482,7 +473,7 @@ export function PosBoard({
             <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
               <button
                 onClick={() => setSelectedCategory('all')}
-                className={`rounded-xl px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
+                className={`touch-target-sm rounded-xl px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
                   selectedCategory === 'all'
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'bg-muted hover:bg-muted/80 text-muted-foreground'
@@ -498,7 +489,7 @@ export function PosBoard({
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`rounded-xl px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
+                    className={`touch-target-sm rounded-xl px-4 py-2 text-xs font-bold whitespace-nowrap transition-all ${
                       selectedCategory === cat.id
                         ? 'bg-primary text-primary-foreground shadow-sm'
                         : 'bg-muted hover:bg-muted/80 text-muted-foreground'
@@ -512,7 +503,7 @@ export function PosBoard({
           </div>
 
           {/* Product Grid Catalog */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             {filteredItems.length === 0 ? (
               <div className="text-muted-foreground flex h-64 flex-col items-center justify-center text-center">
                 <Utensils className="mb-2 h-10 w-10 stroke-[1.5] opacity-40" />
@@ -521,7 +512,7 @@ export function PosBoard({
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredItems.map((item) => {
                   const stockVal = item.dailyMenuOverride?.stockDaily
                   const isAvailable =
@@ -535,7 +526,7 @@ export function PosBoard({
                       key={item.id}
                       disabled={!isAvailable}
                       onClick={() => isAvailable && handleItemClick(item)}
-                      className={`group ${cardBgClass} border-border/60 flex flex-col justify-between overflow-hidden rounded-2xl border p-3.5 text-left transition-all ${
+                      className={`group ${cardBgClass} border-border/60 flex min-h-[120px] flex-col justify-between overflow-hidden rounded-2xl border p-3.5 text-left transition-all ${
                         isAvailable
                           ? 'hover:border-primary/50 hover:shadow-md active:scale-[0.98]'
                           : 'cursor-not-allowed opacity-60'
@@ -581,18 +572,18 @@ export function PosBoard({
                           </p>
                         )}
                       </div>
-                      <div className="border-border/30 mt-3 flex items-center justify-between border-t pt-2">
+                      <div className="border-border/30 mt-3 flex items-center justify-between border-t pt-2.5">
                         <span className="text-foreground text-sm font-black">
                           ${Number(item.price).toLocaleString('es-CL')}
                         </span>
                         <div
-                          className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
+                          className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
                             isAvailable
                               ? 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground'
                               : 'bg-muted text-muted-foreground'
                           }`}
                         >
-                          <Plus size={16} />
+                          <Plus size={18} />
                         </div>
                       </div>
                     </button>
@@ -603,8 +594,36 @@ export function PosBoard({
           </div>
         </div>
 
+        {/* Mobile/Portrait Bottom Cart Floating Bar */}
+        {cart.length > 0 && (
+          <div className="border-border bg-card/95 border-t p-3 shadow-2xl backdrop-blur-md lg:hidden">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="text-muted-foreground text-xs font-semibold">
+                  {totalCartItemsCount} {totalCartItemsCount === 1 ? 'producto' : 'productos'} en el
+                  carrito
+                </span>
+                <div className="text-foreground text-lg font-black">
+                  Total: ${totalAmount.toLocaleString('es-CL')}
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMobileCartOpen(!isMobileCartOpen)}
+                className="bg-primary text-primary-foreground flex min-h-[48px] items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-bold shadow-lg active:scale-95"
+              >
+                <ShoppingCart size={18} />
+                <span>{isMobileCartOpen ? 'Ocultar Pedido' : 'Ver Pedido'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Right Column: Order Cart & Checkout Drawer Panel */}
-        <div className="bg-card flex w-96 flex-col overflow-hidden shadow-xl">
+        <div
+          className={`bg-card w-full flex-col overflow-hidden shadow-xl lg:flex lg:w-96 ${
+            isMobileCartOpen ? 'border-border flex h-[75vh] border-t lg:h-auto' : 'hidden lg:flex'
+          }`}
+        >
           {/* Cart Header */}
           <div className="border-border/40 space-y-3 border-b p-4">
             <div className="flex items-center justify-between">
@@ -695,24 +714,28 @@ export function PosBoard({
 
                   {/* Quantity and Item Delete controls */}
                   <div className="border-border/20 flex items-center justify-between border-t pt-2">
-                    <button
-                      onClick={() => updateQuantity(item.id, -1)}
-                      className="bg-card hover:bg-muted text-foreground border-border/50 flex h-7 w-7 items-center justify-center rounded-lg border font-bold transition-colors"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <span className="px-2 text-xs font-bold">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.id, 1)}
-                      className="bg-card hover:bg-muted text-foreground border-border/50 flex h-7 w-7 items-center justify-center rounded-lg border font-bold transition-colors"
-                    >
-                      <Plus size={14} />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => updateQuantity(item.id, -1)}
+                        className="bg-card hover:bg-muted text-foreground border-border/50 flex h-9 w-9 items-center justify-center rounded-xl border font-bold transition-colors active:scale-95"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <span className="min-w-[24px] text-center text-xs font-bold">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(item.id, 1)}
+                        className="bg-card hover:bg-muted text-foreground border-border/50 flex h-9 w-9 items-center justify-center rounded-xl border font-bold transition-colors active:scale-95"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
                     <button
                       onClick={() => updateQuantity(item.id, -item.quantity)}
-                      className="text-destructive hover:bg-destructive/10 ml-auto flex h-7 w-7 items-center justify-center rounded-lg transition-colors"
+                      className="text-destructive hover:bg-destructive/10 touch-target-sm ml-auto flex items-center justify-center rounded-xl transition-colors"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
@@ -723,134 +746,62 @@ export function PosBoard({
           {/* Discounts & Employee Meal ("Comida Empleado $0") Panel */}
           {cart.length > 0 && (
             <div className="border-border/40 bg-muted/10 space-y-3 border-t p-4">
-              {/* Discount Buttons */}
+              {/* Active Discount Credit Rules Selector */}
+              {activeDiscountCredits.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-muted-foreground flex items-center justify-between text-xs font-bold">
+                    <span>Beneficios y Descuentos</span>
+                  </label>
+                  <select
+                    value={selectedDiscountCredit?.id || ''}
+                    onChange={(e) => {
+                      const id = e.target.value
+                      if (!id) {
+                        setSelectedDiscountCredit(null)
+                      } else {
+                        const found = activeDiscountCredits.find((dc) => dc.id === id)
+                        if (found) {
+                          setSelectedDiscountCredit(found)
+                        }
+                      }
+                    }}
+                    className="bg-card border-border/60 focus:ring-primary/20 min-h-[44px] w-full rounded-xl border px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:outline-none dark:text-slate-200"
+                  >
+                    <option value="">Seleccionar beneficio...</option>
+                    {activeDiscountCredits.map((dc) => {
+                      const valString =
+                        dc.valueType === 'PERCENTAGE'
+                          ? `${dc.value}%`
+                          : `$${Number(dc.value).toLocaleString('es-CL')}`
+                      const typeLabel = dc.type === 'DISCOUNT' ? 'Descuento' : 'Crédito'
+                      return (
+                        <option key={dc.id} value={dc.id}>
+                          [{typeLabel}] {dc.name} — {valString}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+              )}
+
+              {/* Customer Name & Kitchen Note */}
               <div className="space-y-1.5">
-                <label className="text-muted-foreground flex items-center justify-between text-xs font-bold">
-                  <span>Descuentos y Cortesías</span>
-                  {isStaffMeal && (
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black text-emerald-600 uppercase dark:text-emerald-400">
-                      100% Cortesía
-                    </span>
-                  )}
-                </label>
-
-                {/* Staff Meal Special Toggle Button */}
-                <button
-                  onClick={handleApplyStaffMeal}
-                  className={`flex w-full items-center justify-center gap-2 rounded-xl py-2 text-xs font-black transition-all ${
-                    isStaffMeal
-                      ? 'bg-emerald-600 text-white shadow-md'
-                      : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400'
-                  }`}
-                >
-                  <UserCheck size={16} />
-                  {isStaffMeal
-                    ? '✓ Comida Empleado ($0 Aplicado)'
-                    : 'Comida de Empleado / Cortesía ($0)'}
-                </button>
-
-                {/* Percentage Discount Options */}
-                {!isStaffMeal && (
-                  <>
-                    <div className="grid grid-cols-4 gap-1 pt-1">
-                      {[10, 20, 50].map((pct) => (
-                        <button
-                          key={pct}
-                          onClick={() => {
-                            setDiscountPercent(discountPercent === pct ? 0 : pct)
-                            setCustomDiscountAmount(0)
-                            setSelectedDiscountCredit(null)
-                          }}
-                          className={`rounded-lg border py-1 text-xs font-bold transition-all ${
-                            discountPercent === pct
-                              ? 'bg-primary text-primary-foreground border-primary'
-                              : 'bg-card text-muted-foreground border-border/50 hover:bg-muted'
-                          }`}
-                        >
-                          {pct}%
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => {
-                          const val = prompt('Ingresa monto de descuento fijo ($ CLP):')
-                          if (val && !isNaN(Number(val))) {
-                            setCustomDiscountAmount(Number(val))
-                            setDiscountPercent(0)
-                            setSelectedDiscountCredit(null)
-                          }
-                        }}
-                        className={`rounded-lg border py-1 text-xs font-bold transition-all ${
-                          customDiscountAmount > 0
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-card text-muted-foreground border-border/50 hover:bg-muted'
-                        }`}
-                      >
-                        {customDiscountAmount > 0 ? `$${customDiscountAmount}` : 'Fijo'}
-                      </button>
-                    </div>
-
-                    {/* Descuento o crédito Selector */}
-                    {activeDiscountCredits.length > 0 && (
-                      <div className="space-y-1 pt-2">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase">
-                          Descuento o crédito
-                        </label>
-                        <select
-                          value={selectedDiscountCredit?.id || ''}
-                          onChange={(e) => {
-                            const id = e.target.value
-                            if (!id) {
-                              setSelectedDiscountCredit(null)
-                            } else {
-                              const found = activeDiscountCredits.find((dc) => dc.id === id)
-                              if (found) {
-                                setSelectedDiscountCredit(found)
-                                setDiscountPercent(0)
-                                setCustomDiscountAmount(0)
-                              }
-                            }
-                          }}
-                          className="bg-card border-border/60 focus:ring-primary/20 w-full rounded-xl border px-3 py-2.5 text-xs font-semibold text-slate-700 focus:ring-2 focus:outline-none"
-                        >
-                          <option value="">Seleccionar beneficio...</option>
-                          {activeDiscountCredits.map((dc) => {
-                            const valString =
-                              dc.valueType === 'PERCENTAGE'
-                                ? `${dc.value}%`
-                                : `$${Number(dc.value).toLocaleString('es-CL')}`
-                            const typeLabel = dc.type === 'DISCOUNT' ? 'Descuento' : 'Crédito'
-                            return (
-                              <option key={dc.id} value={dc.id}>
-                                [{typeLabel}] {dc.name} — {valString}
-                              </option>
-                            )
-                          })}
-                        </select>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Customer Name — shown in kitchen display */}
                 <input
                   type="text"
                   value={customerName}
+                  onFocus={handleInputFocus}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder={
-                    isStaffMeal ? 'Nombre empleado (ej: Juan - Cocina)' : 'Nombre del cliente...'
-                  }
-                  className="bg-card border-border/60 focus:ring-primary/20 w-full rounded-xl border px-3 py-2 text-xs focus:ring-2 focus:outline-none"
+                  placeholder="Nombre del cliente..."
+                  className="bg-card border-border/60 focus:ring-primary/20 min-h-[48px] w-full rounded-xl border px-3 py-2.5 text-xs font-medium focus:ring-2 focus:outline-none"
                 />
-                {/* Kitchen Note — internal note for the kitchen team, not shown on ticket header */}
-                {!isStaffMeal && (
-                  <input
-                    type="text"
-                    value={staffNote}
-                    onChange={(e) => setStaffNote(e.target.value)}
-                    placeholder="Nota para cocina (ej: sin cebolla, alérgico...)"
-                    className="bg-card border-border/60 focus:ring-primary/20 w-full rounded-xl border px-3 py-2 text-xs focus:ring-2 focus:outline-none"
-                  />
-                )}
+                <input
+                  type="text"
+                  value={staffNote}
+                  onFocus={handleInputFocus}
+                  onChange={(e) => setStaffNote(e.target.value)}
+                  placeholder="Nota para cocina (ej: sin cebolla, alérgico...)"
+                  className="bg-card border-border/60 focus:ring-primary/20 min-h-[48px] w-full rounded-xl border px-3 py-2.5 text-xs font-medium focus:ring-2 focus:outline-none"
+                />
               </div>
 
               {/* Totals Summary */}
@@ -861,7 +812,7 @@ export function PosBoard({
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between font-semibold text-emerald-600">
-                    <span>Descuento</span>
+                    <span>Descuento ({selectedDiscountCredit?.name})</span>
                     <span>-${discountAmount.toLocaleString('es-CL')}</span>
                   </div>
                 )}
@@ -883,9 +834,7 @@ export function PosBoard({
                 className="bg-primary text-primary-foreground hover:bg-primary/90 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-extrabold shadow-lg transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <DollarSign size={18} />
-                {isStaffMeal
-                  ? 'Cobrar $0 y Enviar a Cocina'
-                  : `Cobrar $${totalAmount.toLocaleString('es-CL')}`}
+                Cobrar ${totalAmount.toLocaleString('es-CL')}
               </button>
             </div>
           )}
@@ -997,39 +946,39 @@ export function PosBoard({
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setPaymentMethod('CASH')}
-                className={`flex items-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all ${
+                className={`flex min-h-[48px] items-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all active:scale-95 ${
                   paymentMethod === 'CASH'
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                     : 'bg-muted/30 border-border/50 text-foreground hover:bg-muted'
                 }`}
               >
-                <DollarSign size={16} /> Efectivo
+                <DollarSign size={18} /> Efectivo
               </button>
               <button
                 onClick={() => setPaymentMethod('CARD_POS')}
-                className={`flex items-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all ${
+                className={`flex min-h-[48px] items-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all active:scale-95 ${
                   paymentMethod === 'CARD_POS'
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                     : 'bg-muted/30 border-border/50 text-foreground hover:bg-muted'
                 }`}
               >
-                <CreditCard size={16} /> Tarjeta / POS Físico
+                <CreditCard size={18} /> Tarjeta / POS Físico
               </button>
               <button
                 onClick={() => setPaymentMethod('TRANSFER')}
-                className={`col-span-2 flex items-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all ${
+                className={`col-span-2 flex min-h-[48px] items-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all active:scale-95 ${
                   paymentMethod === 'TRANSFER'
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
                     : 'bg-muted/30 border-border/50 text-foreground hover:bg-muted'
                 }`}
               >
-                <Sparkles size={16} /> Transferencia Bancaria
+                <Sparkles size={18} /> Transferencia Bancaria
               </button>
             </div>
 
             {/* Cash Calculator */}
             {paymentMethod === 'CASH' && (
-              <div className="bg-muted/20 border-border/40 space-y-2 rounded-2xl border p-3.5">
+              <div className="bg-muted/20 border-border/40 space-y-2.5 rounded-2xl border p-3.5">
                 <label className="text-muted-foreground text-xs font-bold">
                   Paga Con (Efectivo Recibido):
                 </label>
@@ -1037,25 +986,26 @@ export function PosBoard({
                   <input
                     type="number"
                     value={cashGiven}
+                    onFocus={handleInputFocus}
                     onChange={(e) => setCashGiven(e.target.value)}
                     placeholder={`$${totalAmount}`}
-                    className="bg-card border-border/60 focus:ring-primary/20 w-full rounded-xl border px-3 py-2 text-sm font-bold focus:ring-2 focus:outline-none"
+                    className="bg-card border-border/60 focus:ring-primary/20 min-h-[48px] w-full rounded-xl border px-3.5 py-2.5 text-sm font-bold focus:ring-2 focus:outline-none"
                   />
                   <button
                     onClick={() => setCashGiven(String(totalAmount))}
-                    className="bg-muted hover:bg-muted/80 rounded-xl px-3 py-2 text-xs font-bold whitespace-nowrap"
+                    className="bg-muted hover:bg-muted/80 min-h-[48px] rounded-xl px-4 py-2 text-xs font-bold whitespace-nowrap active:scale-95"
                   >
                     Exacto
                   </button>
                 </div>
 
                 {/* Preset Cash Buttons */}
-                <div className="grid grid-cols-4 gap-1 pt-1">
+                <div className="grid grid-cols-4 gap-1.5 pt-1">
                   {[5000, 10000, 20000, 50000].map((preset) => (
                     <button
                       key={preset}
                       onClick={() => setCashGiven(String(preset))}
-                      className="bg-card hover:bg-muted border-border/40 rounded-lg border py-1.5 text-[11px] font-bold"
+                      className="bg-card hover:bg-muted border-border/40 min-h-[44px] rounded-xl border py-2 text-xs font-bold active:scale-95"
                     >
                       ${preset / 1000}k
                     </button>

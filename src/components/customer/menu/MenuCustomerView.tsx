@@ -162,9 +162,9 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
               <button
                 type="button"
                 onClick={() => setIsStatusModalOpen(true)}
-                className="bg-card hover:bg-muted text-foreground border-border/60 flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-4 py-2.5 text-xs font-bold shadow-xs transition-all select-none hover:shadow-sm"
+                className="bg-card hover:bg-muted text-foreground border-border/60 flex min-h-[48px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-xs font-bold shadow-xs transition-all select-none hover:shadow-sm active:scale-95 sm:text-sm"
               >
-                <PackageSearch size={15} className="text-primary shrink-0" />
+                <PackageSearch size={18} className="text-primary shrink-0" />
                 <span>Consultar estado del pedido</span>
               </button>
             </div>
@@ -173,9 +173,9 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
       </header>
 
       {/* Sticky categories horizontal navigation & search header */}
-      <div className="bg-background/80 border-border/45 sticky top-0 z-30 border-b py-4 shadow-sm backdrop-blur-md transition-all duration-300">
+      <div className="bg-background/80 border-border/45 sticky top-0 z-30 border-b py-3.5 shadow-sm backdrop-blur-md transition-all duration-300">
         <div className="mx-auto max-w-6xl space-y-4 px-4">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
             {/* Category tabs */}
             <nav className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto scroll-smooth px-4 pb-1 select-none md:mx-0 md:px-0 md:pb-0">
               {menu.categories.map((cat) => {
@@ -184,7 +184,7 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
                   <button
                     key={cat.id}
                     onClick={() => scrollToCategory(cat.id)}
-                    className={`cursor-pointer rounded-full px-4.5 py-2 text-xs font-semibold whitespace-nowrap transition-all duration-200 md:text-sm ${
+                    className={`touch-target-sm flex cursor-pointer items-center justify-center rounded-full px-5 py-2.5 text-xs font-semibold whitespace-nowrap transition-all duration-200 md:text-sm ${
                       isActive
                         ? 'bg-foreground text-background scale-103 font-bold shadow-sm'
                         : 'bg-muted hover:bg-muted-foreground/5 text-muted-foreground hover:text-foreground'
@@ -197,16 +197,17 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
             </nav>
 
             {/* Search Input */}
-            <div className="relative w-full md:w-64">
-              <span className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <Search size={15} />
+            <div className="relative w-full md:w-72">
+              <span className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <Search size={16} />
               </span>
               <input
                 type="text"
                 value={searchQuery}
+                onFocus={(e) => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar productos en la carta..."
-                className="bg-muted border-border/50 focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-full border py-2.5 pr-4 pl-9 text-xs transition-all focus:ring-0 focus:outline-none md:text-sm"
+                className="bg-muted border-border/50 focus:border-primary placeholder:text-muted-foreground/60 min-h-[48px] w-full rounded-full border py-2.5 pr-4 pl-10 text-xs transition-all focus:ring-0 focus:outline-none md:text-sm"
               />
             </div>
           </div>
@@ -224,9 +225,9 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
               </h3>
             </div>
 
-            <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
+            <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0">
               {highlightedItems.map((item) => (
-                <div key={`feat-${item.id}`} className="w-64 shrink-0 md:w-72">
+                <div key={`feat-${item.id}`} className="w-44 shrink-0 sm:w-64 md:w-72">
                   <ProductCard item={item} onSelect={handleCardSelect} />
                 </div>
               ))}
@@ -242,18 +243,18 @@ export function MenuCustomerView({ menu, locationName }: MenuCustomerViewProps) 
               ref={(el) => {
                 categoryRefs.current[cat.id] = el
               }}
-              className="scroll-mt-24 space-y-6"
+              className="scroll-mt-24 space-y-4 sm:space-y-6"
             >
               {/* Heading */}
               <div className="flex items-center gap-4 select-none">
-                <h3 className="text-foreground text-lg font-extrabold tracking-tight md:text-xl">
+                <h3 className="text-foreground text-base font-extrabold tracking-tight sm:text-lg md:text-xl">
                   {cat.name}
                 </h3>
                 <div className="bg-border/60 h-[1px] flex-1" />
               </div>
 
-              {/* Grid lists */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Grid lists: 2 columns on mobile (e.g. iPhone SE), 3 columns on tablet/desktop */}
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-3">
                 {cat.items.map((item) => (
                   <ProductCard key={item.id} item={item} onSelect={handleCardSelect} />
                 ))}

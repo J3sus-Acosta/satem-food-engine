@@ -242,9 +242,12 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
                       type="text"
                       required
                       value={customerName}
+                      onFocus={(e) =>
+                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Ej: Juan Pérez"
-                      className="border-border/60 bg-card focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-xl border p-3.5 text-xs focus:ring-0 focus:outline-none md:text-sm"
+                      className="border-border/60 bg-card focus:border-primary placeholder:text-muted-foreground/60 min-h-[48px] w-full rounded-xl border p-3.5 text-xs focus:ring-0 focus:outline-none md:text-sm"
                       disabled={isLoading}
                     />
                   </div>
@@ -261,9 +264,12 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
                       type="tel"
                       required
                       value={customerPhone}
+                      onFocus={(e) =>
+                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                      }
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       placeholder="Ej: +56912345678"
-                      className="border-border/60 bg-card focus:border-primary placeholder:text-muted-foreground/60 w-full rounded-xl border p-3.5 text-xs focus:ring-0 focus:outline-none md:text-sm"
+                      className="border-border/60 bg-card focus:border-primary placeholder:text-muted-foreground/60 min-h-[48px] w-full rounded-xl border p-3.5 text-xs focus:ring-0 focus:outline-none md:text-sm"
                       disabled={isLoading}
                     />
                   </div>
@@ -272,7 +278,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
             </div>
 
             {/* Calculations and Form submit footer */}
-            <div className="bg-muted/30 border-border flex shrink-0 flex-col gap-4 border-t p-5 md:p-6">
+            <div className="bg-card/95 border-border sticky bottom-0 flex shrink-0 flex-col gap-4 border-t p-4 backdrop-blur-md sm:p-5 md:p-6">
               <div className="flex items-center justify-between select-none">
                 <span className="text-muted-foreground text-xs font-semibold">Total a pagar</span>
                 <span className="text-foreground text-lg font-extrabold">
@@ -283,11 +289,11 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-foreground text-background hover:bg-foreground/90 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3.5 text-center text-xs font-bold tracking-wide uppercase shadow-md transition-all disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
+                className="bg-foreground text-background hover:bg-foreground/90 flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl py-3.5 text-center text-xs font-bold tracking-wide uppercase shadow-md transition-all active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 size={15} className="animate-spin" />
+                    <Loader2 size={16} className="animate-spin" />
                     <span>Enviando pedido...</span>
                   </>
                 ) : (
@@ -304,9 +310,9 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
               <button
                 type="button"
                 onClick={handleRequestClose}
-                className="hover:bg-muted text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+                className="hover:bg-muted text-muted-foreground hover:text-foreground touch-target-sm flex cursor-pointer items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors"
               >
-                <ArrowLeft size={14} />
+                <ArrowLeft size={16} />
                 <span>Volver</span>
               </button>
               <div className="flex items-center gap-2">
@@ -315,7 +321,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
               </div>
               <button
                 onClick={handleRequestClose}
-                className="hover:bg-muted text-muted-foreground cursor-pointer rounded-lg p-2 transition-colors"
+                className="hover:bg-muted text-muted-foreground touch-target-sm cursor-pointer rounded-xl p-2 transition-colors"
                 aria-label="Cerrar carrito"
               >
                 <X size={18} />
@@ -323,7 +329,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
             </div>
 
             {/* Items scroll list */}
-            <div className="flex-1 space-y-5 overflow-y-auto p-5 md:p-6">
+            <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5 md:p-6">
               {items.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center space-y-3 py-16 text-center select-none">
                   <ShoppingCart size={40} className="text-muted-foreground/60 stroke-[1.5]" />
@@ -342,7 +348,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
                   return (
                     <div
                       key={`${item.menuItemId}-${idx}`}
-                      className="border-border/45 bg-muted/20 flex gap-4 rounded-2xl border p-4 shadow-sm"
+                      className="border-border/45 bg-muted/20 flex gap-3.5 rounded-2xl border p-3.5 shadow-sm"
                     >
                       {/* Product Thumbnail */}
                       <div className="bg-muted flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl select-none">
@@ -358,7 +364,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
                       </div>
 
                       {/* Content details */}
-                      <div className="flex-1 space-y-3">
+                      <div className="flex-1 space-y-2.5">
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <h4 className="text-xs leading-tight font-bold md:text-sm">
@@ -378,33 +384,33 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
 
                           <button
                             onClick={() => removeItem(idx)}
-                            className="hover:bg-destructive/10 text-muted-foreground/80 hover:text-destructive cursor-pointer rounded-lg p-1.5 transition-colors"
+                            className="hover:bg-destructive/10 text-muted-foreground/80 hover:text-destructive touch-target-sm cursor-pointer rounded-xl p-1.5 transition-colors"
                             aria-label="Eliminar producto"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
 
                         {/* Adjust count footer */}
                         <div className="flex items-center justify-between gap-4">
                           {/* Selector +/- */}
-                          <div className="border-border bg-card flex items-center rounded-lg border p-0.5 shadow-sm select-none">
+                          <div className="border-border bg-card flex items-center rounded-xl border p-1 shadow-sm select-none">
                             <button
                               onClick={() => updateQuantity(idx, item.quantity - 1)}
-                              className="hover:bg-muted cursor-pointer rounded p-1 transition-colors"
+                              className="hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors active:scale-95"
                               aria-label="Reducir cantidad"
                             >
-                              <Minus size={11} />
+                              <Minus size={13} />
                             </button>
-                            <span className="w-6 text-center text-xs font-bold">
+                            <span className="w-8 text-center text-xs font-bold">
                               {item.quantity}
                             </span>
                             <button
                               onClick={() => updateQuantity(idx, item.quantity + 1)}
-                              className="hover:bg-muted cursor-pointer rounded p-1 transition-colors"
+                              className="hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors active:scale-95"
                               aria-label="Aumentar cantidad"
                             >
-                              <Plus size={11} />
+                              <Plus size={13} />
                             </button>
                           </div>
 
@@ -421,7 +427,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
 
             {/* Calculations and submit action footer */}
             {items.length > 0 && (
-              <div className="bg-muted/30 border-border flex shrink-0 flex-col gap-4 border-t p-5 select-none md:p-6">
+              <div className="bg-card/95 border-border sticky bottom-0 flex shrink-0 flex-col gap-4 border-t p-4 backdrop-blur-md select-none sm:p-5 md:p-6">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground text-xs font-semibold">Subtotal</span>
                   <span className="text-foreground text-lg font-extrabold">
@@ -431,7 +437,7 @@ export function CartDrawer({ locationId, isOpen, onClose }: CartDrawerProps) {
 
                 <button
                   onClick={handleConfirmOrder}
-                  className="bg-foreground text-background hover:bg-foreground/90 w-full cursor-pointer rounded-xl py-3.5 text-center text-xs font-bold tracking-wide uppercase shadow-md transition-all md:text-sm"
+                  className="bg-foreground text-background hover:bg-foreground/90 flex min-h-[48px] w-full cursor-pointer items-center justify-center rounded-xl py-3.5 text-center text-xs font-bold tracking-wide uppercase shadow-md transition-all active:scale-[0.99] md:text-sm"
                 >
                   Confirmar pedido
                 </button>

@@ -289,7 +289,7 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
                             key={mod.id}
                             type="button"
                             onClick={() => handleModifierSelect(group.id, mod.id, group.maxSelect)}
-                            className={`flex cursor-pointer items-center justify-between rounded-xl border p-3.5 text-left transition-all ${
+                            className={`flex min-h-[48px] cursor-pointer items-center justify-between rounded-xl border p-3.5 text-left transition-all active:scale-[0.99] ${
                               isChecked
                                 ? 'border-primary bg-primary/5 text-primary font-medium'
                                 : 'border-border/60 hover:border-border hover:bg-muted/30 text-foreground'
@@ -297,13 +297,13 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
                           >
                             <div className="flex items-center gap-3">
                               <div
-                                className={`flex h-4.5 w-4.5 items-center justify-center rounded border transition-all ${
+                                className={`flex h-5 w-5 items-center justify-center rounded border transition-all ${
                                   isChecked
                                     ? 'bg-primary border-primary text-primary-foreground'
                                     : 'border-muted-foreground/30 bg-card'
                                 }`}
                               >
-                                {isChecked && <Check size={11} strokeWidth={3.5} />}
+                                {isChecked && <Check size={12} strokeWidth={3.5} />}
                               </div>
                               <span className="text-xs font-semibold md:text-sm">{mod.name}</span>
                             </div>
@@ -327,6 +327,7 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
             <h4 className="text-sm font-bold md:text-base">Notas especiales</h4>
             <textarea
               value={notes}
+              onFocus={(e) => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Ej: Sin condimentos, aderezos al lado, etc."
               rows={2}
@@ -337,7 +338,7 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
         </div>
 
         {/* Quantity selector and checkout action footer */}
-        <div className="bg-muted/30 border-border flex shrink-0 flex-col gap-4 border-t p-5 md:p-6">
+        <div className="bg-muted/30 border-border sticky bottom-0 flex shrink-0 flex-col gap-4 border-t p-4 sm:p-5 md:p-6">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-xs font-medium">Cantidad</span>
 
@@ -346,18 +347,18 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="hover:bg-muted text-muted-foreground cursor-pointer rounded-lg p-2 transition-colors"
+                className="hover:bg-muted text-muted-foreground flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition-colors active:scale-95 disabled:opacity-40"
                 disabled={quantity <= 1}
               >
-                <Minus size={14} />
+                <Minus size={16} />
               </button>
-              <span className="text-foreground w-8 text-center text-sm font-bold">{quantity}</span>
+              <span className="text-foreground w-10 text-center text-sm font-bold">{quantity}</span>
               <button
                 type="button"
                 onClick={() => setQuantity((q) => q + 1)}
-                className="hover:bg-muted text-muted-foreground cursor-pointer rounded-lg p-2 transition-colors"
+                className="hover:bg-muted text-muted-foreground flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition-colors active:scale-95"
               >
-                <Plus size={14} />
+                <Plus size={16} />
               </button>
             </div>
           </div>
@@ -375,7 +376,7 @@ export function ProductCustomizer({ item, isOpen, onClose }: ProductCustomizerPr
             <button
               type="button"
               onClick={handleAddToCart}
-              className="bg-foreground text-background hover:bg-foreground/90 flex-1 cursor-pointer rounded-xl py-3.5 text-center text-xs font-bold tracking-wide uppercase shadow-md transition-all md:text-sm"
+              className="bg-foreground text-background hover:bg-foreground/90 flex min-h-[48px] flex-1 cursor-pointer items-center justify-center rounded-xl py-3.5 text-center text-xs font-bold tracking-wide uppercase shadow-md transition-all active:scale-[0.99] md:text-sm"
             >
               Agregar al carrito
             </button>
