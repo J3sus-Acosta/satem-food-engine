@@ -1,0 +1,100 @@
+schema: spec-driven
+
+context: |
+
+  Project: SATEM Soluciones Inteligentes SpA — SATEM Food Engine
+
+  Purpose:
+    Plataforma de pedidos, POS, cocina (KDS), inventario, caja y reportes
+    para restaurantes, multi-organización y multi-sucursal.
+
+  Development philosophy:
+    - OpenSpec-driven development
+    - Multi-agent development
+    - Security by design
+    - Minimal changes
+    - Reusable architecture
+    - Strong typing
+    - Automated testing
+    - Maintainability
+
+  Detected stack (preserve it, do not replace it):
+    - Next.js App Router (monolith full-stack, no separate Express backend)
+    - TypeScript strict
+    - React 19
+    - Prisma + PostgreSQL
+    - Vitest
+    - Docker / EasyPanel
+    - Tailwind CSS 4 + shadcn/ui in existing code (legacy, do not migrate unless requested)
+
+  Architecture (see AGENTS.md at repository root, it is mandatory):
+    - Route Handlers are thin: validate -> call service -> respond
+    - Business logic lives only in src/services
+    - Persistence only through Repository Interfaces (no Prisma in components, routes or services)
+    - External integrations only in src/integrations via interfaces + factories
+    - Payment provider resolved only through PaymentProviderFactory
+    - Order status changes only through OrderService
+    - Never expose internal IDs (CUID/UUID) to end users
+
+  Frontend rules:
+    - Client project: do NOT apply SATEM branding or satem-design-system; keep the existing visual identity
+    - Follow existing Tailwind 4 + shadcn/ui conventions; do not introduce MUI/Bootstrap
+    - Responsive design required, handle loading/empty/error states
+    - Reuse components, maintain accessibility
+
+  Database rules:
+    - Do not perform destructive production changes without authorization
+    - Use prisma migrate, never db push against production
+    - Review relations and indexes before schema changes
+
+  API rules:
+    - Validate request input
+    - Return ApiResponse<T> with consistent status codes
+    - Enforce authorization server-side
+
+  Testing:
+    - Use Vitest (existing)
+    - Test happy path, validation, authorization failures and edge cases
+    - Add regression tests for discovered bugs
+
+  SATEM architecture principle:
+    Preserve the existing architecture whenever possible.
+    Do not introduce a new framework or database merely because another
+    technology is preferred by the agent.
+
+rules:
+
+  proposal:
+    - Clearly define the business objective.
+    - Define scope and non-goals.
+    - Identify affected modules, APIs and database models.
+    - Identify security, frontend and infrastructure impact.
+    - Identify external integrations.
+
+  tasks:
+    - Break work into small independently verifiable tasks.
+    - Every task must identify files to modify, files allowed to create and files out of scope.
+    - Include testing tasks for new business logic.
+    - Include security validation when authentication or authorization changes.
+    - Include migration validation when database structure changes.
+    - Include frontend validation when UI behavior changes.
+
+operations:
+
+  apply:
+    guidance:
+      - Read existing code before changing it.
+      - Do not modify unrelated files.
+      - Follow the existing architecture and AGENTS.md.
+      - Reuse existing services and utilities.
+      - Do not introduce dependencies without justification.
+      - Run npm run type-check, npm run lint and npm test after implementation.
+      - Update documentation when architecture changes.
+
+  archive:
+    guidance:
+      - Confirm that implementation matches OpenSpec.
+      - Confirm tests pass.
+      - Confirm security review completed when applicable.
+      - Confirm architecture documentation is updated.
+      - Confirm no pending tasks remain.

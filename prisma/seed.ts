@@ -79,6 +79,7 @@ async function main() {
       name: 'Admin Satem',
       role: 'SUPERADMIN',
       isActive: true,
+      deletedAt: null,
       username: 'superadmin',
       passwordHash: superAdminPasswordHash,
     },
@@ -88,6 +89,7 @@ async function main() {
       name: 'Admin Satem',
       role: 'SUPERADMIN',
       isActive: true,
+      deletedAt: null,
       username: 'superadmin',
       passwordHash: superAdminPasswordHash,
     },
@@ -100,6 +102,7 @@ async function main() {
       name: 'Administrador Demo',
       role: 'ADMIN',
       isActive: true,
+      deletedAt: null,
       username: 'admin-demo',
       passwordHash: demoPasswordHash,
     },
@@ -109,6 +112,7 @@ async function main() {
       name: 'Administrador Demo',
       role: 'ADMIN',
       isActive: true,
+      deletedAt: null,
       username: 'admin-demo',
       passwordHash: demoPasswordHash,
     },
@@ -120,6 +124,7 @@ async function main() {
       name: 'Cajero Demo',
       role: 'CASHIER',
       isActive: true,
+      deletedAt: null,
       username: 'cajero-demo',
       passwordHash: demoPasswordHash,
     },
@@ -129,6 +134,7 @@ async function main() {
       name: 'Cajero Demo',
       role: 'CASHIER',
       isActive: true,
+      deletedAt: null,
       username: 'cajero-demo',
       passwordHash: demoPasswordHash,
     },
@@ -140,6 +146,7 @@ async function main() {
       name: 'Cocinero Demo',
       role: 'KITCHEN',
       isActive: true,
+      deletedAt: null,
       username: 'cocinero-demo',
       passwordHash: demoPasswordHash,
     },
@@ -149,6 +156,7 @@ async function main() {
       name: 'Cocinero Demo',
       role: 'KITCHEN',
       isActive: true,
+      deletedAt: null,
       username: 'cocinero-demo',
       passwordHash: demoPasswordHash,
     },
@@ -168,10 +176,19 @@ async function main() {
         passwordHash: hashPassword('Admin@123'),
         role: 'ADMIN',
         isActive: true,
+        deletedAt: null,
       },
     })
   } else {
-    console.info('Usuario Administrador Inicial (admin) ya existe. Omitiendo.')
+    console.info('Usuario Administrador Inicial (admin) ya existe. Asegurando estado activo.')
+    await db.user.update({
+      where: { username: 'admin' },
+      data: {
+        isActive: true,
+        deletedAt: null,
+        passwordHash: hashPassword('Admin@123'),
+      },
+    })
   }
 
   // Asociar Cajero y Cocinero al Local 1 (Casa Matriz)

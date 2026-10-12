@@ -353,13 +353,21 @@ export async function createOrder(items: OrderItem[]): Promise<Order> {
 
 ---
 
-## 10. Estilos (Tailwind CSS 4)
+## 10. Estilos
 
-- Tailwind CSS 4 usa `@import "tailwindcss"` en CSS, **no** un archivo `tailwind.config.js`.
-- La configuración de tema se realiza con `@theme` en CSS.
-- Usar siempre las clases de shadcn/ui antes de escribir CSS custom.
-- No mezclar estilos inline con Tailwind en el mismo elemento.
-- El orden de las clases Tailwind es gestionado automáticamente por `prettier-plugin-tailwindcss`.
+- Este proyecto es para clientes externos: **NO se aplica el `satem-design-system`** (ni su paleta, tipografía, tokens, branding ni componentes) salvo petición explícita del usuario. Mantener la identidad visual existente.
+- El código existente usa Tailwind CSS 4 + shadcn/ui (`@import "tailwindcss"`, `@theme` en CSS). Seguir esas convenciones; no migrar ni rediseñar sin requerimiento explícito; no se añaden MUI ni Bootstrap.
+- No mezclar estilos inline con clases en el mismo elemento.
+- El orden de clases Tailwind lo gestiona `prettier-plugin-tailwindcss` en el código existente.
+
+---
+
+## 10.5 Ecosistema Multi-Agente
+
+- Agentes en `.agents/subagents/`, skills en `.agents/skills/`, specs en `openspec/` y manual en `SATEM_AGENT_GUIDE.md`.
+- Con un cambio OpenSpec activo, OpenSpec es la fuente de verdad: no inventar requisitos que lo contradigan.
+- Cada tarea declara archivos a modificar, archivos permitidos a crear y archivos fuera de alcance.
+- En conflicto, prevalece este `AGENTS.md`.
 
 ---
 
