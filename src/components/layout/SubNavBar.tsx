@@ -90,7 +90,7 @@ export function SubNavBar({ activeTab, currentUserRole }: SubNavBarProps) {
   )
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-slate-200 pb-3">
+    <div className="mb-6 flex flex-wrap items-center gap-1 border-b border-slate-200 pb-3 print:hidden">
       {visibleTabs.map((tab) => {
         const isActive = activeTab === tab.id
         return (

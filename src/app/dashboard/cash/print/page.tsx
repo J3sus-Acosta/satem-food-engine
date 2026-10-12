@@ -90,22 +90,35 @@ export default async function PrintCashPage(props: PrintPageProps) {
           }
         }
         @media print {
+          html,
           body {
-            background-color: white;
-            padding: 0;
-            margin: 0;
+            background-color: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
             font-family: serif;
             color: black;
             font-size: 12pt;
           }
-          .print-container {
-            width: 100%;
-            padding: 0;
-            box-shadow: none;
-            border-radius: 0;
+          body * {
+            visibility: hidden !important;
           }
+          .dashboard-app-header,
           .print-btn {
-            display: none;
+            display: none !important;
+          }
+          .print-container,
+          .print-container * {
+            visibility: visible !important;
+          }
+          .print-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
           }
         }
         .header {
@@ -190,8 +203,7 @@ export default async function PrintCashPage(props: PrintPageProps) {
       <PrintCashButton />
 
       <div className="header">
-        <h1>SATEM Food Engine</h1>
-        <h2 style={{ margin: '5px 0 0 0', fontSize: '14pt' }}>Reporte de Cierre de Caja</h2>
+        <h1>Reporte de Cierre de Caja</h1>
       </div>
 
       <div className="meta-grid">
